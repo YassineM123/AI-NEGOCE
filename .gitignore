@@ -35,3 +35,6 @@ reports/evidence/tmp/
 reports/evidence/*_adhoc.json
 test-results/
 playwright-report/
+
+# Real invoice dataset provided by the owner: confidential, never versioned
+Dataset/
