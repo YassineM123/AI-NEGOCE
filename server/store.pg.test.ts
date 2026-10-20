@@ -7,7 +7,8 @@ import fs from "node:fs"
 import path from "node:path"
 import { Pool } from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import { PostgresStore, type DocumentRecord } from "./store.js"
+import { DEMO_FINANCIAL_RULES } from "./financial-rules.js"
+import { PostgresStore, RevisionConflictError, type DocumentRecord } from "./store.js"
 
 const url = process.env.TEST_DATABASE_URL
 const schema = `test_${crypto.randomBytes(6).toString("hex")}`
@@ -137,6 +138,26 @@ describe.skipIf(!url)("PostgreSQL store, tenancy and migrations (TEST_DATABASE_U
     } finally {
       client.release()
       await pool.end()
+    }
+  })
+
+  it("stores financial rules per organization with server-side verification and revisions", async () => {
+    const store = new PostgresStore(scoped())
+    try {
+      const a = store.forTenant("org-a")
+      await a.recordUser({ id: "expert", displayName: "Expert", role: "admin", agencies: ["*"] })
+      const { verified: _v, verifiedBy: _b, verifiedAt: _t, ...rules } = DEMO_FINANCIAL_RULES
+      const first = await a.saveFinancialRules({ rules, actorId: "expert", markVerified: true })
+      expect(first).toMatchObject({ revision: 1, rules: { verified: true, verifiedBy: "expert", currency: "TND" } })
+      const changed = await a.saveFinancialRules({ rules: { ...rules, tolerance: "0.001" }, actorId: "expert", markVerified: false, expectedRevision: 1 })
+      expect(changed).toMatchObject({ revision: 2, rules: { verified: false, verifiedBy: null, tolerance: "0.001" } })
+      await expect(a.saveFinancialRules({ rules, actorId: "expert", markVerified: false, expectedRevision: 1 })).rejects.toBeInstanceOf(RevisionConflictError)
+      // The verifier must be a user of the same organization.
+      await expect(store.forTenant("org-b").saveFinancialRules({ rules, actorId: "expert", markVerified: true })).rejects.toThrow(/foreign key/)
+      expect(await store.forTenant("org-b").getFinancialRules()).toBeUndefined()
+      expect((await a.getFinancialRules())?.revision).toBe(2)
+    } finally {
+      await store.close()
     }
   })
 

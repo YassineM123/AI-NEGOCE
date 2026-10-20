@@ -9,10 +9,12 @@ export type Permission =
   | "invoice.approve"
   | "mapping.approve"
   | "erp.integrate"
+  | "settings.manage"
 
 // documents.* and invoice.approve reproduce the role checks the routes had before.
 // invoice.correct, mapping.approve and erp.integrate are not used by any route yet; their
-// assignment is a least-privilege default NOT yet validated by the business.
+// assignment is a least-privilege default NOT yet validated by the business. settings.manage
+// (organization financial rules) is reserved to administrators.
 const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   admin: [
     "documents.read",
@@ -21,6 +23,7 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
     "invoice.approve",
     "mapping.approve",
     "erp.integrate",
+    "settings.manage",
   ],
   accountant: ["documents.read", "documents.upload", "invoice.correct", "invoice.approve"],
   manager: ["documents.read", "documents.upload", "invoice.correct"],

@@ -1,5 +1,11 @@
 import { Pool, type PoolClient } from "pg"
 import type { Extraction } from "./ocr.js"
+import type { FinancialRules } from "./financial-rules.js"
+
+/** Rules content as edited by an administrator (verification fields are set by the server). */
+export type FinancialRulesInput = Omit<FinancialRules, "verified" | "verifiedBy" | "verifiedAt">
+export type StoredFinancialRules = { rules: FinancialRules; revision: number }
+export class RevisionConflictError extends Error {}
 
 export type Organization = {
   id: string
@@ -68,6 +74,14 @@ export interface TenantStore {
   /** Upserts the user as seen in the verified token (history and foreign keys only). */
   recordUser(user: UserRecord): Promise<void>
   recordApprovalEvent(event: ApprovalEvent): Promise<void>
+  getFinancialRules(): Promise<StoredFinancialRules | undefined>
+  /**
+   * Replaces the rules. Any change clears the verification unless markVerified is true, in
+   * which case the acting user and time are recorded. expectedRevision guards concurrent edits.
+   */
+  saveFinancialRules(input: { rules: FinancialRulesInput; actorId: string; markVerified: boolean; expectedRevision?: number }): Promise<StoredFinancialRules>
+  /** Inserts rules only when the organization has none (development seeding). */
+  ensureFinancialRules(rules: FinancialRulesInput): Promise<void>
 }
 
 export interface Store {
@@ -92,6 +106,7 @@ export class MemoryStore implements Store {
   audits: StoredAuditEvent[] = []
   users = new Map<string, UserRecord & { organizationId: string; lastSeenAt: string }>()
   approvalEvents: (ApprovalEvent & { organizationId: string; createdAt: string })[] = []
+  financialRules = new Map<string, StoredFinancialRules>()
 
   async getOrganization(id: string) {
     return this.organizations.get(id)
@@ -163,7 +178,36 @@ export class MemoryStore implements Store {
         if (!doc(e.documentId)) throw new Error("Document outside tenant")
         this.approvalEvents.push({ ...e, organizationId: org, createdAt: new Date().toISOString() })
       },
+      getFinancialRules: async () => this.financialRules.get(org),
+      saveFinancialRules: async ({ rules, actorId, markVerified, expectedRevision }) => {
+        const current = this.financialRules.get(org)
+        if (expectedRevision !== undefined && (current?.revision ?? 0) !== expectedRevision)
+          throw new RevisionConflictError("Les règles ont été modifiées entre-temps")
+        const stored = {
+          rules: { ...rules, verified: markVerified, verifiedBy: markVerified ? actorId : null, verifiedAt: markVerified ? new Date().toISOString() : null },
+          revision: (current?.revision ?? 0) + 1,
+        }
+        this.financialRules.set(org, stored)
+        return stored
+      },
+      ensureFinancialRules: async (rules) => {
+        if (!this.financialRules.has(org))
+          this.financialRules.set(org, { rules: { ...rules, verified: false, verifiedBy: null, verifiedAt: null }, revision: 1 })
+      },
     }
+  }
+}
+
+async function readRules(c: PoolClient, org: string, lock = false): Promise<StoredFinancialRules | undefined> {
+  const q = await c.query(
+    `SELECT rules, verified, verified_by AS "verifiedBy", verified_at AS "verifiedAt", revision FROM organization_financial_rules WHERE organization_id=$1${lock ? " FOR UPDATE" : ""}`,
+    [org],
+  )
+  const row = q.rows[0]
+  if (!row) return undefined
+  return {
+    rules: { ...row.rules, verified: row.verified, verifiedBy: row.verifiedBy, verifiedAt: row.verifiedAt ? new Date(row.verifiedAt).toISOString() : null },
+    revision: row.revision,
   }
 }
 
@@ -304,6 +348,25 @@ export class PostgresStore implements Store {
             "INSERT INTO approval_events(organization_id,document_id,actor_id,decision,correction,invoice_id,invoice_version) VALUES($1,$2,$3,$4,$5,$6,$7)",
             [org, e.documentId, e.actorId, e.decision, e.correction ?? null, e.invoiceId ?? null, e.invoiceVersion ?? null],
           )
+        }),
+      getFinancialRules: () => tx((c) => readRules(c, org)),
+      saveFinancialRules: ({ rules, actorId, markVerified, expectedRevision }) =>
+        tx(async (c) => {
+          const current = await readRules(c, org, true)
+          if (expectedRevision !== undefined && (current?.revision ?? 0) !== expectedRevision)
+            throw new RevisionConflictError("Les règles ont été modifiées entre-temps")
+          await c.query(
+            `INSERT INTO organization_financial_rules(organization_id,rules,verified,verified_by,verified_at,updated_by,updated_at,revision)
+             VALUES($1,$2,$3,$4,$5,$6,now(),1)
+             ON CONFLICT (organization_id) DO UPDATE SET rules=EXCLUDED.rules, verified=EXCLUDED.verified, verified_by=EXCLUDED.verified_by,
+               verified_at=EXCLUDED.verified_at, updated_by=EXCLUDED.updated_by, updated_at=now(), revision=organization_financial_rules.revision+1`,
+            [org, rules, markVerified, markVerified ? actorId : null, markVerified ? new Date().toISOString() : null, actorId],
+          )
+          return (await readRules(c, org))!
+        }),
+      ensureFinancialRules: (rules) =>
+        tx(async (c) => {
+          await c.query("INSERT INTO organization_financial_rules(organization_id,rules) VALUES($1,$2) ON CONFLICT (organization_id) DO NOTHING", [org, rules])
         }),
     }
   }

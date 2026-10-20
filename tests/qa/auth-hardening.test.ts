@@ -164,9 +164,9 @@ describe("token tampering and privilege escalation", () => {
 })
 
 describe("permission matrix", () => {
-  const all: Permission[] = ["documents.read", "documents.upload", "invoice.correct", "invoice.approve", "mapping.approve", "erp.integrate"]
+  const all: Permission[] = ["documents.read", "documents.upload", "invoice.correct", "invoice.approve", "mapping.approve", "erp.integrate", "settings.manage"]
   it.each([
-    ["admin", all],
+    ["admin", [...all, "settings.manage"]],
     ["accountant", ["documents.read", "documents.upload", "invoice.correct", "invoice.approve"]],
     ["manager", ["documents.read", "documents.upload", "invoice.correct"]],
     ["commercial", []],

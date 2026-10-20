@@ -28,6 +28,11 @@ import {
 } from "./services.js"
 import { validateInvoice, type InvoiceInput } from "./invoice-validation.js"
 import {
+  DEMO_FINANCIAL_RULES,
+  financialRulesSchema,
+  rulesUsable,
+} from "./financial-rules.js"
+import {
   DisabledOcrProvider,
   HttpOcrProvider,
   type OcrProvider,
@@ -35,6 +40,7 @@ import {
 import {
   MemoryStore,
   PostgresStore,
+  RevisionConflictError,
   type Organization,
   type Store,
 } from "./store.js"
@@ -130,7 +136,7 @@ export function createApp(deps = defaultDependencies()) {
   app.use(
     cors({
       origin: config.FRONTEND_ORIGIN,
-      methods: ["GET", "POST", "PATCH"],
+      methods: ["GET", "POST", "PUT", "PATCH"],
       allowedHeaders: ["Authorization", "Content-Type", "Idempotency-Key"],
     }),
   )
@@ -174,7 +180,12 @@ export function createApp(deps = defaultDependencies()) {
     auth.mode !== "local-dev"
       ? Promise.resolve()
       : (devOrganizations ??= Promise.all(
-          DEV_ORGANIZATIONS.map((o) => store.ensureOrganization({ ...o })),
+          DEV_ORGANIZATIONS.map(async (o) => {
+            await store.ensureOrganization({ ...o })
+            // Demonstration rules, unverified: usable only because these organizations are synthetic.
+            const { verified: _v, verifiedBy: _b, verifiedAt: _a, ...rules } = DEMO_FINANCIAL_RULES
+            await store.forTenant(o.id).ensureFinancialRules(rules)
+          }),
         )
           .then(() => undefined)
           .catch((error) => {
@@ -821,9 +832,13 @@ export function createApp(deps = defaultDependencies()) {
           },
         })
       const fields = extraction.fields as InvoiceInput & { supplier?: string }
+      const stored = await tenant(req).getFinancialRules()
+      const usable = rulesUsable(stored?.rules, res.locals.organization as Organization)
+      if (!usable.ok)
+        return res.status(409).json({ error: { code: usable.code, message: usable.message } })
       const issues = validateInvoice(
         { ...fields, supplierId: fields.supplierId ?? fields.supplier },
-        { currency: "TND", vatRates: [0, 7, 13, 19] },
+        { rules: stored!.rules },
       )
       if (issues.length) return res.status(409).json({
           error: {
@@ -840,7 +855,59 @@ export function createApp(deps = defaultDependencies()) {
         resourceType: "document",
         resourceId: doc.id,
       })
-      return res.json({ id: doc.id, status: "approved" })
+      return res.json({
+        id: doc.id,
+        status: "approved",
+        // Which rules the totals were checked against, and whether an accountant validated them.
+        financialRules: { revision: stored!.revision, verified: stored!.rules.verified, source: stored!.rules.source },
+      })
+    },
+  )
+  // Organization financial rules. Reading is open to document reviewers; changing them is
+  // reserved to settings.manage. Any change clears the verification unless the same request
+  // marks them verified, which records the acting user and time.
+  app.get(
+    "/api/v1/settings/financial-rules",
+    requirePermission("documents.read"),
+    async (req, res) => {
+      const stored = await tenant(req).getFinancialRules()
+      if (!stored)
+        return res.status(404).json({ error: { code: "FINANCIAL_RULES_MISSING", message: "Règles financières non configurées pour cette organisation" } })
+      return res.json(stored)
+    },
+  )
+  app.put(
+    "/api/v1/settings/financial-rules",
+    requirePermission("settings.manage"),
+    async (req, res) => {
+      const parsed = z
+        .object({
+          rules: financialRulesSchema.omit({ verified: true, verifiedBy: true, verifiedAt: true }).strict(),
+          markVerified: z.boolean(),
+          expectedRevision: z.number().int().min(0).optional(),
+        })
+        .strict()
+        .safeParse(req.body)
+      if (!parsed.success)
+        return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Règles invalides", details: parsed.error.flatten() } })
+      const codes = parsed.data.rules.vatRates.map((v) => v.code)
+      if (new Set(codes).size !== codes.length)
+        return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Codes de TVA en double" } })
+      try {
+        const saved = await tenant(req).saveFinancialRules({ ...parsed.data, actorId: req.principal!.id })
+        await tenant(req).audit({
+          actorId: req.principal!.id,
+          action: "financial_rules.updated",
+          resourceType: "financial_rules",
+          resourceId: req.principal!.organizationId,
+          metadata: { revision: saved.revision, verified: saved.rules.verified },
+        })
+        return res.json(saved)
+      } catch (error) {
+        if (error instanceof RevisionConflictError)
+          return res.status(409).json({ error: { code: "REVISION_CONFLICT", message: error.message } })
+        throw error
+      }
     },
   )
   app.use("/api", (_req, res) =>
