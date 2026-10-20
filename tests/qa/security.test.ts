@@ -118,9 +118,13 @@ describe("input validation, errors, rate limiting", () => {
   })
   it("internal errors do not leak stack traces or messages", async () => {
     const store = new MemoryStore()
-    store.createConversation = async () => {
-      throw new Error("SECRET connection string postgres://user:pass@db")
-    }
+    const forTenant = store.forTenant.bind(store)
+    store.forTenant = (org) => ({
+      ...forTenant(org),
+      createConversation: async () => {
+        throw new Error("SECRET connection string postgres://user:pass@db")
+      },
+    })
     const r = await request(makeApp({ store }).app).post("/api/v1/conversations").set(bearer("dev-admin")).send({ title: "x" })
     expect(r.status).toBe(500)
     expect(JSON.stringify(r.body)).not.toMatch(/SECRET|postgres:|at .*\.ts/)

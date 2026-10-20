@@ -72,7 +72,9 @@ describe("upload validation with hostile / malformed files", () => {
     const r = await request(app).post("/api/v1/documents").set(bearer("dev-admin")).field("agency", "Tunis Centre").attach("file", fs.readFileSync(path.join(OCR_DIR, "text_layer_invoice.pdf")), { filename: "../../../../etc/passwd.pdf", contentType: "application/pdf" })
     expect(r.status).toBe(201)
     expect(r.body.filename).toBe("passwd.pdf")
-    const files = fs.readdirSync(path.resolve(config.UPLOAD_DIR))
+    // One directory per organization, then a random server-chosen name.
+    expect(fs.readdirSync(path.resolve(config.UPLOAD_DIR))).toEqual(["demo-fictive"])
+    const files = fs.readdirSync(path.resolve(config.UPLOAD_DIR, "demo-fictive"))
     expect(files).toHaveLength(1)
     expect(files[0]).toMatch(/^[0-9a-f-]{36}\.pdf$/)
   })

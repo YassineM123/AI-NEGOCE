@@ -22,6 +22,10 @@ const schema = z.object({
   OIDC_ISSUER: z.string().url().optional(),
   OIDC_AUDIENCE: z.string().min(1).optional(),
   OIDC_JWKS_URL: z.string().url().optional(),
+  // Token claim carrying the organization (tenant) identifier.
+  OIDC_ORGANIZATION_CLAIM: z.string().min(1).default("org_id"),
+  // Organization allowed to read the synthetic SQLite ERP sandbox (never used in production).
+  ERP_SANDBOX_ORGANIZATION: z.string().min(1).default("demo-fictive"),
   ERP_BASE_URL: z.string().url().optional(),
   ERP_API_TOKEN: z.string().min(16).optional(),
   OCR_PROVIDER: z.enum(["disabled", "http"]).default("disabled"),

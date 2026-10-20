@@ -6,10 +6,19 @@ import type { AppConfig } from "./config.js"
 export type Role = "admin" | "manager" | "accountant" | "commercial"
 export type Principal = {
   id: string
+  /** Tenant of the user, always taken from verified server-side context, never from input. */
+  organizationId: string
   name: string
   role: Role
   agencies: string[]
 }
+
+/** Development organizations (AUTH_MODE=local-dev only): synthetic data, never customers. */
+export const DEV_ORGANIZATIONS = [
+  { id: "demo-fictive", name: "Organisation de démonstration — données fictives", status: "active", isSynthetic: true },
+  { id: "demo-fictive-b", name: "Organisation de test B — données fictives", status: "active", isSynthetic: true },
+] as const
+const ORGANIZATION_ID = /^[a-z0-9][a-z0-9-]{1,62}$/
 declare global {
   namespace Express {
     interface Request {
@@ -26,21 +35,32 @@ declare global {
 export const DEV_IDENTITIES: Readonly<Record<string, Principal>> = Object.freeze({
   admin: {
     id: "usr-admin",
+    organizationId: "demo-fictive",
     name: "Administrateur (développement)",
     role: "admin",
     agencies: ["*"],
   },
   "manager-sfax": {
     id: "usr-sfax",
+    organizationId: "demo-fictive",
     name: "Responsable Sfax (développement)",
     role: "manager",
     agencies: ["Sfax"],
   },
   "commercial-tunis": {
     id: "usr-tunis",
+    organizationId: "demo-fictive",
     name: "Commercial Tunis (développement)",
     role: "commercial",
     agencies: ["Tunis Centre"],
+  },
+  // Second synthetic organization, to exercise tenant isolation by hand.
+  "admin-org-b": {
+    id: "usr-admin-b",
+    organizationId: "demo-fictive-b",
+    name: "Administrateur organisation B (développement)",
+    role: "admin",
+    agencies: ["*"],
   },
 })
 export const devIdentity = (key: string) =>
@@ -146,14 +166,19 @@ export function createAuth(config: AppConfig) {
       audience: config.OIDC_AUDIENCE,
     })
     const role = payload.role
+    const organizationId = payload[config.OIDC_ORGANIZATION_CLAIM]
     if (
       !payload.sub ||
       typeof role !== "string" ||
-      !["admin", "manager", "accountant", "commercial"].includes(role)
+      !["admin", "manager", "accountant", "commercial"].includes(role) ||
+      // No tenant, no access: a token without a well-formed organization is refused.
+      typeof organizationId !== "string" ||
+      !ORGANIZATION_ID.test(organizationId)
     )
       throw new Error("Invalid claims")
     return {
       id: payload.sub,
+      organizationId,
       name: typeof payload.name === "string" ? payload.name : payload.sub,
       role: role as Role,
       agencies: Array.isArray(payload.agencies)

@@ -11,6 +11,7 @@ import pinoHttp from "pino-http"
 import { z } from "zod"
 import {
   DEV_IDENTITIES,
+  DEV_ORGANIZATIONS,
   createAuth,
   devIdentity,
   localOnly,
@@ -31,7 +32,12 @@ import {
   HttpOcrProvider,
   type OcrProvider,
 } from "./ocr.js"
-import { MemoryStore, PostgresStore, type Store } from "./store.js"
+import {
+  MemoryStore,
+  PostgresStore,
+  type Organization,
+  type Store,
+} from "./store.js"
 import { UnconfiguredErpAdapter, type ErpAdapter } from "./erp.js"
 import { ErpDatabase } from "./erp-db.js"
 import { managementPage } from "./erp-pages.js"
@@ -162,6 +168,19 @@ export function createApp(deps = defaultDependencies()) {
     })
   })
   const auth = createAuth(config)
+  // Development organizations are created on first use (local-dev only, synthetic data).
+  let devOrganizations: Promise<void> | null = null
+  const ensureDevOrganizations = () =>
+    auth.mode !== "local-dev"
+      ? Promise.resolve()
+      : (devOrganizations ??= Promise.all(
+          DEV_ORGANIZATIONS.map((o) => store.ensureOrganization({ ...o })),
+        )
+          .then(() => undefined)
+          .catch((error) => {
+            devOrganizations = null
+            throw error
+          }))
   if (auth.mode === "local-dev") {
     // Development identities exist only on this machine: no remote client, no proxy.
     app.use("/api/v1", localOnly())
@@ -181,8 +200,9 @@ export function createApp(deps = defaultDependencies()) {
             details: { available: Object.keys(DEV_IDENTITIES) },
           },
         })
+      await ensureDevOrganizations()
       const session = auth.issueDevToken(parsed.data.identity)
-      await store.audit({
+      await store.forTenant(principal.organizationId).audit({
         actorId: principal.id,
         action: "auth.dev_session.issued",
         resourceType: "auth",
@@ -193,13 +213,52 @@ export function createApp(deps = defaultDependencies()) {
     })
   }
   app.use("/api/v1", auth.middleware)
-  app.get("/api/v1/me", (req, res) =>
-    res.json({ ...req.principal, authMode: auth.mode }),
-  )
-  const requireErpData: express.RequestHandler = (_req, res, next) =>
+  // Tenant resolution: the organization comes only from the verified principal, and it must
+  // exist and be active. Cached for 30 s, so a suspension takes effect within that delay.
+  const organizations = new Map<string, { org: Organization | undefined; at: number }>()
+  app.use("/api/v1", async (req, res, next) => {
+    try {
+      await ensureDevOrganizations()
+      const id = req.principal!.organizationId
+      let hit = organizations.get(id)
+      if (!hit || Date.now() - hit.at > 30_000) {
+        hit = { org: await store.getOrganization(id), at: Date.now() }
+        organizations.set(id, hit)
+      }
+      if (!hit.org || hit.org.status !== "active")
+        return res.status(403).json({
+          error: { code: "ORGANIZATION_INACTIVE", message: "Organisation inconnue ou inactive" },
+        })
+      res.locals.organization = hit.org
+      return next()
+    } catch (error) {
+      return next(error)
+    }
+  })
+  /** Store confined to the caller's organization. */
+  const tenant = (req: express.Request) => store.forTenant(req.principal!.organizationId)
+  app.get("/api/v1/me", (req, res) => {
+    const org = res.locals.organization as Organization
+    res.json({
+      ...req.principal,
+      organization: { id: org.id, name: org.name, isSynthetic: org.isSynthetic },
+      authMode: auth.mode,
+    })
+  })
+  // The SQLite ERP sandbox and the BI/Copilot fixtures hold one synthetic company: only the
+  // designated sandbox organization may read or write them.
+  const sandboxTenant = (req: express.Request) =>
+    req.principal!.organizationId === config.ERP_SANDBOX_ORGANIZATION
+  const sandboxDenied = (res: express.Response) =>
+    res.status(403).json({
+      error: { code: "ERP_SOURCE_UNAVAILABLE", message: "Aucune source ERP configurée pour cette organisation" },
+    })
+  const requireErpData: express.RequestHandler = (req, res, next) =>
     config.NODE_ENV === "production" && !erp.production
       ? res.status(503).json({ error: { code: "ERP_UNAVAILABLE", message: "Source ERP indisponible" } })
-      : next()
+      : !sandboxTenant(req)
+        ? sandboxDenied(res)
+        : next()
   app.get(
     "/api/v1/bi/overview",
     requireRoles("admin", "manager", "accountant", "commercial"),
@@ -261,8 +320,10 @@ export function createApp(deps = defaultDependencies()) {
       return res.json(deps.erpDb.dashboard(parsed.data.period, agencies))
     },
   )
-  const erpGuard: express.RequestHandler = (_req, res, next) =>
-    deps.erpDb
+  const erpGuard: express.RequestHandler = (req, res, next) =>
+    !sandboxTenant(req)
+      ? sandboxDenied(res)
+      : deps.erpDb
       ? next()
       : res.status(503).json({
           error: { code: "DATABASE_UNAVAILABLE", message: "Base de données absente : lancez npm run db:reset" },
@@ -280,7 +341,7 @@ export function createApp(deps = defaultDependencies()) {
       if (scope === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Aucune agence autorisée" } })
       try {
         const result = fn(deps.erpDb!, scope, parsed.data, req)
-        await store.audit({
+        await tenant(req).audit({
           actorId: req.principal!.id,
           action,
           resourceType: "erp",
@@ -396,11 +457,11 @@ export function createApp(deps = defaultDependencies()) {
       if (!parsed.success) return res.status(400).json({
           error: { code: "INVALID_REQUEST", message: "Titre invalide" },
         })
-      const c = await store.createConversation(
+      const c = await tenant(req).createConversation(
         req.principal!.id,
         parsed.data.title,
       )
-      await store.audit({
+      await tenant(req).audit({
         actorId: req.principal!.id,
         action: "conversation.created",
         resourceType: "conversation",
@@ -415,7 +476,7 @@ export function createApp(deps = defaultDependencies()) {
     async (req, res) => {
       const id = String(req.params.id)
       const c = uuid.safeParse(id).success
-        ? await store.getConversation(id, req.principal!.id)
+        ? await tenant(req).getConversation(id, req.principal!.id)
         : undefined
       return c ? res.json(c) : res.status(404).json({
             error: { code: "NOT_FOUND", message: "Conversation introuvable" },
@@ -453,7 +514,7 @@ export function createApp(deps = defaultDependencies()) {
           },
         })
       const c = parsed.data.conversationId
-        ? await store.getConversation(
+        ? await tenant(req).getConversation(
             parsed.data.conversationId,
             req.principal!.id,
           )
@@ -478,19 +539,19 @@ export function createApp(deps = defaultDependencies()) {
       )
       if (c) {
         const now = new Date().toISOString()
-        await store.addMessage(c.id, {
+        await tenant(req).addMessage(c.id, {
           role: "user",
           content: parsed.data.question,
           createdAt: now,
         })
-        await store.addMessage(c.id, {
+        await tenant(req).addMessage(c.id, {
           role: "assistant",
           content: answer.answer,
           sources: answer.sources,
           createdAt: now,
         })
       }
-      await store.audit({
+      await tenant(req).audit({
         actorId: req.principal!.id,
         action: "copilot.queried",
         resourceType: "copilot",
@@ -538,12 +599,13 @@ export function createApp(deps = defaultDependencies()) {
           : req.file.mimetype === "image/png"
             ? ".png"
             : ".jpg"
-      const storageKey = `${id}${extension}`
+      // One directory per organization; the organization id is validated (^[a-z0-9-]+$).
+      const storageKey = `${req.principal!.organizationId}/${id}${extension}`
       const sha256 = crypto
         .createHash("sha256")
         .update(req.file.buffer)
         .digest("hex")
-      const existing = await store.findDocumentByHash(req.principal!.id, sha256)
+      const existing = await tenant(req).findDocumentByHash(sha256)
       if (existing) {
         res.location(`/api/v1/documents/${existing.id}`)
         return res.status(409).json({
@@ -558,12 +620,12 @@ export function createApp(deps = defaultDependencies()) {
           },
         })
       }
-      await fs.mkdir(uploadDir, { recursive: true })
+      await fs.mkdir(path.dirname(path.join(uploadDir, storageKey)), { recursive: true })
       await fs.writeFile(path.join(uploadDir, storageKey), req.file.buffer, {
         flag: "wx",
       })
       try {
-        await store.createDocument({
+        await tenant(req).createDocument({
           id,
           ownerId: req.principal!.id,
           agency,
@@ -589,8 +651,8 @@ export function createApp(deps = defaultDependencies()) {
         // Keep the stored file so extraction can be retried, but never leave the
         // record looking reviewable.
         req.log.warn({ err, documentId: id }, "ocr extraction failed")
-        await store.updateDocumentStatus(id, "failed")
-        await store.audit({
+        await tenant(req).updateDocumentStatus(id, "failed")
+        await tenant(req).audit({
           actorId: req.principal!.id,
           action: "document.ocr_failed",
           resourceType: "document",
@@ -604,8 +666,8 @@ export function createApp(deps = defaultDependencies()) {
           },
         })
       }
-      await store.saveExtraction(id, extraction)
-      await store.audit({
+      await tenant(req).saveExtraction(id, extraction)
+      await tenant(req).audit({
         actorId: req.principal!.id,
         action: "document.uploaded",
         resourceType: "document",
@@ -638,7 +700,7 @@ export function createApp(deps = defaultDependencies()) {
             message: "Agence hors périmètre",
           },
         })
-      const documents = await store.listDocuments(
+      const documents = await tenant(req).listDocuments(
         scope === "*" ? undefined : scope,
       )
       return res.json({
@@ -661,7 +723,7 @@ export function createApp(deps = defaultDependencies()) {
     async (req, res) => {
       const id = String(req.params.id)
       const doc = uuid.safeParse(id).success
-        ? await store.getDocument(id)
+        ? await tenant(req).getDocument(id)
         : undefined
       if (!doc) return res.status(404).json({
           error: { code: "NOT_FOUND", message: "Document introuvable" },
@@ -672,7 +734,7 @@ export function createApp(deps = defaultDependencies()) {
             message: "Document hors périmètre",
           },
         })
-      const extraction = await store.getExtraction(doc.id)
+      const extraction = await tenant(req).getExtraction(doc.id)
       return res.json({
         ...doc,
         storageKey: undefined,
@@ -682,13 +744,49 @@ export function createApp(deps = defaultDependencies()) {
       })
     },
   )
+  // Original file, for the review viewer. Same checks as the metadata: permission, tenant
+  // (the lookup is tenant-scoped) and agency. Served inline with a sandboxing CSP.
+  app.get(
+    "/api/v1/documents/:id/file",
+    requirePermission("documents.read"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      const doc = uuid.safeParse(id).success
+        ? await tenant(req).getDocument(id)
+        : undefined
+      if (!doc)
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      if (scopedAgencies(req, doc.agency) === null)
+        return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+      const file = path.resolve(uploadDir, doc.storageKey)
+      if (!file.startsWith(uploadDir + path.sep))
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      let content: Buffer
+      try {
+        content = await fs.readFile(file)
+      } catch {
+        return res.status(410).json({ error: { code: "FILE_MISSING", message: "Fichier original indisponible" } })
+      }
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "document.file_read",
+        resourceType: "document",
+        resourceId: doc.id,
+      })
+      res.setHeader("Content-Type", doc.mimeType)
+      res.setHeader("Content-Disposition", `inline; filename="${doc.id}${path.extname(doc.storageKey)}"`)
+      res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'")
+      res.setHeader("Cache-Control", "private, no-store")
+      return res.send(content)
+    },
+  )
   app.post(
     "/api/v1/documents/:id/approve",
     requirePermission("invoice.approve"),
     async (req, res) => {
       const id = String(req.params.id)
       const doc = uuid.safeParse(id).success
-        ? await store.getDocument(id)
+        ? await tenant(req).getDocument(id)
         : undefined
       if (!doc) return res.status(404).json({
           error: { code: "NOT_FOUND", message: "Document introuvable" },
@@ -705,7 +803,7 @@ export function createApp(deps = defaultDependencies()) {
             message: `Document au statut ${doc.status} : approbation impossible`,
           },
         })
-      const extraction = await store.getExtraction(doc.id)
+      const extraction = await tenant(req).getExtraction(doc.id)
       if (!extraction || extraction.missingFields.length) return res.status(409).json({
           error: {
             code: "EXTRACTION_INCOMPLETE",
@@ -725,8 +823,8 @@ export function createApp(deps = defaultDependencies()) {
             details: { issues },
           },
         })
-      await store.updateDocumentStatus(doc.id, "approved")
-      await store.audit({
+      await tenant(req).updateDocumentStatus(doc.id, "approved")
+      await tenant(req).audit({
         actorId: req.principal!.id,
         action: "document.approved",
         resourceType: "document",

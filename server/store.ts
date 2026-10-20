@@ -1,8 +1,16 @@
-import { Pool } from "pg"
+import { Pool, type PoolClient } from "pg"
 import type { Extraction } from "./ocr.js"
 
+export type Organization = {
+  id: string
+  name: string
+  status: "active" | "suspended" | "quarantine"
+  /** true for demonstration organizations whose data is entirely fictitious */
+  isSynthetic: boolean
+}
 export type DocumentRecord = {
   id: string
+  organizationId: string
   ownerId: string
   agency: string
   filename: string
@@ -20,6 +28,7 @@ export type AuditEvent = {
   resourceId: string
   metadata?: Record<string, unknown>
 }
+export type StoredAuditEvent = AuditEvent & { organizationId: string }
 export type Conversation = {
   id: string
   ownerId: string
@@ -33,90 +42,112 @@ export type Conversation = {
   }[]
 }
 
-export interface Store {
-  createDocument(record: DocumentRecord): Promise<void>
+/** Every operation is confined to one organization; it cannot be widened by its arguments. */
+export interface TenantStore {
+  readonly organizationId: string
+  createDocument(record: Omit<DocumentRecord, "organizationId">): Promise<void>
   getDocument(id: string): Promise<DocumentRecord | undefined>
-  findDocumentByHash(
-    ownerId: string,
-    sha256: string,
-  ): Promise<DocumentRecord | undefined>
+  findDocumentByHash(sha256: string): Promise<DocumentRecord | undefined>
   listDocuments(agencies?: string[]): Promise<DocumentRecord[]>
   saveExtraction(documentId: string, extraction: Extraction): Promise<void>
   getExtraction(documentId: string): Promise<Extraction | undefined>
   updateDocumentStatus(id: string, status: string): Promise<void>
   audit(event: AuditEvent): Promise<void>
   createConversation(ownerId: string, title: string): Promise<Conversation>
-  getConversation(
-    id: string,
-    ownerId: string,
-  ): Promise<Conversation | undefined>
-  addMessage(
-    id: string,
-    message: Conversation["messages"][number],
-  ): Promise<void>
+  getConversation(id: string, ownerId: string): Promise<Conversation | undefined>
+  addMessage(id: string, message: Conversation["messages"][number]): Promise<void>
+}
+
+export interface Store {
+  forTenant(organizationId: string): TenantStore
+  getOrganization(id: string): Promise<Organization | undefined>
+  /** Creates the organization when absent (used for development organizations only). */
+  ensureOrganization(org: Organization): Promise<void>
   health(): Promise<boolean>
   close(): Promise<void>
 }
 
+const requireTenant = (organizationId: string) => {
+  if (!organizationId) throw new Error("Tenant context required")
+  return organizationId
+}
+
 export class MemoryStore implements Store {
+  organizations = new Map<string, Organization>()
   documents = new Map<string, DocumentRecord>()
-  extractions = new Map<string, Extraction>()
-  conversations = new Map<string, Conversation>()
-  audits: AuditEvent[] = []
-  async createDocument(r: DocumentRecord) {
-    this.documents.set(r.id, r)
+  extractions = new Map<string, Extraction & { organizationId: string }>()
+  conversations = new Map<string, Conversation & { organizationId: string }>()
+  audits: StoredAuditEvent[] = []
+
+  async getOrganization(id: string) {
+    return this.organizations.get(id)
   }
-  async getDocument(id: string) {
-    return this.documents.get(id)
-  }
-  async findDocumentByHash(ownerId: string, sha256: string) {
-    return [...this.documents.values()].find(
-      (d) => d.ownerId === ownerId && d.sha256 === sha256,
-    )
-  }
-  async listDocuments(agencies?: string[]) {
-    const all = [...this.documents.values()].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
-    )
-    if (!agencies) return all
-    return all.filter((d) => agencies.includes(d.agency))
-  }
-  async saveExtraction(documentId: string, extraction: Extraction) {
-    this.extractions.set(documentId, extraction)
-  }
-  async getExtraction(documentId: string) {
-    return this.extractions.get(documentId)
-  }
-  async updateDocumentStatus(id: string, status: string) {
-    const r = this.documents.get(id)
-    if (r) this.documents.set(id, { ...r, status })
-  }
-  async audit(e: AuditEvent) {
-    this.audits.push(e)
-  }
-  async createConversation(ownerId: string, title: string) {
-    const c = {
-      id: crypto.randomUUID(),
-      ownerId,
-      title,
-      createdAt: new Date().toISOString(),
-      messages: [],
-    }
-    this.conversations.set(c.id, c)
-    return c
-  }
-  async getConversation(id: string, ownerId: string) {
-    const c = this.conversations.get(id)
-    return c?.ownerId === ownerId ? c : undefined
-  }
-  async addMessage(id: string, m: Conversation["messages"][number]) {
-    this.conversations.get(id)?.messages.push(m)
+  async ensureOrganization(org: Organization) {
+    if (!this.organizations.has(org.id)) this.organizations.set(org.id, org)
   }
   async health() {
     return true
   }
   async close() {}
+
+  forTenant(organizationId: string): TenantStore {
+    const org = requireTenant(organizationId)
+    const doc = (id: string) => {
+      const d = this.documents.get(id)
+      return d?.organizationId === org ? d : undefined
+    }
+    return {
+      organizationId: org,
+      createDocument: async (r) => {
+        if ([...this.documents.values()].some((d) => d.organizationId === org && d.sha256 === r.sha256))
+          throw new Error("duplicate key value violates unique constraint uq_documents_org_sha")
+        this.documents.set(r.id, { ...r, organizationId: org })
+      },
+      getDocument: async (id) => doc(id),
+      findDocumentByHash: async (sha256) =>
+        [...this.documents.values()].find((d) => d.organizationId === org && d.sha256 === sha256),
+      listDocuments: async (agencies) =>
+        [...this.documents.values()]
+          .filter((d) => d.organizationId === org && (!agencies || agencies.includes(d.agency)))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      saveExtraction: async (documentId, extraction) => {
+        if (!doc(documentId)) throw new Error("Document outside tenant")
+        this.extractions.set(documentId, { ...extraction, organizationId: org })
+      },
+      getExtraction: async (documentId) => {
+        const e = this.extractions.get(documentId)
+        if (!e || e.organizationId !== org) return undefined
+        const { organizationId: _, ...extraction } = e
+        return extraction
+      },
+      updateDocumentStatus: async (id, status) => {
+        const d = doc(id)
+        if (d) this.documents.set(id, { ...d, status })
+      },
+      audit: async (e) => {
+        this.audits.push({ ...e, organizationId: org })
+      },
+      createConversation: async (ownerId, title) => {
+        const c = { id: crypto.randomUUID(), ownerId, title, createdAt: new Date().toISOString(), messages: [] }
+        this.conversations.set(c.id, { ...c, organizationId: org })
+        return c
+      },
+      getConversation: async (id, ownerId) => {
+        const c = this.conversations.get(id)
+        if (!c || c.organizationId !== org || c.ownerId !== ownerId) return undefined
+        const { organizationId: _, ...conversation } = c
+        return conversation
+      },
+      addMessage: async (id, m) => {
+        const c = this.conversations.get(id)
+        if (c?.organizationId === org) c.messages.push(m)
+      },
+    }
+  }
 }
+
+const DOCUMENT_COLUMNS =
+  'id,organization_id AS "organizationId",owner_id AS "ownerId",agency,filename,storage_key AS "storageKey",mime_type AS "mimeType",size_bytes AS size,sha256,status,created_at AS "createdAt"'
 
 export class PostgresStore implements Store {
   private pool: Pool
@@ -131,100 +162,117 @@ export class PostgresStore implements Store {
           : undefined,
     })
   }
-  async createDocument(r: DocumentRecord) {
-    await this.pool.query(
-      "INSERT INTO documents(id,owner_id,agency,filename,storage_key,mime_type,size_bytes,sha256,status,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-      [
-        r.id,
-        r.ownerId,
-        r.agency,
-        r.filename,
-        r.storageKey,
-        r.mimeType,
-        r.size,
-        r.sha256,
-        r.status,
-        r.createdAt,
-      ],
-    )
+
+  /**
+   * Runs fn in a transaction as the restricted role ai_negoce_app with app.organization_id
+   * set, so row-level security confines every statement to this organization even if a
+   * query forgot its explicit filter.
+   */
+  private async tenantTx<T>(organizationId: string, fn: (c: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect()
+    try {
+      await client.query("BEGIN")
+      await client.query("SET LOCAL ROLE ai_negoce_app")
+      await client.query("SELECT set_config('app.organization_id', $1, true)", [organizationId])
+      const result = await fn(client)
+      await client.query("COMMIT")
+      return result
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {})
+      throw error
+    } finally {
+      client.release()
+    }
   }
-  async getDocument(id: string) {
+
+  async getOrganization(id: string) {
     const q = await this.pool.query(
-      'SELECT id,owner_id AS "ownerId",agency,filename,storage_key AS "storageKey",mime_type AS "mimeType",size_bytes AS size,sha256,status,created_at AS "createdAt" FROM documents WHERE id=$1',
+      'SELECT id,name,status,is_synthetic AS "isSynthetic" FROM organizations WHERE id=$1',
       [id],
     )
-    return q.rows[0]
+    return q.rows[0] as Organization | undefined
   }
-  async findDocumentByHash(ownerId: string, sha256: string) {
-    const q = await this.pool.query(
-      'SELECT id,owner_id AS "ownerId",agency,filename,storage_key AS "storageKey",mime_type AS "mimeType",size_bytes AS size,sha256,status,created_at AS "createdAt" FROM documents WHERE owner_id=$1 AND sha256=$2',
-      [ownerId, sha256],
-    )
-    return q.rows[0]
-  }
-  async listDocuments(agencies?: string[]) {
-    const columns =
-      'id,owner_id AS "ownerId",agency,filename,storage_key AS "storageKey",mime_type AS "mimeType",size_bytes AS size,sha256,status,created_at AS "createdAt"'
-    const q = agencies
-      ? await this.pool.query(
-          `SELECT ${columns} FROM documents WHERE agency = ANY($1) ORDER BY created_at DESC`,
-          [agencies],
-        )
-      : await this.pool.query(
-          `SELECT ${columns} FROM documents ORDER BY created_at DESC`,
-        )
-    return q.rows
-  }
-  async saveExtraction(documentId: string, extraction: Extraction) {
+  async ensureOrganization(org: Organization) {
     await this.pool.query(
-      "INSERT INTO invoice_extractions(document_id,provider,payload,confidence,version) VALUES($1,$2,$3,$4,(SELECT COALESCE(MAX(version),0)+1 FROM invoice_extractions WHERE document_id=$1))",
-      [documentId, extraction.provider, extraction, extraction.confidence],
+      "INSERT INTO organizations(id,name,status,is_synthetic) VALUES($1,$2,$3,$4) ON CONFLICT (id) DO NOTHING",
+      [org.id, org.name, org.status, org.isSynthetic],
     )
   }
-  async getExtraction(documentId: string) {
-    const q = await this.pool.query(
-      "SELECT payload FROM invoice_extractions WHERE document_id=$1 ORDER BY version DESC LIMIT 1",
-      [documentId],
-    )
-    return q.rows[0]?.payload
+
+  forTenant(organizationId: string): TenantStore {
+    const org = requireTenant(organizationId)
+    const tx = <T>(fn: (c: PoolClient) => Promise<T>) => this.tenantTx(org, fn)
+    return {
+      organizationId: org,
+      createDocument: (r) =>
+        tx(async (c) => {
+          await c.query(
+            "INSERT INTO documents(id,organization_id,owner_id,agency,filename,storage_key,mime_type,size_bytes,sha256,status,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+            [r.id, org, r.ownerId, r.agency, r.filename, r.storageKey, r.mimeType, r.size, r.sha256, r.status, r.createdAt],
+          )
+        }),
+      getDocument: (id) =>
+        tx(async (c) => (await c.query(`SELECT ${DOCUMENT_COLUMNS} FROM documents WHERE organization_id=$1 AND id=$2`, [org, id])).rows[0]),
+      findDocumentByHash: (sha256) =>
+        tx(async (c) => (await c.query(`SELECT ${DOCUMENT_COLUMNS} FROM documents WHERE organization_id=$1 AND sha256=$2`, [org, sha256])).rows[0]),
+      listDocuments: (agencies) =>
+        tx(async (c) =>
+          (agencies
+            ? await c.query(`SELECT ${DOCUMENT_COLUMNS} FROM documents WHERE organization_id=$1 AND agency = ANY($2) ORDER BY created_at DESC`, [org, agencies])
+            : await c.query(`SELECT ${DOCUMENT_COLUMNS} FROM documents WHERE organization_id=$1 ORDER BY created_at DESC`, [org])
+          ).rows,
+        ),
+      saveExtraction: (documentId, extraction) =>
+        tx(async (c) => {
+          await c.query(
+            "INSERT INTO invoice_extractions(organization_id,document_id,provider,payload,confidence,version) VALUES($1,$2,$3,$4,$5,(SELECT COALESCE(MAX(version),0)+1 FROM invoice_extractions WHERE organization_id=$1 AND document_id=$2))",
+            [org, documentId, extraction.provider, extraction, extraction.confidence],
+          )
+        }),
+      getExtraction: (documentId) =>
+        tx(async (c) => (await c.query("SELECT payload FROM invoice_extractions WHERE organization_id=$1 AND document_id=$2 ORDER BY version DESC LIMIT 1", [org, documentId])).rows[0]?.payload),
+      updateDocumentStatus: (id, status) =>
+        tx(async (c) => {
+          await c.query("UPDATE documents SET status=$3, updated_at=now() WHERE organization_id=$1 AND id=$2", [org, id, status])
+        }),
+      audit: (e) =>
+        tx(async (c) => {
+          await c.query(
+            "INSERT INTO audit_logs(organization_id,actor_id,action,resource_type,resource_id,metadata) VALUES($1,$2,$3,$4,$5,$6)",
+            [org, e.actorId, e.action, e.resourceType, e.resourceId, e.metadata ?? {}],
+          )
+        }),
+      createConversation: (ownerId, title) =>
+        tx(async (c) => {
+          const q = await c.query(
+            'INSERT INTO conversations(organization_id,owner_id,title) VALUES($1,$2,$3) RETURNING id,owner_id AS "ownerId",title,created_at AS "createdAt"',
+            [org, ownerId, title],
+          )
+          return { ...q.rows[0], messages: [] }
+        }),
+      getConversation: (id, ownerId) =>
+        tx(async (c) => {
+          const conv = await c.query(
+            'SELECT id,owner_id AS "ownerId",title,created_at AS "createdAt" FROM conversations WHERE organization_id=$1 AND id=$2 AND owner_id=$3',
+            [org, id, ownerId],
+          )
+          if (!conv.rows[0]) return undefined
+          const m = await c.query(
+            'SELECT role,content,sources,created_at AS "createdAt" FROM messages WHERE organization_id=$1 AND conversation_id=$2 ORDER BY created_at',
+            [org, id],
+          )
+          return { ...conv.rows[0], messages: m.rows }
+        }),
+      addMessage: (id, m) =>
+        tx(async (c) => {
+          await c.query(
+            "INSERT INTO messages(organization_id,conversation_id,role,content,sources,created_at) VALUES($1,$2,$3,$4,$5,$6)",
+            [org, id, m.role, m.content, JSON.stringify(m.sources ?? []), m.createdAt],
+          )
+        }),
+    }
   }
-  async updateDocumentStatus(id: string, status: string) {
-    await this.pool.query(
-      "UPDATE documents SET status=$2, updated_at=now() WHERE id=$1",
-      [id, status],
-    )
-  }
-  async audit(e: AuditEvent) {
-    await this.pool.query(
-      "INSERT INTO audit_logs(actor_id,action,resource_type,resource_id,metadata) VALUES($1,$2,$3,$4,$5)",
-      [e.actorId, e.action, e.resourceType, e.resourceId, e.metadata ?? {}],
-    )
-  }
-  async createConversation(ownerId: string, title: string) {
-    const q = await this.pool.query(
-      'INSERT INTO conversations(owner_id,title) VALUES($1,$2) RETURNING id,owner_id AS "ownerId",title,created_at AS "createdAt"',
-      [ownerId, title],
-    )
-    return { ...q.rows[0], messages: [] }
-  }
-  async getConversation(id: string, ownerId: string) {
-    const c = await this.pool.query(
-      'SELECT id,owner_id AS "ownerId",title,created_at AS "createdAt" FROM conversations WHERE id=$1 AND owner_id=$2',
-      [id, ownerId],
-    )
-    if (!c.rows[0]) return undefined
-    const m = await this.pool.query(
-      'SELECT role,content,sources,created_at AS "createdAt" FROM messages WHERE conversation_id=$1 ORDER BY created_at',
-      [id],
-    )
-    return { ...c.rows[0], messages: m.rows }
-  }
-  async addMessage(id: string, m: Conversation["messages"][number]) {
-    await this.pool.query(
-      "INSERT INTO messages(conversation_id,role,content,sources,created_at) VALUES($1,$2,$3,$4,$5)",
-      [id, m.role, m.content, m.sources ?? [], m.createdAt],
-    )
-  }
+
   async health() {
     try {
       await this.pool.query("SELECT 1")

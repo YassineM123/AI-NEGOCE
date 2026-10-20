@@ -5,7 +5,7 @@ import os from "node:os"
 import path from "node:path"
 import { SignJWT, exportJWK, generateKeyPair } from "jose"
 import { createApp } from "../../../server/app.js"
-import { signDevToken } from "../../../server/auth.js"
+import { DEV_ORGANIZATIONS, signDevToken } from "../../../server/auth.js"
 import { loadConfig } from "../../../server/config.js"
 import { MemoryStore } from "../../../server/store.js"
 import { DisabledOcrProvider, type OcrProvider } from "../../../server/ocr.js"
@@ -25,8 +25,9 @@ export async function startIssuer() {
   })
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r))
   const port = (server.address() as { port: number }).port
+  // Tokens belong to the synthetic demo organization unless the claims say otherwise.
   const sign = (claims: Record<string, unknown>, opts: { issuer?: string; audience?: string; expiresIn?: string | number; key?: CryptoKey } = {}) =>
-    new SignJWT(claims)
+    new SignJWT({ org_id: "demo-fictive", ...claims })
       .setProtectedHeader({ alg: "RS256", kid: "qa-key" })
       .setIssuer(opts.issuer ?? ISSUER)
       .setAudience(opts.audience ?? AUDIENCE)
@@ -42,6 +43,9 @@ export async function startIssuer() {
 
 export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Record<string, string>; data?: unknown } = {}) {
   const store = opts.store ?? new MemoryStore()
+  // Known organizations: the two synthetic development ones plus two "customer" tenants used
+  // by cross-tenant tests.
+  for (const o of [...DEV_ORGANIZATIONS, ...TEST_ORGANIZATIONS]) if (!store.organizations.has(o.id)) store.organizations.set(o.id, { ...o })
   const config = loadConfig({
     NODE_ENV: "test",
     AUTH_MODE: "local-dev",
@@ -55,12 +59,18 @@ export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Re
   return { app: createApp(deps as Parameters<typeof createApp>[0]), store, config }
 }
 
+export const TEST_ORGANIZATIONS = [
+  { id: "client-a", name: "Client A (test)", status: "active" as const, isSynthetic: false },
+  { id: "client-b", name: "Client B (test)", status: "active" as const, isSynthetic: false },
+  { id: "client-suspendu", name: "Client suspendu (test)", status: "suspended" as const, isSynthetic: false },
+]
 /** Test-only HS256 key for AUTH_MODE=local-dev apps built by the test suites. */
 export const TEST_DEV_KEY = "qa-only-local-dev-signing-key-not-a-secret-0001"
 const DEV_ALIASES: Record<string, string> = {
   "dev-admin": "admin",
   "dev-manager-sfax": "manager-sfax",
   "dev-commercial-tunis": "commercial-tunis",
+  "dev-admin-org-b": "admin-org-b",
 }
 /**
  * Authorization header. `dev-<identity>` names a local development identity: a signed session

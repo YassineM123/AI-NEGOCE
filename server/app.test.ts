@@ -95,7 +95,7 @@ describe("documents and BI", () => {
       })
     expect(r.status).toBe(201)
     expect(r.body.extraction.fields).toEqual({})
-    expect((await store.getDocument(r.body.id))?.ownerId).toBe("usr-admin")
+    expect((await store.forTenant("demo-fictive").getDocument(r.body.id))?.ownerId).toBe("usr-admin")
   })
   it("lists only documents inside the caller's agency scope", async () => {
     const tunis = await request(app)

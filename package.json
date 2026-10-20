@@ -12,6 +12,7 @@
     "dev:api": "tsx watch --env-file-if-exists=.env server/index.ts",
     "start:api": "tsx server/index.ts",
     "migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
+    "org": "tsx --env-file-if-exists=.env scripts/org.ts",
     "db:dev:up": "docker compose -f docker-compose.dev.yml up -d --wait",
     "db:dev:down": "docker compose -f docker-compose.dev.yml down",
     "db:seed": "tsx scripts/db-seed.ts",
