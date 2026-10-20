@@ -124,6 +124,35 @@ const post = <T>(path: string, body: unknown) =>
     body: JSON.stringify(body),
   })
 
+export type Session = {
+  id: string
+  name: string
+  role: "admin" | "manager" | "accountant" | "commercial"
+  agencies: string[]
+  organization: { id: string; name: string; isSynthetic: boolean }
+  authMode: "oidc" | "local-dev"
+  /** What the screens actually read: the synthetic sandbox, a verified ERP connector, or nothing. */
+  dataSource: { kind: "sandbox" | "erp" | "none"; label: string }
+  erpStatus: "not_configured" | "available" | "unavailable"
+}
+export type FinancialRulesResponse = {
+  revision: number
+  rules: {
+    currency: string
+    moneyScale: number
+    roundingMode: string
+    vatRounding: "line" | "document"
+    vatRates: { code: string; rate: string; label: string }[]
+    stampDuty: string | null
+    tolerance: string
+    maxDiscountPct: string | null
+    verified: boolean
+    verifiedBy: string | null
+    verifiedAt: string | null
+    source: string
+  }
+}
+
 export type Extraction = {
   fields: Record<string, unknown>
   missingFields: string[]
@@ -222,6 +251,8 @@ async function request<T>(
 }
 
 export const api = {
+  me: () => request<Session>("/me"),
+  financialRules: () => request<FinancialRulesResponse>("/settings/financial-rules"),
   health: () =>
     request<{ status: string; mode?: string; erp?: string; ocr?: string }>("/livez"),
   overview: (agency = "all", period: { from?: string; to?: string } = {}) =>

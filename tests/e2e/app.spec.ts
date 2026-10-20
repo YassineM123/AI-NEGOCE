@@ -184,3 +184,24 @@ test("accessibility basics", async ({ page }) => {
     expect(await page.locator("h1").count()).toBeGreaterThan(0)
   }
 })
+
+test.describe("environment labels", () => {
+  test("the shell shows the session organization and states that data is fictitious", async ({ page }) => {
+    await expect(page.locator(".demo-pill")).toHaveText(/Environnement de démonstration — Données fictives/)
+    await expect(page.locator(".company-select")).toContainText("Organisation de démonstration")
+    await expect(page.locator(".user-card")).toContainText("Administrateur")
+    const body = await page.locator("body").innerText()
+    expect(body).not.toMatch(/CARTHAGE|Sonia|Ben Amor/i)
+  })
+  test("settings show no invented legal identity and the real, unverified financial rules", async ({ page }) => {
+    await go(page, "Paramètres")
+    const content = page.locator(".settings-content")
+    await expect(content).not.toContainText(/9876543|B24185672019|\+216|carthage/i)
+    await expect(page.getByRole("button", { name: "Enregistrement non disponible" })).toBeDisabled()
+    await page.locator(".settings-nav button", { hasText: "Taxes & comptabilité" }).click()
+    await expect(content).toContainText("Non vérifiées")
+    await expect(content).toContainText("non vérifiées par un expert-comptable")
+    await page.locator(".settings-nav button", { hasText: "Intégrations" }).click()
+    await expect(content).toContainText("Non configuré")
+  })
+})

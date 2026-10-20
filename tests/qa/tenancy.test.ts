@@ -165,3 +165,18 @@ describe("review history and user records", () => {
     expect(store.users.get("demo-fictive|usr-admin")).toMatchObject({ role: "admin", displayName: "Administrateur (développement)" })
   })
 })
+
+describe("environment and data-source labels (/me)", () => {
+  it("the demo organization is reported as synthetic sandbox data", async () => {
+    const r = await request(makeApp().app).get("/api/v1/me").set(bearer("dev-admin"))
+    expect(r.body.organization).toMatchObject({ id: "demo-fictive", isSynthetic: true })
+    expect(r.body.dataSource.kind).toBe("sandbox")
+    expect(r.body.dataSource.label).toMatch(/données fictives/)
+    expect(r.body.erpStatus).toBe("not_configured")
+  })
+  it("a customer organization without connector is told so, never shown as connected", async () => {
+    const r = await request(ctx.app).get("/api/v1/me").set(await as("client-a"))
+    expect(r.body.dataSource).toEqual({ kind: "none", label: "Aucune source ERP connectée" })
+    expect(r.body.organization.isSynthetic).toBe(false)
+  })
+})

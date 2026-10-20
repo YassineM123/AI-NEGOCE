@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react"
 import {
   ApiError,
   api,
@@ -9,10 +17,44 @@ import {
   type DashboardPeriod,
   type DocumentResponse,
   type DocumentSummary,
+  type FinancialRulesResponse,
   type Lookups,
   type PageData,
+  type Session,
   type Tone,
 } from "./api"
+
+// Authenticated session from GET /me: user, organization and the data source really in use.
+// Every identity or connectivity label on screen comes from here, never from constants.
+const SessionContext = createContext<ApiState<Session>>({})
+const useSession = () => useContext(SessionContext)
+const roleLabels: Record<Session["role"], string> = {
+  admin: "Administrateur",
+  manager: "Responsable",
+  accountant: "Comptable",
+  commercial: "Commercial",
+}
+/** "Administrateur (développement)" -> "Administrateur" */
+const displayName = (name: string) => name.replace(/\s*\(.*\)\s*$/, "")
+/** Two initials from the significant words: "Organisation de démonstration — …" -> "OD" */
+const initials = (name: string) =>
+  name
+    .replace(/\(.*?\)|—.*$/g, "")
+    .split(/\s+/)
+    .filter((w) => /^\p{Lu}|^\p{L}{3,}/u.test(w))
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("") || "?"
+function environmentLabel(session: ApiState<Session>) {
+  const s = session.data
+  if (session.error) return "Session indisponible"
+  if (!s) return "Chargement de la session…"
+  if (s.dataSource.kind === "sandbox" || s.organization.isSynthetic)
+    return "Environnement de démonstration — Données fictives"
+  if (s.dataSource.kind === "erp") return `ERP connecté : ${s.dataSource.label}`
+  if (s.erpStatus === "unavailable") return "ERP indisponible"
+  return "Aucune source ERP connectée"
+}
 
 type Module = "dashboard" | "sales" | "purchases" | "inventory" | "finance" | "ocr" | "bi" | "copilot" | "settings"
 type IconName = "grid" | "sales" | "cart" | "stock" | "finance" | "ocr" | "chart" | "spark" | "settings" | "bell" | "search" | "plus" | "upload" | "check" | "warning" | "arrow" | "filter" | "download" | "send" | "lock" | "file" | "info"
@@ -273,6 +315,20 @@ const navGroups: {
   },
 ]
 
+function SidebarUser() {
+  const { data } = useSession()
+  return (
+    <div className="user-card">
+      <div className="avatar">{data ? initials(data.name) : "…"}</div>
+      <div>
+        <strong>{data ? displayName(data.name) : "Chargement…"}</strong>
+        <span>{data ? roleLabels[data.role] : ""}</span>
+      </div>
+      <span className="status-dot" />
+    </div>
+  )
+}
+
 function Sidebar({
   active,
   navigate,
@@ -317,14 +373,7 @@ function Sidebar({
           <Icon name="settings" size={18} />
           <span>Paramètres</span>
         </button>
-        <div className="user-card">
-          <div className="avatar">SB</div>
-          <div>
-            <strong>Sonia Ben Amor</strong>
-            <span>Administratrice</span>
-          </div>
-          <span className="status-dot" />
-        </div>
+        <SidebarUser />
       </div>
     </aside>
   )
@@ -343,6 +392,8 @@ const moduleTitles: Record<Module, { title: string; breadcrumb: string }> = {
 }
 
 function Topbar({ module }: { module: Module }) {
+  const session = useSession()
+  const org = session.data?.organization
   return (
     <header className="topbar">
       <div>
@@ -350,8 +401,8 @@ function Topbar({ module }: { module: Module }) {
         <div className="page-title">{moduleTitles[module].title}</div>
       </div>
       <div className="top-actions">
-        <div className="demo-pill">
-          <span /> Environnement de démonstration
+        <div className="demo-pill" title={session.data?.dataSource.label}>
+          <span /> {environmentLabel(session)}
         </div>
         <button className="icon-btn" aria-label="Rechercher">
           <Icon name="search" />
@@ -361,10 +412,10 @@ function Topbar({ module }: { module: Module }) {
           <span />
         </button>
         <div className="company-select">
-          <span className="company-logo">CM</span>
+          <span className="company-logo">{org ? initials(org.name) : "…"}</span>
           <div>
-            <small>Société active</small>
-            <strong>CARTHAGE MOBILIER SARL</strong>
+            <small>Organisation active</small>
+            <strong>{org?.name ?? "—"}</strong>
           </div>
           <Icon name="arrow" size={14} />
         </div>
@@ -410,6 +461,7 @@ const prevLabel = (period: DashboardPeriod, from: string) =>
     : `vs. même période ${from.slice(0, 4)}`
 
 function Dashboard({ navigate }: { navigate: (module: Module) => void }) {
+  const session = useSession()
   const [period, setPeriod] = useState<DashboardPeriod>("month")
   const [agency, setAgency] = useState("all")
   const [data, setData] = useState<DashboardData | null>(null)
@@ -465,7 +517,7 @@ function Dashboard({ navigate }: { navigate: (module: Module) => void }) {
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Bonjour Sonia,</h1>
+          <h1>Bonjour{session.data ? ` ${displayName(session.data.name).split(" ")[0]}` : ""},</h1>
           <p>
             Voici l’essentiel de l’activité
             {data ? ` au ${longDate(data.asOf)}` : ""}.
@@ -1847,6 +1899,7 @@ function InvoiceDrilldown({ data }: { data: BiData | null }) {
 }
 
 function CopilotModule() {
+  const session = useSession()
   const [mode, setMode] = useState<"chat" | "access">("chat")
   const [messages, setMessages] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -1909,7 +1962,7 @@ function CopilotModule() {
             <span className="ai-status">
               <i /> AI Copilot
             </span>
-            <small>Connecté aux données de CARTHAGE MOBILIER SARL</small>
+            <small>Source : {session.data?.dataSource.label ?? "chargement…"}</small>
           </div>
           <div className="segmented mini">
             <button
@@ -2874,7 +2927,22 @@ function ErpModal({
 }
 
 function SettingsPage() {
+  const session = useSession()
+  const org = session.data?.organization
   const [section, setSection] = useState("Société")
+  const [rules, setRules] = useState<ApiState<FinancialRulesResponse>>({})
+  useEffect(() => {
+    if (section !== "Taxes & comptabilité") return
+    let cancelled = false
+    setRules({})
+    api
+      .financialRules()
+      .then((r) => !cancelled && setRules({ data: r }))
+      .catch((e) => !cancelled && setRules({ error: e instanceof Error ? e.message : "Erreur de chargement" }))
+    return () => {
+      cancelled = true
+    }
+  }, [section])
   const sections = [
     ["Société", "Informations légales et fiscales", "settings"],
     ["Utilisateurs & rôles", "Accès, profils et autorisations", "lock"],
@@ -2882,6 +2950,10 @@ function SettingsPage() {
     ["Taxes & comptabilité", "TVA, timbre et journaux", "finance"],
     ["Intégrations", "Connexions et synchronisation", "spark"],
   ] as const
+  // Legal identifiers are not stored by this application yet: the fields stay empty rather
+  // than showing invented values.
+  const notProvided = "Non renseigné"
+  const r = rules.data?.rules
   return (
     <div className="page settings-page">
       <div className="page-heading">
@@ -2891,7 +2963,7 @@ function SettingsPage() {
             Configurez votre société, vos utilisateurs et les règles de gestion.
           </p>
         </div>
-        <Button>Enregistrer les modifications</Button>
+        <Button disabled>Enregistrement non disponible</Button>
       </div>
       <div className="settings-layout">
         <aside className="panel settings-nav">
@@ -2917,57 +2989,104 @@ function SettingsPage() {
                 <div>
                   <h2>Informations de la société</h2>
                   <p>
-                    Ces informations apparaissent sur vos documents commerciaux.
+                    Organisation issue de votre session. Les informations
+                    légales ne sont pas encore reliées à l’ERP.
                   </p>
                 </div>
-                <Badge tone="success">Dossier actif</Badge>
+                {org?.isSynthetic && <Badge tone="warning">Données fictives</Badge>}
               </div>
               <div className="company-profile">
-                <div className="company-big-logo">CM</div>
+                <div className="company-big-logo">{org ? initials(org.name) : "…"}</div>
                 <div>
-                  <strong>CARTHAGE MOBILIER SARL</strong>
-                  <span>Entreprise résidente · Tunisie</span>
+                  <strong>{org?.name ?? "—"}</strong>
+                  <span>Identifiant : {org?.id ?? "—"}</span>
                 </div>
-                <Button variant="secondary">Modifier le logo</Button>
               </div>
               <div className="settings-form">
                 <label className="field span-2">
                   <span>Raison sociale</span>
-                  <input defaultValue="CARTHAGE MOBILIER SARL" />
+                  <input value={org?.name ?? ""} readOnly />
                 </label>
                 <label className="field">
                   <span>Matricule fiscal</span>
-                  <input defaultValue="9876543/B/A/M/000" />
+                  <input placeholder={notProvided} readOnly />
                 </label>
                 <label className="field">
                   <span>Registre national des entreprises</span>
-                  <input defaultValue="B24185672019" />
+                  <input placeholder={notProvided} readOnly />
                 </label>
                 <label className="field span-2">
                   <span>Adresse du siège</span>
-                  <input defaultValue="52, Avenue de Carthage — 1000 Tunis" />
+                  <input placeholder={notProvided} readOnly />
                 </label>
                 <label className="field">
                   <span>Téléphone</span>
-                  <input defaultValue="+216 71 245 680" />
+                  <input placeholder={notProvided} readOnly />
                 </label>
                 <label className="field">
                   <span>E-mail</span>
-                  <input defaultValue="contact@carthage-mobilier.tn" />
-                </label>
-                <label className="field">
-                  <span>Devise principale</span>
-                  <select>
-                    <option>Dinar tunisien (TND)</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Exercice en cours</span>
-                  <select>
-                    <option>2025</option>
-                  </select>
+                  <input placeholder={notProvided} readOnly />
                 </label>
               </div>
+            </>
+          ) : section === "Taxes & comptabilité" ? (
+            <>
+              <div className="settings-head">
+                <div>
+                  <h2>Règles financières</h2>
+                  <p>Règles utilisées pour contrôler les factures avant approbation.</p>
+                </div>
+                {r && (
+                  <Badge tone={r.verified ? "success" : "warning"}>
+                    {r.verified ? "Validées par l’expert-comptable" : "Non vérifiées"}
+                  </Badge>
+                )}
+              </div>
+              {!rules.data && !rules.error && <p>Chargement…</p>}
+              {rules.error && (
+                <div className="warning-box">
+                  <Icon name="warning" size={17} />
+                  <div>
+                    <strong>Règles indisponibles</strong>
+                    <span>{rules.error}</span>
+                  </div>
+                </div>
+              )}
+              {r && (
+                <div className="setting-rows">
+                  <div>
+                    <span>Devise et précision</span>
+                    <strong>
+                      {r.currency} · {r.moneyScale} décimales
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Arrondi</span>
+                    <strong>
+                      {r.roundingMode} · TVA par {r.vatRounding === "line" ? "ligne" : "document"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Taux de TVA configurés</span>
+                    <strong>{r.vatRates.map((v) => `${v.rate} %`).join(" · ")}</strong>
+                  </div>
+                  <div>
+                    <span>Timbre fiscal contrôlé</span>
+                    <strong>{r.stampDuty ?? "Non contrôlé"}</strong>
+                  </div>
+                  <div>
+                    <span>Source</span>
+                    <strong>{r.source}</strong>
+                  </div>
+                  <div>
+                    <span>Révision</span>
+                    <strong>
+                      {rules.data!.revision}
+                      {r.verifiedAt ? ` · validée le ${new Date(r.verifiedAt).toLocaleDateString("fr-FR")}` : ""}
+                    </strong>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="settings-placeholder">
@@ -2982,23 +3101,27 @@ function SettingsPage() {
               </div>
               <h2>{section}</h2>
               <p>
-                Les réglages de cette rubrique sont disponibles dans
-                l’environnement de démonstration.
+                Cette rubrique n’est pas encore disponible : aucun réglage n’y
+                est enregistré.
               </p>
-              <div className="setting-rows">
-                <div>
-                  <span>Configuration principale</span>
-                  <Badge tone="success">Configurée</Badge>
+              {section === "Intégrations" && (
+                <div className="setting-rows">
+                  <div>
+                    <span>Source de données</span>
+                    <strong>{session.data?.dataSource.label ?? "—"}</strong>
+                  </div>
+                  <div>
+                    <span>Connecteur ERP AI-NÉGOCE</span>
+                    <Badge tone={session.data?.erpStatus === "available" ? "success" : "neutral"}>
+                      {session.data?.erpStatus === "available"
+                        ? "Disponible"
+                        : session.data?.erpStatus === "unavailable"
+                          ? "Indisponible"
+                          : "Non configuré"}
+                    </Badge>
+                  </div>
                 </div>
-                <div>
-                  <span>Règles et autorisations</span>
-                  <button className="link-button">Gérer</button>
-                </div>
-                <div>
-                  <span>Dernière modification</span>
-                  <strong>28/02/2025 · Sonia Ben Amor</strong>
-                </div>
-              </div>
+              )}
             </div>
           )}
         </section>
@@ -3009,6 +3132,17 @@ function SettingsPage() {
 
 export default function App() {
   const [module, setModule] = useState<Module>("dashboard")
+  const [session, setSession] = useState<ApiState<Session>>({})
+  useEffect(() => {
+    let cancelled = false
+    api
+      .me()
+      .then((data) => !cancelled && setSession({ data }))
+      .catch((e) => !cancelled && setSession({ error: e instanceof Error ? e.message : "Session indisponible" }))
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const content = useMemo(() => {
     if (
       module === "sales" ||
@@ -3024,12 +3158,14 @@ export default function App() {
     return <Dashboard navigate={setModule} />
   }, [module])
   return (
-    <div className="app-shell">
-      <Sidebar active={module} navigate={setModule} />
-      <main className="main">
-        <Topbar module={module} />
-        {content}
-      </main>
-    </div>
+    <SessionContext.Provider value={session}>
+      <div className="app-shell">
+        <Sidebar active={module} navigate={setModule} />
+        <main className="main">
+          <Topbar module={module} />
+          {content}
+        </main>
+      </div>
+    </SessionContext.Provider>
   )
 }

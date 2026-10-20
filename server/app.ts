@@ -257,12 +257,27 @@ export function createApp(deps = defaultDependencies()) {
   })
   /** Store confined to the caller's organization. */
   const tenant = (req: express.Request) => store.forTenant(req.principal!.organizationId)
-  app.get("/api/v1/me", (req, res) => {
+  app.get("/api/v1/me", async (req, res) => {
     const org = res.locals.organization as Organization
+    // What the screens are really reading, so the UI never implies a production ERP link.
+    const erpStatus = !erp.production ? "not_configured" : (await erp.health().catch(() => false)) ? "available" : "unavailable"
+    const dataSource =
+      req.principal!.organizationId === config.ERP_SANDBOX_ORGANIZATION && config.NODE_ENV !== "production"
+        ? {
+            kind: "sandbox" as const,
+            label: deps.erpDb
+              ? "Bac à sable ERP synthétique (SQLite) — données fictives"
+              : "Jeu de données de test — données fictives",
+          }
+        : erpStatus === "available"
+          ? { kind: "erp" as const, label: `Connecteur ERP « ${erp.name} »` }
+          : { kind: "none" as const, label: "Aucune source ERP connectée" }
     res.json({
       ...req.principal,
       organization: { id: org.id, name: org.name, isSynthetic: org.isSynthetic },
       authMode: auth.mode,
+      dataSource,
+      erpStatus,
     })
   })
   // The SQLite ERP sandbox and the BI/Copilot fixtures hold one synthetic company: only the

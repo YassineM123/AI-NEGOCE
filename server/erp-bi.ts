@@ -264,7 +264,7 @@ export function datasetFrom(db: ErpDatabase): Dataset {
     sales,
     receivables,
     inventory,
-    metadata: { ...datasetMetadata, source: "Base SQLite locale", asOf: db.asOf(), lastUpdated: new Date().toISOString() },
+    metadata: { ...datasetMetadata, source: "Bac à sable ERP synthétique (SQLite) — données fictives", asOf: db.asOf(), lastUpdated: new Date().toISOString() },
   }
   cached = { db, version: db.version, data }
   return data

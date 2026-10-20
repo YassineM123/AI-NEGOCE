@@ -168,7 +168,7 @@ export class ErpDatabase {
         marginDropCount: drops.length,
       },
       agencies: this.agencies().map((a) => a.name),
-      source: "Base SQLite locale",
+      source: "Bac à sable ERP synthétique (SQLite) — données fictives",
     }
   }
 }
