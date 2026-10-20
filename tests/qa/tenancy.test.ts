@@ -6,7 +6,7 @@ import path from "node:path"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import request from "supertest"
 import { MemoryStore } from "../../server/store.js"
-import { AUDIENCE, ISSUER, PDF, bearer, makeApp, startIssuer } from "./support/harness.js"
+import { AUDIENCE, ISSUER, PDF, StubOcr, bearer, makeApp, startIssuer } from "./support/harness.js"
 
 let issuer: Awaited<ReturnType<typeof startIssuer>>
 let ctx: ReturnType<typeof makeApp>
@@ -152,5 +152,16 @@ describe("the synthetic ERP sandbox belongs to the demo organization only", () =
     expect(up.status).toBe(201)
     expect((await request(app).get(`/api/v1/documents/${up.body.id}`).set(bearer("dev-admin-org-b"))).status).toBe(404)
     expect((await request(app).get("/api/v1/me").set(bearer("dev-admin-org-b"))).body.organization.id).toBe("demo-fictive-b")
+  })
+})
+
+describe("review history and user records", () => {
+  it("records the approving user and an approval event in the organization", async () => {
+    const { app, store } = makeApp({ ocr: new StubOcr("complete") })
+    const up = await request(app).post("/api/v1/documents").set(bearer("dev-admin")).field("agency", "Tunis Centre").attach("file", pdf(), { filename: "f.pdf", contentType: "application/pdf" })
+    expect(up.status).toBe(201)
+    expect((await request(app).post(`/api/v1/documents/${up.body.id}/approve`).set(bearer("dev-admin"))).status).toBe(200)
+    expect(store.approvalEvents).toEqual([expect.objectContaining({ organizationId: "demo-fictive", documentId: up.body.id, actorId: "usr-admin", decision: "approved" })])
+    expect(store.users.get("demo-fictive|usr-admin")).toMatchObject({ role: "admin", displayName: "Administrateur (développement)" })
   })
 })

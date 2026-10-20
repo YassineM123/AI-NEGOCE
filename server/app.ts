@@ -216,6 +216,7 @@ export function createApp(deps = defaultDependencies()) {
   // Tenant resolution: the organization comes only from the verified principal, and it must
   // exist and be active. Cached for 30 s, so a suspension takes effect within that delay.
   const organizations = new Map<string, { org: Organization | undefined; at: number }>()
+  const recordedUsers = new Map<string, number>()
   app.use("/api/v1", async (req, res, next) => {
     try {
       await ensureDevOrganizations()
@@ -230,6 +231,14 @@ export function createApp(deps = defaultDependencies()) {
           error: { code: "ORGANIZATION_INACTIVE", message: "Organisation inconnue ou inactive" },
         })
       res.locals.organization = hit.org
+      // Keep the users table current (refreshed at most every 10 minutes per user/role/scope).
+      const p = req.principal!
+      const key = `${id}|${p.id}|${p.role}|${p.agencies.join(",")}`
+      const seen = recordedUsers.get(key)
+      if (!seen || Date.now() - seen > 600_000) {
+        await store.forTenant(id).recordUser({ id: p.id, displayName: p.name, role: p.role, agencies: p.agencies })
+        recordedUsers.set(key, Date.now())
+      }
       return next()
     } catch (error) {
       return next(error)
@@ -824,6 +833,7 @@ export function createApp(deps = defaultDependencies()) {
           },
         })
       await tenant(req).updateDocumentStatus(doc.id, "approved")
+      await tenant(req).recordApprovalEvent({ documentId: doc.id, actorId: req.principal!.id, decision: "approved" })
       await tenant(req).audit({
         actorId: req.principal!.id,
         action: "document.approved",

@@ -29,6 +29,15 @@ export type AuditEvent = {
   metadata?: Record<string, unknown>
 }
 export type StoredAuditEvent = AuditEvent & { organizationId: string }
+export type UserRecord = { id: string; displayName: string; role: string; agencies: string[] }
+export type ApprovalEvent = {
+  documentId: string
+  actorId: string
+  decision: "approved" | "rejected" | "corrected" | "reopened"
+  invoiceId?: string
+  invoiceVersion?: number
+  correction?: Record<string, unknown>
+}
 export type Conversation = {
   id: string
   ownerId: string
@@ -56,6 +65,9 @@ export interface TenantStore {
   createConversation(ownerId: string, title: string): Promise<Conversation>
   getConversation(id: string, ownerId: string): Promise<Conversation | undefined>
   addMessage(id: string, message: Conversation["messages"][number]): Promise<void>
+  /** Upserts the user as seen in the verified token (history and foreign keys only). */
+  recordUser(user: UserRecord): Promise<void>
+  recordApprovalEvent(event: ApprovalEvent): Promise<void>
 }
 
 export interface Store {
@@ -78,6 +90,8 @@ export class MemoryStore implements Store {
   extractions = new Map<string, Extraction & { organizationId: string }>()
   conversations = new Map<string, Conversation & { organizationId: string }>()
   audits: StoredAuditEvent[] = []
+  users = new Map<string, UserRecord & { organizationId: string; lastSeenAt: string }>()
+  approvalEvents: (ApprovalEvent & { organizationId: string; createdAt: string })[] = []
 
   async getOrganization(id: string) {
     return this.organizations.get(id)
@@ -141,6 +155,13 @@ export class MemoryStore implements Store {
       addMessage: async (id, m) => {
         const c = this.conversations.get(id)
         if (c?.organizationId === org) c.messages.push(m)
+      },
+      recordUser: async (u) => {
+        this.users.set(`${org}|${u.id}`, { ...u, organizationId: org, lastSeenAt: new Date().toISOString() })
+      },
+      recordApprovalEvent: async (e) => {
+        if (!doc(e.documentId)) throw new Error("Document outside tenant")
+        this.approvalEvents.push({ ...e, organizationId: org, createdAt: new Date().toISOString() })
       },
     }
   }
@@ -268,6 +289,20 @@ export class PostgresStore implements Store {
           await c.query(
             "INSERT INTO messages(organization_id,conversation_id,role,content,sources,created_at) VALUES($1,$2,$3,$4,$5,$6)",
             [org, id, m.role, m.content, JSON.stringify(m.sources ?? []), m.createdAt],
+          )
+        }),
+      recordUser: (u) =>
+        tx(async (c) => {
+          await c.query(
+            "INSERT INTO users(organization_id,id,display_name,role,agencies) VALUES($1,$2,$3,$4,$5) ON CONFLICT (organization_id,id) DO UPDATE SET display_name=EXCLUDED.display_name, role=EXCLUDED.role, agencies=EXCLUDED.agencies, last_seen_at=now()",
+            [org, u.id, u.displayName, u.role, u.agencies],
+          )
+        }),
+      recordApprovalEvent: (e) =>
+        tx(async (c) => {
+          await c.query(
+            "INSERT INTO approval_events(organization_id,document_id,actor_id,decision,correction,invoice_id,invoice_version) VALUES($1,$2,$3,$4,$5,$6,$7)",
+            [org, e.documentId, e.actorId, e.decision, e.correction ?? null, e.invoiceId ?? null, e.invoiceVersion ?? null],
           )
         }),
     }
