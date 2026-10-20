@@ -482,11 +482,15 @@ function autoStartApi(): Plugin {
         return
       }
       const cli = path.resolve(__dirname, "node_modules/tsx/dist/cli.mjs")
-      child = spawn(process.execPath, [cli, "watch", "--env-file-if-exists=.env", "server/index.ts"], {
-        cwd: __dirname,
-        stdio: "inherit",
-        env: process.env,
-      })
+      child = spawn(
+        process.execPath,
+        [cli, "watch", "--env-file-if-exists=.env", "server/index.ts"],
+        {
+          cwd: __dirname,
+          stdio: "inherit",
+          env: process.env,
+        },
+      )
       child.on("exit", (code) => {
         if (code) server.config.logger.error(`[api] exited with code ${code}`)
         child = null
