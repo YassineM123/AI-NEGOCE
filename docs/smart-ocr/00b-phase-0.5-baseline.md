@@ -125,6 +125,8 @@ References checked, none found: Postgres `documents`, `audit_logs`, `erp_sync` (
 
 `migrations/001_initial.sql` uses `gen_random_uuid()` (core since PG 13), `pgcrypto`, `jsonb`, `timestamptz`, `bigserial`, `numeric(5,4)` and `IF NOT EXISTS`: no feature differs between 16 and 17. Rule for Phase 1: new migrations must stay compatible with PostgreSQL 16 and 17 and be run against both before release; 17 stays the deployment default only once it has been tested.
 
+**Outstanding deployment requirement (decided 2026-10-20):** local development continues on 16.14. Before any staging or production deployment, the full migration set and the PostgreSQL test suite must be run on a fresh PostgreSQL 17 instance. A data volume is bound to its major version: moving an existing volume from 16 to 17 requires `pg_dump`/`pg_restore` (or `pg_upgrade`), never a simple image change (see `01a-authentication.md` §5).
+
 ## 8. Test results
 
 See the final report in the conversation for the run executed on the committed state.

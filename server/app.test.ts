@@ -1,3 +1,4 @@
+import { TEST_DEV_KEY, bearer } from "../tests/qa/support/harness.js"
 import { afterAll, describe, expect, it } from "vitest"
 import request from "supertest"
 import os from "node:os"
@@ -12,6 +13,8 @@ const uploadDir = path.join(os.tmpdir(), `ai-negoce-${crypto.randomUUID()}`)
 const store = new MemoryStore()
 const config = loadConfig({
   NODE_ENV: "test",
+  AUTH_MODE: "local-dev",
+  AUTH_DEV_SIGNING_KEY: TEST_DEV_KEY,
   UPLOAD_DIR: uploadDir,
   FRONTEND_ORIGIN: "http://localhost:8443",
 })
@@ -21,7 +24,7 @@ const app = createApp({
   ocr: new DisabledOcrProvider(),
   erp: new TestErpAdapter(),
 })
-const admin = { Authorization: "Bearer dev-admin" }
+const admin = bearer("dev-admin")
 afterAll(async () => {
   await fs.rm(uploadDir, { recursive: true, force: true })
 })
@@ -42,18 +45,18 @@ describe("security boundary", () => {
   it("enforces agency scope", async () => {
     const ok = await request(app)
       .get("/api/v1/bi/overview?agency=Sfax")
-      .set("Authorization", "Bearer dev-manager-sfax")
+      .set(bearer("dev-manager-sfax"))
     expect(ok.status).toBe(200)
     expect(ok.body.recordCount).toBe(2)
     const denied = await request(app)
       .get("/api/v1/bi/overview?agency=Tunis%20Centre")
-      .set("Authorization", "Bearer dev-manager-sfax")
+      .set(bearer("dev-manager-sfax"))
     expect(denied.status).toBe(403)
   })
   it("prevents commercial users from uploading", async () => {
     const r = await request(app)
       .post("/api/v1/documents")
-      .set("Authorization", "Bearer dev-commercial-tunis")
+      .set(bearer("dev-commercial-tunis"))
       .field("agency", "Tunis Centre")
       .attach("file", Buffer.from("%PDF-1.4\n%%EOF"), {
         filename: "invoice.pdf",
@@ -123,14 +126,14 @@ describe("documents and BI", () => {
 
     const scoped = await request(app)
       .get("/api/v1/documents?agency=Sfax")
-      .set("Authorization", "Bearer dev-manager-sfax")
+      .set(bearer("dev-manager-sfax"))
     expect(scoped.status).toBe(200)
     expect(scoped.body.documents).toHaveLength(1)
     expect(scoped.body.documents[0].filename).toBe("historic-sfax.pdf")
 
     const denied = await request(app)
       .get("/api/v1/documents?agency=Tunis%20Centre")
-      .set("Authorization", "Bearer dev-manager-sfax")
+      .set(bearer("dev-manager-sfax"))
     expect(denied.status).toBe(403)
   })
   it("blocks approval while extraction is incomplete", async () => {

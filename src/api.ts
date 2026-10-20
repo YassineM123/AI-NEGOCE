@@ -116,7 +116,7 @@ export type BiData = {
   }
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3001/api/v1"
 const post = <T>(path: string, body: unknown) =>
   request<T>(path, {
     method: "POST",
@@ -164,13 +164,52 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+// Local development only (API started with AUTH_MODE=local-dev): the API issues a short-lived
+// token for the identity named in VITE_DEV_IDENTITY, which is a name, not a credential.
+// Production builds replace import.meta.env.DEV with false, so this code and the identity are
+// dropped from the bundle; without a token the API answers 401 (no implicit fallback).
+function createDevSession() {
+  let session: Promise<string | null> | null = null
+  return {
+    token() {
+      const identity = import.meta.env.VITE_DEV_IDENTITY
+      if (!identity) return Promise.resolve(null)
+      session ??= fetch(`${API_URL}/auth/dev-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identity }),
+      })
+        .then(async (r) => (r.ok ? ((await r.json()).token as string) : null))
+        .catch(() => null)
+        .then((token) => {
+          if (!token) session = null
+          return token
+        })
+      return session
+    },
+    reset() {
+      session = null
+    },
+  }
+}
+const devSession = import.meta.env.DEV
+  ? createDevSession()
+  : { token: () => Promise.resolve(null), reset() {} }
+
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  retried = false,
+): Promise<T> {
   const headers = new Headers(init?.headers)
-  headers.set(
-    "Authorization",
-    `Bearer ${import.meta.env.VITE_DEV_TOKEN || "dev-admin"}`,
-  )
+  const token = await devSession.token()
+  if (token) headers.set("Authorization", `Bearer ${token}`)
   const response = await fetch(`${API_URL}${path}`, { ...init, headers })
+  // An expired development session (or a restarted API with a new key) is renewed once.
+  if (response.status === 401 && token && !retried) {
+    devSession.reset()
+    return request<T>(path, init, true)
+  }
   const body = await response.json().catch(() => ({}))
   if (!response.ok)
     throw new ApiError(

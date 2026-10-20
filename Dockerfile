@@ -6,7 +6,8 @@ COPY . .
 RUN npm run typecheck && npm test && npm run build
 
 FROM node:22-alpine AS runtime
-ENV NODE_ENV=production
+# A container must accept traffic on its interface, which is only allowed with the identity provider.
+ENV NODE_ENV=production AUTH_MODE=oidc HOST=0.0.0.0
 WORKDIR /app
 RUN addgroup -S app && adduser -S -G app -u 10001 app
 COPY --from=build /app/node_modules ./node_modules

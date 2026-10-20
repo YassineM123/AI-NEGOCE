@@ -8,7 +8,7 @@ import path from "node:path"
 // whose as_of is pinned to the seed manifest, so the suite is deterministic on any calendar day.
 const API_PORT = process.env.E2E_API_PORT ?? "3101"
 const WEB_PORT = process.env.E2E_WEB_PORT ?? "5174"
-const API = `http://localhost:${API_PORT}/api/v1`
+const API = `http://127.0.0.1:${API_PORT}/api/v1`
 const WEB = `http://localhost:${WEB_PORT}`
 export default defineConfig({
   testDir: "tests/e2e",
@@ -35,6 +35,9 @@ export default defineConfig({
       env: {
         API_PORT,
         NODE_ENV: "development",
+        // Explicit local development identities; the API binds to loopback only.
+        AUTH_MODE: "local-dev",
+        HOST: "127.0.0.1",
         LOG_LEVEL: "silent",
         FRONTEND_ORIGIN: WEB,
         ERP_DB_FILE: process.env.E2E_DB_FILE ?? path.resolve("var/e2e-ai-negoce.db"),
@@ -47,7 +50,7 @@ export default defineConfig({
     {
       command: `npx vite --port ${WEB_PORT} --strictPort`,
       url: WEB,
-      env: { PORT: WEB_PORT, VITE_API_URL: API, VITE_DEV_TOKEN: "dev-admin" },
+      env: { PORT: WEB_PORT, VITE_API_URL: API, VITE_DEV_IDENTITY: "admin" },
       reuseExistingServer: false,
       timeout: 60_000,
     },

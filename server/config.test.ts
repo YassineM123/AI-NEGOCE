@@ -13,6 +13,7 @@ describe("production configuration", () => {
     expect(() =>
       loadConfig({
         NODE_ENV: "test",
+        AUTH_MODE: "local-dev",
         OCR_PROVIDER: "http",
         OCR_ENDPOINT: "https://ocr.example.com",
       }),

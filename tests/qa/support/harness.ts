@@ -5,6 +5,7 @@ import os from "node:os"
 import path from "node:path"
 import { SignJWT, exportJWK, generateKeyPair } from "jose"
 import { createApp } from "../../../server/app.js"
+import { signDevToken } from "../../../server/auth.js"
 import { loadConfig } from "../../../server/config.js"
 import { MemoryStore } from "../../../server/store.js"
 import { DisabledOcrProvider, type OcrProvider } from "../../../server/ocr.js"
@@ -43,6 +44,8 @@ export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Re
   const store = opts.store ?? new MemoryStore()
   const config = loadConfig({
     NODE_ENV: "test",
+    AUTH_MODE: "local-dev",
+    AUTH_DEV_SIGNING_KEY: TEST_DEV_KEY,
     UPLOAD_DIR: path.join(os.tmpdir(), `ai-negoce-qa-${crypto.randomUUID()}`),
     FRONTEND_ORIGIN: "http://localhost:8443",
     ...opts.env,
@@ -52,7 +55,21 @@ export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Re
   return { app: createApp(deps as Parameters<typeof createApp>[0]), store, config }
 }
 
-export const bearer = (token: string) => ({ Authorization: `Bearer ${token}` })
+/** Test-only HS256 key for AUTH_MODE=local-dev apps built by the test suites. */
+export const TEST_DEV_KEY = "qa-only-local-dev-signing-key-not-a-secret-0001"
+const DEV_ALIASES: Record<string, string> = {
+  "dev-admin": "admin",
+  "dev-manager-sfax": "manager-sfax",
+  "dev-commercial-tunis": "commercial-tunis",
+}
+/**
+ * Authorization header. `dev-<identity>` names a local development identity: a signed session
+ * token is minted for it with TEST_DEV_KEY. Any other string is sent verbatim, so the raw text
+ * "dev-admin" is itself never a valid credential.
+ */
+export const bearer = (token: string) => ({
+  Authorization: `Bearer ${Object.prototype.hasOwnProperty.call(DEV_ALIASES, token) ? signDevToken(TEST_DEV_KEY, DEV_ALIASES[token]) : token}`,
+})
 export const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\n%%EOF\n")
 
 export class StubOcr implements OcrProvider {

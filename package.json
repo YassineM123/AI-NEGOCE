@@ -20,6 +20,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "vite build",
+    "check:bundle": "tsx --env-file-if-exists=.env scripts/check-bundle.ts",
     "preview": "vite preview",
     "format": "oxfmt",
     "test:e2e": "playwright test",

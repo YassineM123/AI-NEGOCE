@@ -9,7 +9,15 @@ import path from "node:path"
 import pino from "pino"
 import pinoHttp from "pino-http"
 import { z } from "zod"
-import { authenticate, requireRoles, scopedAgencies } from "./auth.js"
+import {
+  DEV_IDENTITIES,
+  createAuth,
+  devIdentity,
+  localOnly,
+  requireRoles,
+  scopedAgencies,
+} from "./auth.js"
+import { requirePermission } from "./permissions.js"
 import { loadConfig, type AppConfig } from "./config.js"
 import {
   defaultDataset,
@@ -52,6 +60,8 @@ export type Dependencies = {
   data?: Dataset
   /** Local ERP database (SQLite) behind the dashboard; null when not built */
   erpDb?: ErpDatabase | null
+  /** Log destination; stdout when absent (tests inject one to inspect the output) */
+  logDestination?: pino.DestinationStream
 }
 export function defaultDependencies(env = process.env): Dependencies {
   const config = loadConfig(env)
@@ -95,10 +105,19 @@ export function createApp(deps = defaultDependencies()) {
     ["image/png", "\u0089PNG"],
     ["image/jpeg", "\u00ff\u00d8\u00ff"],
   ])
-  const logger = pino({
-    level: process.env.LOG_LEVEL || "info",
-    redact: ["req.headers.authorization", "req.body", "res.body"],
-  })
+  const logger = pino(
+    {
+      level: process.env.LOG_LEVEL || "info",
+      redact: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        'res.headers["set-cookie"]',
+        "req.body",
+        "res.body",
+      ],
+    },
+    deps.logDestination,
+  )
   const app = express()
   app.disable("x-powered-by")
   app.use(helmet({ contentSecurityPolicy: false }))
@@ -142,8 +161,41 @@ export function createApp(deps = defaultDependencies()) {
       dependencies: { database, erp: erpReady, ocr: ocr.name !== "disabled" },
     })
   })
-  app.use("/api/v1", authenticate(config))
-  app.get("/api/v1/me", (req, res) => res.json(req.principal))
+  const auth = createAuth(config)
+  if (auth.mode === "local-dev") {
+    // Development identities exist only on this machine: no remote client, no proxy.
+    app.use("/api/v1", localOnly())
+    app.post("/api/v1/auth/dev-session", async (req, res) => {
+      // JSON only: a cross-site form post cannot reach this endpoint without a CORS preflight.
+      if (!req.is("application/json"))
+        return res.status(415).json({
+          error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Corps JSON requis" },
+        })
+      const parsed = z.object({ identity: z.string().max(40) }).safeParse(req.body)
+      const principal = parsed.success ? devIdentity(parsed.data.identity) : undefined
+      if (!parsed.success || !principal)
+        return res.status(400).json({
+          error: {
+            code: "UNKNOWN_IDENTITY",
+            message: "Identité de développement inconnue",
+            details: { available: Object.keys(DEV_IDENTITIES) },
+          },
+        })
+      const session = auth.issueDevToken(parsed.data.identity)
+      await store.audit({
+        actorId: principal.id,
+        action: "auth.dev_session.issued",
+        resourceType: "auth",
+        resourceId: parsed.data.identity,
+      })
+      res.setHeader("Cache-Control", "no-store")
+      return res.status(201).json({ ...session, principal })
+    })
+  }
+  app.use("/api/v1", auth.middleware)
+  app.get("/api/v1/me", (req, res) =>
+    res.json({ ...req.principal, authMode: auth.mode }),
+  )
   const requireErpData: express.RequestHandler = (_req, res, next) =>
     config.NODE_ENV === "production" && !erp.production
       ? res.status(503).json({ error: { code: "ERP_UNAVAILABLE", message: "Source ERP indisponible" } })
@@ -450,7 +502,7 @@ export function createApp(deps = defaultDependencies()) {
   )
   app.post(
     "/api/v1/documents",
-    requireRoles("admin", "manager", "accountant"),
+    requirePermission("documents.upload"),
     upload.single("file"),
     async (req, res) => {
       if (!req.file) return res.status(400).json({
@@ -577,7 +629,7 @@ export function createApp(deps = defaultDependencies()) {
   )
   app.get(
     "/api/v1/documents",
-    requireRoles("admin", "manager", "accountant"),
+    requirePermission("documents.read"),
     async (req, res) => {
       const scope = scopedAgencies(req, String(req.query.agency || "all"))
       if (scope === null) return res.status(403).json({
@@ -605,7 +657,7 @@ export function createApp(deps = defaultDependencies()) {
   )
   app.get(
     "/api/v1/documents/:id",
-    requireRoles("admin", "manager", "accountant"),
+    requirePermission("documents.read"),
     async (req, res) => {
       const id = String(req.params.id)
       const doc = uuid.safeParse(id).success
@@ -632,7 +684,7 @@ export function createApp(deps = defaultDependencies()) {
   )
   app.post(
     "/api/v1/documents/:id/approve",
-    requireRoles("admin", "accountant"),
+    requirePermission("invoice.approve"),
     async (req, res) => {
       const id = String(req.params.id)
       const doc = uuid.safeParse(id).success

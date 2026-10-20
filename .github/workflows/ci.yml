@@ -15,5 +15,6 @@ jobs:
       - run: npx playwright install --with-deps chrome
       - run: npm run test:e2e -- --project=desktop
       - run: npm run build
+      - run: npm run check:bundle
       - run: npm audit --audit-level=high
       - run: docker build -t ai-negoce:${{ github.sha }} .

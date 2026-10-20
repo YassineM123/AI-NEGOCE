@@ -21,8 +21,9 @@ describe("authentication", () => {
     expect((await request(app).get("/api/v1/me").set(bearer("dev-root"))).status).toBe(401)
   })
   it("development tokens are refused when NODE_ENV=production", async () => {
-    const { app } = makeApp({ env: { NODE_ENV: "production", DATABASE_URL: "postgres://unused", OIDC_ISSUER: ISSUER, OIDC_AUDIENCE: AUDIENCE, OIDC_JWKS_URL: issuer.jwksUrl, ERP_BASE_URL: "https://erp.invalid", ERP_API_TOKEN: "x".repeat(20) } })
+    const { app } = makeApp({ env: { NODE_ENV: "production", AUTH_MODE: "oidc", HOST: "0.0.0.0", DATABASE_URL: "postgres://unused", OIDC_ISSUER: ISSUER, OIDC_AUDIENCE: AUDIENCE, OIDC_JWKS_URL: issuer.jwksUrl, ERP_BASE_URL: "https://erp.invalid", ERP_API_TOKEN: "x".repeat(20) } })
     expect((await request(app).get("/api/v1/me").set(bearer("dev-admin"))).status).toBe(401)
+    expect((await request(app).get("/api/v1/me").set("Authorization", "Bearer dev-admin")).status).toBe(401)
   })
   it("accepts a valid OIDC token and maps claims", async () => {
     const t = await issuer.sign({ sub: "u1", name: "QA", role: "accountant", agencies: ["Sfax"] })

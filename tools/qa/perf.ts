@@ -1,6 +1,7 @@
 // Repeatable local performance test. Real HTTP server (ephemeral port) over the 10,000-document
 // synthetic dataset, progressively increasing concurrency. Local machine only — never production.
 // Usage: npx tsx tools/qa/perf.ts [out.json]
+import { TEST_DEV_KEY, bearer } from "../../tests/qa/support/harness.js"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -22,7 +23,7 @@ const loadMs = performance.now() - t0
 const data = { sales: s.sales, receivables: s.receivables, inventory: s.inventory, metadata: s.datasetMetadata }
 const afterLoad = process.memoryUsage()
 const app = createApp({
-  config: loadConfig({ NODE_ENV: "test", RATE_LIMIT_PER_MINUTE: "1000000", UPLOAD_DIR: path.join(os.tmpdir(), `ai-negoce-perf-${Date.now()}`) }),
+  config: loadConfig({ NODE_ENV: "test", AUTH_MODE: "local-dev", AUTH_DEV_SIGNING_KEY: TEST_DEV_KEY, RATE_LIMIT_PER_MINUTE: "1000000", UPLOAD_DIR: path.join(os.tmpdir(), `ai-negoce-perf-${Date.now()}`) }),
   store: new MemoryStore(),
   ocr: new DisabledOcrProvider(),
   erp: new TestErpAdapter(),
@@ -31,7 +32,7 @@ const app = createApp({
 const server = app.listen(0, "127.0.0.1")
 await new Promise((r) => server.once("listening", r))
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/v1`
-const auth = { Authorization: "Bearer dev-admin" }
+const auth = bearer("dev-admin")
 
 type Scenario = { name: string; make: (i: number) => [string, RequestInit] }
 const json = (body: unknown): RequestInit => ({ method: "POST", headers: { ...auth, "Content-Type": "application/json" }, body: JSON.stringify(body) })

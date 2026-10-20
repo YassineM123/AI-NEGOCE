@@ -16,6 +16,8 @@ services:
     build: .
     environment:
       NODE_ENV: production
+      AUTH_MODE: oidc
+      HOST: 0.0.0.0
       API_PORT: 3001
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN}
       DATABASE_URL: postgresql://ai_negoce:${POSTGRES_PASSWORD}@postgres:5432/ai_negoce

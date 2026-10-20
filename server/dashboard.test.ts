@@ -1,3 +1,4 @@
+import { TEST_DEV_KEY, bearer } from "../tests/qa/support/harness.js"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import request from "supertest"
 import { execFileSync } from "node:child_process"
@@ -15,13 +16,13 @@ const csvDir = path.resolve("datasets/synthetic/v1/csv")
 const dbFile = path.join(os.tmpdir(), `ai-negoce-${crypto.randomUUID()}.db`)
 let erpDb: ErpDatabase
 let app: ReturnType<typeof createApp>
-const admin = { Authorization: "Bearer dev-admin" }
+const admin = bearer("dev-admin")
 
 beforeAll(() => {
   execFileSync(process.execPath, ["--import", "tsx", "scripts/db-seed.ts", csvDir, dbFile], { stdio: "ignore" })
   erpDb = new ErpDatabase(dbFile)
   app = createApp({
-    config: loadConfig({ NODE_ENV: "test", FRONTEND_ORIGIN: "http://localhost:8443" }),
+    config: loadConfig({ NODE_ENV: "test", AUTH_MODE: "local-dev", AUTH_DEV_SIGNING_KEY: TEST_DEV_KEY, FRONTEND_ORIGIN: "http://localhost:8443" }),
     store: new MemoryStore(),
     ocr: new DisabledOcrProvider(),
     erp: new TestErpAdapter(),
@@ -58,7 +59,7 @@ describe.skipIf(!fs.existsSync(csvDir))("dashboard from the ERP database", () =>
       sum += one.body.kpis.revenue
     }
     expect(sum).toBeCloseTo(all.kpis.revenue, 2)
-    const sfax = { Authorization: "Bearer dev-manager-sfax" }
+    const sfax = bearer("dev-manager-sfax")
     expect((await request(app).get("/api/v1/dashboard?agency=Sousse").set(sfax)).status).toBe(403)
     const scoped = await request(app).get("/api/v1/dashboard?period=year").set(sfax)
     expect(scoped.body.kpis.revenue).toBeLessThan(all.kpis.revenue)

@@ -1,10 +1,10 @@
 import fs from "node:fs"
 import path from "node:path"
 import { Pool } from "pg"
-import { loadConfig } from "../server/config.js"
-const config = loadConfig()
-if (!config.DATABASE_URL) throw new Error("DATABASE_URL is required")
-const pool = new Pool({ connectionString: config.DATABASE_URL })
+// Migrations only need the database: they do not depend on the API's authentication settings.
+const url = process.env.DATABASE_URL
+if (!url) throw new Error("DATABASE_URL is required")
+const pool = new Pool({ connectionString: url })
 try {
   const sql = fs.readFileSync(
     path.resolve("migrations/001_initial.sql"),
