@@ -31,5 +31,7 @@ __pycache__/
 datasets/synthetic/
 datasets/exports/
 reports/evidence/tmp/
+# Scratch evidence rewritten by every test run without QA_PHASE; named runs (initial/final/...) stay versioned
+reports/evidence/*_adhoc.json
 test-results/
 playwright-report/

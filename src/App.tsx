@@ -871,8 +871,17 @@ function TabBar({
 function OCRModule() {
   const [tab, setTab] = useState("import")
   const [uploaded, setUploaded] = useState(false)
-  const [approved, setApproved] = useState(false)
-  const [showModal, setShowModal] = useState(false)
+  // Number of documents the API reports for this user's agency scope; undefined
+  // while unknown so the tab never shows an invented figure.
+  const [historyCount, setHistoryCount] = useState<number | undefined>()
+  const refreshHistoryCount = () =>
+    api
+      .documents()
+      .then((r) => setHistoryCount(r.documents.length))
+      .catch(() => setHistoryCount(undefined))
+  useEffect(() => {
+    void refreshHistoryCount()
+  }, [])
   const [uploadResult, setUploadResult] = useState<DocumentResponse | null>(null)
   const [uploadError, setUploadError] = useState("")
   const [uploadNotice, setUploadNotice] = useState("")
@@ -888,6 +897,7 @@ function OCRModule() {
       setUploadResult(result)
       setUploaded(true)
       setTab("review")
+      void refreshHistoryCount()
     } catch (error) {
       if (
         error instanceof ApiError &&
@@ -968,7 +978,7 @@ function OCRModule() {
         tabs={[
           { id: "import", label: "1. Importer" },
           { id: "review", label: "2. Vérifier", count: uploaded ? 1 : 0 },
-          { id: "history", label: "3. Historique", count: 8 },
+          { id: "history", label: "3. Historique", count: historyCount },
         ]}
       />
       {tab === "import" && (
@@ -1060,69 +1070,7 @@ function OCRModule() {
           </section>
         )
       )}
-      {tab === "history" && <OCRHistory />}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            {!approved ? (
-              <>
-                <div className="modal-icon success">
-                  <Icon name="check" size={24} />
-                </div>
-                <h2>Valider l’import dans l’ERP ?</h2>
-                <p>
-                  Le document <strong>{uploadResult?.filename ?? "—"}</strong>{" "}
-                  sera transmis à l’ERP et créé en brouillon dans le journal des
-                  achats.
-                </p>
-                <div className="modal-summary">
-                  <span>Journal</span>
-                  <strong>ACH — Achats locaux</strong>
-                  <span>Montants</span>
-                  <strong>non extraits (aucun OCR configuré)</strong>
-                </div>
-                <div className="modal-actions">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowModal(false)}
-                  >
-                    Annuler
-                  </Button>
-                  <Button onClick={() => setApproved(true)}>
-                    Confirmer l’import
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="modal-icon success">
-                  <Icon name="check" size={24} />
-                </div>
-                <h2>Facture importée avec succès</h2>
-                <p>
-                  Le document <strong>{uploadResult?.filename ?? "—"}</strong> a
-                  été créé en brouillon dans le journal des achats.
-                </p>
-                <div className="success-ref">
-                  Identifiant <strong>{uploadResult?.id ?? "—"}</strong>
-                </div>
-                <div className="modal-actions">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setShowModal(false)
-                      setTab("history")
-                    }}
-                  >
-                    Voir l’historique
-                  </Button>
-                  <Button onClick={() => setShowModal(false)}>Fermer</Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {tab === "history" && <OCRHistory onCount={setHistoryCount} />}
     </div>
   )
 }
@@ -1163,7 +1111,7 @@ const documentStatus: Record<string, { label: string; tone: Tone }> = {
   failed: { label: "Échec OCR", tone: "danger" },
 }
 
-function OCRHistory() {
+function OCRHistory({ onCount }: { onCount: (count: number) => void }) {
   const [state, setState] = useState<ApiState<DocumentSummary[]>>({})
   const [reload, setReload] = useState(0)
   const [open, setOpen] = useState<DocumentResponse | null>(null)
@@ -1173,7 +1121,11 @@ function OCRHistory() {
     setState({})
     api
       .documents()
-      .then((r) => !cancelled && setState({ data: r.documents }))
+      .then((r) => {
+        if (cancelled) return
+        setState({ data: r.documents })
+        onCount(r.documents.length)
+      })
       .catch(
         (e) =>
           !cancelled &&

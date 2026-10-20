@@ -453,7 +453,8 @@ function figmaMakeKitPlugin(options: {
  * Starts the backend API (`tsx watch server/index.ts`) alongside the Vite dev
  * server so the app has data without a second terminal. Skipped when the API
  * port is already in use (e.g. `npm run dev:api` running separately) or when
- * AUTO_START_API=false.
+ * AUTO_START_API=false. Like `npm run dev:api`, it reads the local `.env`
+ * (DATABASE_URL for the dev PostgreSQL); variables already set in the shell win.
  */
 function autoStartApi(): Plugin {
   let child: ChildProcess | null = null
@@ -481,7 +482,7 @@ function autoStartApi(): Plugin {
         return
       }
       const cli = path.resolve(__dirname, "node_modules/tsx/dist/cli.mjs")
-      child = spawn(process.execPath, [cli, "watch", "server/index.ts"], {
+      child = spawn(process.execPath, [cli, "watch", "--env-file-if-exists=.env", "server/index.ts"], {
         cwd: __dirname,
         stdio: "inherit",
         env: process.env,
