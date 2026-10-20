@@ -1,0 +1,494 @@
+{
+  "asOf": "2026-06-30",
+  "dataset": "datasets/synthetic/v1",
+  "scenarios": [
+    {
+      "id": "all",
+      "agencies": null,
+      "expected": {
+        "revenue": "52752842.587",
+        "cost": "42683233.134",
+        "grossMargin": "10069609.453",
+        "grossMarginPercent": "19.0883",
+        "receivables": "15068624.752",
+        "overdue": "12932239.991",
+        "inventoryValue": "104840673.383",
+        "lowStockCount": 5330,
+        "dormantStockCount": 4281,
+        "recordCount": 9792,
+        "invoiceCount": 9492,
+        "creditNoteCount": 300,
+        "byAgency": {
+          "Bizerte": {
+            "revenue": "6525899.888",
+            "margin": "1208349.792"
+          },
+          "Nabeul": {
+            "revenue": "5313349.894",
+            "margin": "984750.822"
+          },
+          "Sfax": {
+            "revenue": "13189479.802",
+            "margin": "2536965.943"
+          },
+          "Sousse": {
+            "revenue": "9300860.299",
+            "margin": "1807361.437"
+          },
+          "Tunis Centre": {
+            "revenue": "18423252.704",
+            "margin": "3532181.459"
+          }
+        },
+        "topCustomer": "GROUPE Diba SUARL [FICTIF]",
+        "topCustomerRevenue": "236608.917",
+        "topProduct": "Poste de travail Noanra Max"
+      }
+    },
+    {
+      "id": "agency:Bizerte",
+      "agencies": [
+        "Bizerte"
+      ],
+      "expected": {
+        "revenue": "6525899.888",
+        "cost": "5317550.096",
+        "grossMargin": "1208349.792",
+        "grossMarginPercent": "18.5162",
+        "receivables": "1916042.310",
+        "overdue": "1516213.044",
+        "inventoryValue": "14777468.852",
+        "lowStockCount": 904,
+        "dormantStockCount": 829,
+        "recordCount": 1164,
+        "invoiceCount": 1125,
+        "creditNoteCount": 39,
+        "byAgency": {
+          "Bizerte": {
+            "revenue": "6525899.888",
+            "margin": "1208349.792"
+          }
+        },
+        "topCustomer": "ETS Bafamo [FICTIF]",
+        "topCustomerRevenue": "176623.274",
+        "topProduct": "Guide Dian Lite"
+      }
+    },
+    {
+      "id": "agency:Nabeul",
+      "agencies": [
+        "Nabeul"
+      ],
+      "expected": {
+        "revenue": "5313349.894",
+        "cost": "4328599.072",
+        "grossMargin": "984750.822",
+        "grossMarginPercent": "18.5335",
+        "receivables": "1556020.665",
+        "overdue": "1342460.010",
+        "inventoryValue": "12187497.720",
+        "lowStockCount": 881,
+        "dormantStockCount": 814,
+        "recordCount": 995,
+        "invoiceCount": 974,
+        "creditNoteCount": 21,
+        "byAgency": {
+          "Nabeul": {
+            "revenue": "5313349.894",
+            "margin": "984750.822"
+          }
+        },
+        "topCustomer": "CABINET Mozo SUARL [FICTIF]",
+        "topCustomerRevenue": "217079.553",
+        "topProduct": "Poste de travail Difa Plus"
+      }
+    },
+    {
+      "id": "agency:Sfax",
+      "agencies": [
+        "Sfax"
+      ],
+      "expected": {
+        "revenue": "13189479.802",
+        "cost": "10652513.859",
+        "grossMargin": "2536965.943",
+        "grossMarginPercent": "19.2348",
+        "receivables": "3776006.442",
+        "overdue": "3245973.169",
+        "inventoryValue": "24175107.607",
+        "lowStockCount": 1197,
+        "dormantStockCount": 921,
+        "recordCount": 2456,
+        "invoiceCount": 2373,
+        "creditNoteCount": 83,
+        "byAgency": {
+          "Sfax": {
+            "revenue": "13189479.802",
+            "margin": "2536965.943"
+          }
+        },
+        "topCustomer": "LYCEE Orlu SARL [FICTIF]",
+        "topCustomerRevenue": "191956.116",
+        "topProduct": "Poste de travail Noanra Max"
+      }
+    },
+    {
+      "id": "agency:Sousse",
+      "agencies": [
+        "Sousse"
+      ],
+      "expected": {
+        "revenue": "9300860.299",
+        "cost": "7493498.862",
+        "grossMargin": "1807361.437",
+        "grossMarginPercent": "19.4322",
+        "receivables": "2782087.619",
+        "overdue": "2433825.964",
+        "inventoryValue": "20552668.952",
+        "lowStockCount": 1073,
+        "dormantStockCount": 938,
+        "recordCount": 1739,
+        "invoiceCount": 1697,
+        "creditNoteCount": 42,
+        "byAgency": {
+          "Sousse": {
+            "revenue": "9300860.299",
+            "margin": "1807361.437"
+          }
+        },
+        "topCustomer": "GROUPE Diba SUARL [FICTIF]",
+        "topCustomerRevenue": "236608.917",
+        "topProduct": "Guide Dian Lite"
+      }
+    },
+    {
+      "id": "agency:Tunis Centre",
+      "agencies": [
+        "Tunis Centre"
+      ],
+      "expected": {
+        "revenue": "18423252.704",
+        "cost": "14891071.245",
+        "grossMargin": "3532181.459",
+        "grossMarginPercent": "19.1724",
+        "receivables": "5038467.716",
+        "overdue": "4393767.804",
+        "inventoryValue": "33147930.252",
+        "lowStockCount": 1275,
+        "dormantStockCount": 779,
+        "recordCount": 3438,
+        "invoiceCount": 3323,
+        "creditNoteCount": 115,
+        "byAgency": {
+          "Tunis Centre": {
+            "revenue": "18423252.704",
+            "margin": "3532181.459"
+          }
+        },
+        "topCustomer": "CLINIQUE Timolu [FICTIF]",
+        "topCustomerRevenue": "214931.985",
+        "topProduct": "Poste de travail Noanra Max"
+      }
+    },
+    {
+      "id": "year:2025",
+      "from": "2025-01-01",
+      "to": "2025-12-31",
+      "expected": {
+        "revenue": "35558802.454",
+        "cost": "28775744.361",
+        "grossMargin": "6783058.093",
+        "grossMarginPercent": "19.0756",
+        "receivables": "7031146.653",
+        "overdue": "7031146.653",
+        "inventoryValue": "104840673.383",
+        "lowStockCount": 5330,
+        "dormantStockCount": 4281,
+        "recordCount": 6533,
+        "invoiceCount": 6346,
+        "creditNoteCount": 187,
+        "byAgency": {
+          "Bizerte": {
+            "revenue": "4330108.472",
+            "margin": "798837.223"
+          },
+          "Nabeul": {
+            "revenue": "3448552.452",
+            "margin": "636427.411"
+          },
+          "Sfax": {
+            "revenue": "9002041.568",
+            "margin": "1734841.945"
+          },
+          "Sousse": {
+            "revenue": "6396351.392",
+            "margin": "1252429.921"
+          },
+          "Tunis Centre": {
+            "revenue": "12381748.570",
+            "margin": "2360521.593"
+          }
+        },
+        "topCustomer": "GROUPE Diba SUARL [FICTIF]",
+        "topCustomerRevenue": "189848.799",
+        "topProduct": "Poste de travail Noanra Max"
+      }
+    },
+    {
+      "id": "h1:2026",
+      "from": "2026-01-01",
+      "to": "2026-06-30",
+      "expected": {
+        "revenue": "17194040.133",
+        "cost": "13907488.773",
+        "grossMargin": "3286551.360",
+        "grossMarginPercent": "19.1145",
+        "receivables": "8037478.099",
+        "overdue": "5901093.338",
+        "inventoryValue": "104840673.383",
+        "lowStockCount": 5330,
+        "dormantStockCount": 4281,
+        "recordCount": 3259,
+        "invoiceCount": 3146,
+        "creditNoteCount": 113,
+        "byAgency": {
+          "Bizerte": {
+            "revenue": "2195791.416",
+            "margin": "409512.569"
+          },
+          "Nabeul": {
+            "revenue": "1864797.442",
+            "margin": "348323.411"
+          },
+          "Sfax": {
+            "revenue": "4187438.234",
+            "margin": "802123.998"
+          },
+          "Sousse": {
+            "revenue": "2904508.907",
+            "margin": "554931.516"
+          },
+          "Tunis Centre": {
+            "revenue": "6041504.134",
+            "margin": "1171659.866"
+          }
+        },
+        "topCustomer": "ETS Bafamo [FICTIF]",
+        "topCustomerRevenue": "114890.842",
+        "topProduct": "Guide Dian Lite"
+      }
+    },
+    {
+      "id": "month:2025-02",
+      "from": "2025-02-01",
+      "to": "2025-02-28",
+      "expected": {
+        "revenue": "2817444.711",
+        "cost": "2281431.461",
+        "grossMargin": "536013.250",
+        "grossMarginPercent": "19.0248",
+        "receivables": "567780.820",
+        "overdue": "567780.820",
+        "inventoryValue": "104840673.383",
+        "lowStockCount": 5330,
+        "dormantStockCount": 4281,
+        "recordCount": 504,
+        "invoiceCount": 486,
+        "creditNoteCount": 18,
+        "byAgency": {
+          "Bizerte": {
+            "revenue": "363219.245",
+            "margin": "66616.973"
+          },
+          "Nabeul": {
+            "revenue": "266684.962",
+            "margin": "47453.367"
+          },
+          "Sfax": {
+            "revenue": "665544.887",
+            "margin": "124837.608"
+          },
+          "Sousse": {
+            "revenue": "476212.861",
+            "margin": "97537.626"
+          },
+          "Tunis Centre": {
+            "revenue": "1045782.756",
+            "margin": "199567.676"
+          }
+        },
+        "topCustomer": "STE Veve SA [FICTIF]",
+        "topCustomerRevenue": "45619.692",
+        "topProduct": "Poste de travail Noanra Max"
+      }
+    },
+    {
+      "id": "day:2025-03-15",
+      "from": "2025-03-15",
+      "to": "2025-03-15",
+      "expected": {
+        "revenue": "107621.648",
+        "cost": "85640.120",
+        "grossMargin": "21981.528",
+        "grossMarginPercent": "20.4248",
+        "receivables": "35304.591",
+        "overdue": "35304.591",
+        "inventoryValue": "104840673.383",
+        "lowStockCount": 5330,
+        "dormantStockCount": 4281,
+        "recordCount": 17,
+        "invoiceCount": 17,
+        "creditNoteCount": 0,
+        "byAgency": {
+          "Bizerte": {
+            "revenue": "17828.504",
+            "margin": "4092.629"
+          },
+          "Nabeul": {
+            "revenue": "1397.221",
+            "margin": "426.832"
+          },
+          "Sfax": {
+            "revenue": "35433.933",
+            "margin": "7579.740"
+          },
+          "Sousse": {
+            "revenue": "19287.612",
+            "margin": "3658.121"
+          },
+          "Tunis Centre": {
+            "revenue": "33674.378",
+            "margin": "6224.206"
+          }
+        },
+        "topCustomer": "CLINIQUE Lufa SA [FICTIF]",
+        "topCustomerRevenue": "24894.168",
+        "topProduct": "Étagère Orkati Plus"
+      }
+    },
+    {
+      "id": "empty:2024",
+      "from": "2024-01-01",
+      "to": "2024-12-31",
+      "expected": {
+        "revenue": "0.000",
+        "cost": "0.000",
+        "grossMargin": "0.000",
+        "grossMarginPercent": null,
+        "receivables": "0.000",
+        "overdue": "0.000",
+        "inventoryValue": "104840673.383",
+        "lowStockCount": 5330,
+        "dormantStockCount": 4281,
+        "recordCount": 0,
+        "invoiceCount": 0,
+        "creditNoteCount": 0,
+        "byAgency": {},
+        "topCustomer": null,
+        "topCustomerRevenue": null,
+        "topProduct": null
+      }
+    },
+    {
+      "id": "Sfax:q4-2025",
+      "agencies": [
+        "Sfax"
+      ],
+      "from": "2025-10-01",
+      "to": "2025-12-31",
+      "expected": {
+        "revenue": "2119252.817",
+        "cost": "1708603.927",
+        "grossMargin": "410648.890",
+        "grossMarginPercent": "19.3771",
+        "receivables": "460266.257",
+        "overdue": "460266.257",
+        "inventoryValue": "24175107.607",
+        "lowStockCount": 1197,
+        "dormantStockCount": 921,
+        "recordCount": 412,
+        "invoiceCount": 392,
+        "creditNoteCount": 20,
+        "byAgency": {
+          "Sfax": {
+            "revenue": "2119252.817",
+            "margin": "410648.890"
+          }
+        },
+        "topCustomer": "LYCEE Kata SUARL [FICTIF]",
+        "topCustomerRevenue": "65116.748",
+        "topProduct": "Guide Dian Lite"
+      }
+    },
+    {
+      "id": "Tunis Centre:2026-03",
+      "agencies": [
+        "Tunis Centre"
+      ],
+      "from": "2026-03-01",
+      "to": "2026-03-31",
+      "expected": {
+        "revenue": "1060160.176",
+        "cost": "857166.670",
+        "grossMargin": "202993.506",
+        "grossMarginPercent": "19.1474",
+        "receivables": "567374.983",
+        "overdue": "567374.983",
+        "inventoryValue": "33147930.252",
+        "lowStockCount": 1275,
+        "dormantStockCount": 779,
+        "recordCount": 190,
+        "invoiceCount": 179,
+        "creditNoteCount": 11,
+        "byAgency": {
+          "Tunis Centre": {
+            "revenue": "1060160.176",
+            "margin": "202993.506"
+          }
+        },
+        "topCustomer": "CLINIQUE Batira SUARL [FICTIF]",
+        "topCustomerRevenue": "43120.283",
+        "topProduct": "Écran Dielor Eco"
+      }
+    },
+    {
+      "id": "scope:Tunis Centre+Sfax",
+      "agencies": [
+        "Tunis Centre",
+        "Sfax"
+      ],
+      "expected": {
+        "revenue": "31612732.506",
+        "cost": "25543585.104",
+        "grossMargin": "6069147.402",
+        "grossMarginPercent": "19.1984",
+        "receivables": "8814474.158",
+        "overdue": "7639740.973",
+        "inventoryValue": "57323037.859",
+        "lowStockCount": 2472,
+        "dormantStockCount": 1700,
+        "recordCount": 5894,
+        "invoiceCount": 5696,
+        "creditNoteCount": 198,
+        "byAgency": {
+          "Sfax": {
+            "revenue": "13189479.802",
+            "margin": "2536965.943"
+          },
+          "Tunis Centre": {
+            "revenue": "18423252.704",
+            "margin": "3532181.459"
+          }
+        },
+        "topCustomer": "CLINIQUE Timolu [FICTIF]",
+        "topCustomerRevenue": "214931.985",
+        "topProduct": "Poste de travail Noanra Max"
+      }
+    }
+  ],
+  "properties": {
+    "agencyRevenueSumEqualsCompany": true,
+    "agencyRevenueSum": "52752842.587",
+    "companyRevenue": "52752842.587"
+  }
+}

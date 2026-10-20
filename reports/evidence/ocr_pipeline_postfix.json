@@ -1,0 +1,296 @@
+{
+  "phase": "postfix",
+  "executedAt": "2026-10-15T11:50:20.107Z",
+  "ocrProvider": "disabled",
+  "ocrAccuracy": "NOT MEASURED — no OCR engine configured or available",
+  "uploadLatencyMs": {
+    "n": 16,
+    "p50": 27.1,
+    "p95": 93.9,
+    "max": 93.9
+  },
+  "uploads": [
+    {
+      "file": "clean_invoice.png",
+      "condition": "clean 150-dpi scan, French",
+      "status": 201,
+      "latencyMs": 93.9,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "clean_invoice.jpg",
+      "condition": "clean JPEG q85",
+      "status": 201,
+      "latencyMs": 16.1,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "rotated_7deg.png",
+      "condition": "skewed 7 degrees",
+      "status": 201,
+      "latencyMs": 27.1,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "rotated_90.jpg",
+      "condition": "rotated 90 degrees",
+      "status": 201,
+      "latencyMs": 26.4,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "blurry.png",
+      "condition": "Gaussian blur r=3.2",
+      "status": 201,
+      "latencyMs": 29.2,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "low_resolution.png",
+      "condition": "downscaled to 310x438 px",
+      "status": 201,
+      "latencyMs": 14.7,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "low_resolution_scan.pdf",
+      "condition": "low-resolution image-only PDF",
+      "status": 201,
+      "latencyMs": 30.7,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "scanned_no_text_layer.pdf",
+      "condition": "image-only PDF, no text layer",
+      "status": 201,
+      "latencyMs": 22.1,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "multipage_scanned.pdf",
+      "condition": "2-page image-only PDF (page 2 = continuation)",
+      "status": 201,
+      "latencyMs": 24.7,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "bilingual_fr_ar.png",
+      "condition": "French + Arabic headings (pre-shaped glyphs)",
+      "status": 201,
+      "latencyMs": 33.3,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "decimal_comma.png",
+      "condition": "decimal comma, dot thousands separator (1.234,500)",
+      "status": 201,
+      "latencyMs": 49,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "incomplete_invoice.png",
+      "condition": "invoice number and VAT/TTC totals absent; must be reported missing, not invented",
+      "status": 201,
+      "latencyMs": 10.4,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "unusual_layout.png",
+      "condition": "totals printed above the line table",
+      "status": 201,
+      "latencyMs": 8,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "ocr_confusables.png",
+      "condition": "printed invoice number uses O/l instead of 0/1 (expected normalisation to F001-2026-0042)",
+      "status": 201,
+      "latencyMs": 27.5,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "text_layer_invoice.pdf",
+      "condition": "born-digital PDF with text layer",
+      "status": 201,
+      "latencyMs": 34.4,
+      "fieldsReturned": 0,
+      "missingFields": [
+        "supplier",
+        "invoiceNumber",
+        "invoiceDate",
+        "currency",
+        "lines",
+        "totals"
+      ],
+      "provider": "disabled"
+    },
+    {
+      "file": "fake_image.png",
+      "status": 415,
+      "latencyMs": 6,
+      "note": "content does not match declared type"
+    },
+    {
+      "file": "pdf_declared_as_png.png",
+      "status": 415,
+      "latencyMs": 7,
+      "note": "PDF bytes declared as PNG"
+    },
+    {
+      "file": "windows_exe.pdf",
+      "status": 415,
+      "latencyMs": 19,
+      "note": "executable renamed .pdf"
+    },
+    {
+      "file": "vector.svg",
+      "status": 415,
+      "latencyMs": 7,
+      "note": "SVG with script is not an allowed type"
+    },
+    {
+      "file": "empty.pdf",
+      "status": 415,
+      "latencyMs": 9,
+      "note": "zero-byte file"
+    },
+    {
+      "file": "macro.docx",
+      "status": 415,
+      "latencyMs": 9,
+      "note": "unsupported office format"
+    },
+    {
+      "file": "polyglot.pdf",
+      "status": 201,
+      "latencyMs": 9,
+      "note": "PDF magic + embedded HTML: accepted by signature check (residual risk: no antivirus / deep parsing)"
+    }
+  ]
+}

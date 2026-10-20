@@ -1,0 +1,150 @@
+2026-10-15T12:38:47+01:00
+ ❯ tests/qa/invoice-validation.test.ts (15 tests | 15 failed) 78ms
+ ✓ server/config.test.ts (2 tests) 11ms
+ ❯ tests/qa/bi-anomalies.test.ts (10 tests | 6 failed) 199ms
+ ✓ server/app.test.ts (10 tests) 209ms
+ ❯ tests/qa/defects.test.ts (17 tests | 17 failed) 514ms
+ ✓ tests/qa/ocr-pipeline.test.ts (28 tests) 555ms
+ ❯ tests/qa/bi-validation.test.ts (17 tests | 14 failed) 370ms
+ ❯ tests/qa/security.test.ts (22 tests | 1 failed) 944ms
+ ❯ tests/qa/copilot-benchmark.test.ts (108 tests | 80 failed) 2081ms
+⎯⎯⎯⎯⎯⎯ Failed Tests 133 ⎯⎯⎯⎯⎯⎯
+AssertionError: expected { revenue: +0, grossMargin: +0, …(1) } to deeply equal { revenue: +0, grossMargin: +0, …(1) }
+ ❯ tests/qa/bi-anomalies.test.ts:37:22
+AssertionError: expected { revenue: 2000, cost: 700, …(2) } to deeply equal { revenue: 2000, cost: 700, …(2) }
+ ❯ tests/qa/bi-anomalies.test.ts:37:22
+AssertionError: expected { revenue: 2000, recordCount: 2 } to deeply equal { revenue: 1000, recordCount: 1 }
+ ❯ tests/qa/bi-anomalies.test.ts:37:22
+AssertionError: expected { receivables: 1000 } to deeply equal { receivables: 400 }
+ ❯ tests/qa/bi-anomalies.test.ts:37:22
+AssertionError: expected { revenue: 4000, recordCount: 4 } to deeply equal { revenue: 2000, recordCount: 2 }
+ ❯ tests/qa/bi-anomalies.test.ts:37:22
+AssertionError: expected { revenue: 0.9999999999999999 } to deeply equal { revenue: 1 }
+ ❯ tests/qa/bi-anomalies.test.ts:37:22
+AssertionError: expected false to be true // Object.is equality
+ ❯ tests/qa/bi-validation.test.ts:65:54
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 3613807.518 TND, soit 19.2 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 2596784.653 TND, soit 19.3 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 1842025.414 TND, soit 19.4 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 1235012.246 TND, soit 18.5 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 1003737.364 TND, soit 18.5 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":false,"sources":true},"answer":"Comparaison calculée sur 17127 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":false,"sources":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 3613807.518 TND, soit 19.2 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 2596784.653 TND, soit 19.3 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"names":false,"authorization":true,"sources":true},"answer":"ETS Noka SARL [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"names":false,"authorization":false,"sources":true},"answer":"LYCEE Elsa SA [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"names":true,"authorization":true,"sources":true},"answer":"LYCEE Elsa SA [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"5330 produit(s) sont au niveau ou sous le seuil de réapprovisionnement.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":false,"sources":true},"answer":"5330 produit(s) sont au niveau ou sous le seuil de réapprovisionnement.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"numbers":false,"authorization":true,"sources":true},"answer":"5330 produit(s) sont au niveau ou sous le seuil de réapprovisionnement.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"authorization":false,"sources":true},"answer":"5330 produit(s) sont au niveau ou sous le seuil de réapprovisionnement.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"LYCEE Elsa SA [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 3613807.518 TND, soit 19.2 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 2596784.653 TND, soit 19.3 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 1842025.414 TND, soit 19.4 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 1235012.246 TND, soit 18.5 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 1003737.364 TND, soit 18.5 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"tool":false,"numbers":false,"authorization":true,"noFabrication":true},"answer":"Cette demande concerne des données RH non autorisées pour votre rôle.","status":"denied"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":false,"sources":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":false,"numbers":false,"authorization":true,"sources":true},"answer":"LYCEE Orlu SARL [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"names":true,"authorization":true,"sources":true},"answer":"Comparaison calculée sur 17127 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"numbers":false,"names":true,"authorization":false,"sources":true},"answer":"Comparaison calculée sur 17127 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"tool":true,"names":false,"authorization":true,"sources":true},"answer":"Comparaison calculée sur 17127 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true,"noFabrication":true},"answer":"Cette demande concerne des données RH non autorisées pour votre rôle.","status":"denied"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"numbers":false,"authorization":true,"sources":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"numbers":false,"authorization":true,"sources":true},"answer":"Comparaison calculée sur 17127 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"numbers":false,"authorization":false,"sources":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"names":false,"authorization":true,"sources":true},"answer":"LYCEE Elsa SA [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":true,"names":false,"authorization":false,"sources":true},"answer":"La marge brute calculée est de 10291367.195 TND, soit 19.1 % du chiffre d’affaires.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true},"answer":"Comparaison calculée sur 17127 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true},"answer":"Comparaison calculée sur 3079 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true},"answer":"Comparaison calculée sur 6007 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true},"answer":"Comparaison calculée sur 4259 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true,"noEcho":true},"answer":"Comparaison calculée sur 4259 facture(s).","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: {"grade":{"http":true,"status":false,"authorization":true},"answer":"LYCEE Orlu SARL [FICTIF] génère le chiffre d’affaires le plus élevé sur le périmètre demandé.","status":"ok"}: expected false to be true // Object.is equality
+ ❯ tests/qa/copilot-benchmark.test.ts:201:100
+AssertionError: expected 200 to be 403 // Object.is equality
+ ❯ tests/qa/defects.test.ts:20:22
+AssertionError: expected 200 to be 403 // Object.is equality
+ ❯ tests/qa/defects.test.ts:25:22
+AssertionError: expected 6 to be 4 // Object.is equality
+ ❯ tests/qa/defects.test.ts:31:32
+AssertionError: expected 6 to be 3 // Object.is equality
+ ❯ tests/qa/defects.test.ts:43:32
+AssertionError: expected 200 to be 400 // Object.is equality
+ ❯ tests/qa/defects.test.ts:49:22
+AssertionError: expected 500 to be 400 // Object.is equality
+ ❯ tests/qa/defects.test.ts:57:22
+AssertionError: expected 500 to be 413 // Object.is equality
+ ❯ tests/qa/defects.test.ts:62:22
+AssertionError: expected 'denied' not to be 'denied' // Object.is equality
+ ❯ tests/qa/defects.test.ts:70:31
+AssertionError: expected 'ok' to be 'unsupported' // Object.is equality
+ ❯ tests/qa/defects.test.ts:74:27
+AssertionError: expected 'ok' to be 'unsupported' // Object.is equality
+ ❯ tests/qa/defects.test.ts:79:27
+AssertionError: expected 'ok' to be 'denied' // Object.is equality
+ ❯ tests/qa/defects.test.ts:83:27
+AssertionError: expected [ Array(6) ] to deeply equal [ 'FV-2501-0377', 'FV-2502-0471' ]
+ ❯ tests/qa/defects.test.ts:89:40
+AssertionError: expected 200 to be 409 // Object.is equality
+ ❯ tests/qa/defects.test.ts:99:22
+AssertionError: expected 500 to be 502 // Object.is equality
+ ❯ tests/qa/defects.test.ts:104:23
+AssertionError: expected 201 to be 409 // Object.is equality
+ ❯ tests/qa/defects.test.ts:113:27
+AssertionError: expected 400 to be 403 // Object.is equality
+ ❯ tests/qa/defects.test.ts:119:22
+AssertionError: expected 200 to be 409 // Object.is equality
+ ❯ tests/qa/defects.test.ts:125:114
+AssertionError: server/invoice-validation.ts does not exist: the application performs no invoice validation
+ ❯ tests/qa/invoice-validation.test.ts:32:16
+AssertionError: expected undefined to be 'NOT_FOUND' // Object.is equality
+ ❯ tests/qa/security.test.ts:131:33
+ Test Files  6 failed | 3 passed (9)
+      Tests  133 failed | 96 passed (229)
+   Duration  3.39s (import 48%, tests 43%, transform 8%, worker 1%)

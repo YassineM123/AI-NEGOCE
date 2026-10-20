@@ -1,0 +1,88 @@
+ok         5      0  agencies: unique primary key
+ok       500      0  customers: unique primary key
+ok      7909      0  inventory: unique primary key
+ok      8392      0  payments: unique primary key
+ok        12      0  product_categories: unique primary key
+ok      2000      0  products: unique primary key
+ok      3779      0  purchase_order_lines: unique primary key
+ok      1500      0  purchase_orders: unique primary key
+ok      9492      0  receivables: unique primary key
+ok        25      0  representatives: unique primary key
+ok         4      0  roles: unique primary key
+ok     17127      0  sales_invoice_lines: unique primary key
+ok     10000      0  sales_invoices: unique primary key
+ok     30000      0  stock_movements: unique primary key
+ok      7037      0  supplier_invoice_lines: unique primary key
+ok      3000      0  supplier_invoices: unique primary key
+ok       100      0  suppliers: unique primary key
+ok        25      0  representatives.agency_id -> agencies
+ok       500      0  customers.agency_id -> agencies
+ok       500      0  customers.representative_id -> representatives
+ok      2000      0  products.category_id -> product_categories
+ok      2000      0  products.supplier_id -> suppliers
+ok      1500      0  purchase_orders.supplier_id -> suppliers
+ok      1500      0  purchase_orders.agency_id -> agencies
+ok      3779      0  purchase_order_lines.purchase_order_id -> purchase_orders
+ok      3779      0  purchase_order_lines.product_id -> products
+ok      3000      0  supplier_invoices.supplier_id -> suppliers
+ok      3000      0  supplier_invoices.purchase_order_id -> purchase_orders
+ok      3000      0  supplier_invoices.agency_id -> agencies
+ok      7037      0  supplier_invoice_lines.supplier_invoice_id -> supplier_invoices
+ok      7037      0  supplier_invoice_lines.product_id -> products
+ok     10000      0  sales_invoices.customer_id -> customers
+ok     10000      0  sales_invoices.agency_id -> agencies
+ok     10000      0  sales_invoices.representative_id -> representatives
+ok     10000      0  sales_invoices.original_invoice_id -> sales_invoices
+ok     17127      0  sales_invoice_lines.sales_invoice_id -> sales_invoices
+ok     17127      0  sales_invoice_lines.product_id -> products
+ok      8392      0  payments.sales_invoice_id -> sales_invoices
+ok      8392      0  payments.customer_id -> customers
+ok      9492      0  receivables.sales_invoice_id -> sales_invoices
+ok     30000      0  stock_movements.product_id -> products
+ok     30000      0  stock_movements.agency_id -> agencies
+ok      7909      0  inventory.product_id -> products
+ok      7909      0  inventory.agency_id -> agencies
+ok     10000      0  sales_invoices: required fields present
+ok      3000      0  supplier_invoices: required fields present
+ok      2000      0  products: required fields present
+ok       500      0  customers: required fields present
+ok      8392      0  payments: required fields present
+ok     10000      0  sales_invoices: monetary values are non-negative 3-decimal numbers
+ok     17127      0  sales_invoice_lines: monetary values are non-negative 3-decimal numbers
+ok      3000      0  supplier_invoices: monetary values are non-negative 3-decimal numbers
+ok      8392      0  payments: monetary values are non-negative 3-decimal numbers
+ok      2000      0  products: monetary values are non-negative 3-decimal numbers
+ok      8392      0  payments: amount strictly positive
+ok     17127      0  sales_invoice_lines: integer positive quantity
+ok     17127      0  sales_invoice_lines: VAT rate in scenario set {0,7,13,19}
+ok      7037      0  supplier_invoice_lines: integer positive quantity
+ok      7037      0  supplier_invoice_lines: VAT rate in scenario set {0,7,13,19}
+ok      3779      0  purchase_order_lines: integer positive quantity
+ok     30000      0  stock_movements: quantity is a non-zero integer
+ok     10000      0  sales_invoices: date within dataset period, due >= issue
+ok      3000      0  supplier_invoices: due >= issue
+ok      8392      0  payments: paid on/after invoice date and not after as-of
+ok      1677      0  supplier_invoices: invoice on/after purchase order date
+ok     17127      0  sales_invoice_lines: line HT = qty x price x (1 - discount)
+ok     17127      0  sales_invoice_lines: line VAT = HT x rate
+ok     17127      0  sales_invoice_lines: line cost = qty x unit cost
+ok     10000      0  sales_invoices: header totals = sum of lines (+ stamp)
+ok     10000      0  sales_invoices: every document has >= 1 line (orphan header)
+ok      3000      0  supplier_invoices: header totals = sum of lines
+ok      3000      0  supplier_invoices: (supplier, number) unique — duplicate invoice detection
+ok     10000      0  sales_invoices: document number unique
+ok      1677      0  supplier_invoices: same supplier as its purchase order
+ok      1500      0  purchase_orders: invoiced quantity <= ordered quantity
+ok       300      0  credit notes: reference a posted invoice of the same customer; returned qty <= sold qty
+ok      8392      0  payments: linked to a posted (non-cancelled) invoice of the same customer
+ok      9700      0  sales_invoices: payments + credits never exceed TTC
+ok      9492      0  receivables: outstanding = TTC - credits - payments
+ok      9492      0  receivables: status consistent with balance
+ok      9492      0  receivables: one row per posted invoice
+ok      7909      0  inventory: current = opening + sum(movements)
+ok     30000      0  stock_movements: running balance never negative
+ok     16733      0  stock_movements: every posted invoice line has a matching sale movement; cancelled invoices move no stock
+ok      2400      0  stock_movements: transfers net to zero
+ok     10000      0  sales_invoices: customer and representative belong to the invoice agency
+ok       500      0  customers: representative belongs to customer agency
+87 checks, 0 failing

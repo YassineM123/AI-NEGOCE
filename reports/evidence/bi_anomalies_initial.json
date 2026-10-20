@@ -1,0 +1,120 @@
+[
+  {
+    "id": "NEGATIVE_MARGIN",
+    "ok": true,
+    "expected": {
+      "revenue": 500,
+      "cost": 800,
+      "grossMargin": -300,
+      "grossMarginPercent": -60
+    },
+    "actual": {
+      "revenue": 500,
+      "cost": 800,
+      "grossMargin": -300,
+      "grossMarginPercent": -60
+    }
+  },
+  {
+    "id": "ZERO_REVENUE_PERIOD",
+    "ok": false,
+    "expected": {
+      "revenue": 0,
+      "grossMargin": 0,
+      "grossMarginPercent": null
+    },
+    "actual": {
+      "revenue": 0,
+      "grossMargin": 0,
+      "grossMarginPercent": 0
+    }
+  },
+  {
+    "id": "MISSING_COST",
+    "ok": false,
+    "expected": {
+      "revenue": 2000,
+      "cost": 700,
+      "missingCostRecords": 1,
+      "marginCoverage": "partial"
+    },
+    "actual": {
+      "revenue": 2000,
+      "cost": 700
+    }
+  },
+  {
+    "id": "CANCELLED_INVOICE",
+    "ok": false,
+    "expected": {
+      "revenue": 1000,
+      "recordCount": 1
+    },
+    "actual": {
+      "revenue": 2000,
+      "recordCount": 2
+    }
+  },
+  {
+    "id": "CREDIT_NOTE",
+    "ok": true,
+    "expected": {
+      "revenue": 800,
+      "cost": 560
+    },
+    "actual": {
+      "revenue": 800,
+      "cost": 560
+    }
+  },
+  {
+    "id": "PARTIAL_PAYMENT",
+    "ok": false,
+    "expected": {
+      "receivables": 400
+    },
+    "actual": {
+      "receivables": 1000
+    }
+  },
+  {
+    "id": "OUT_OF_PERIOD",
+    "ok": false,
+    "expected": {
+      "revenue": 2000,
+      "recordCount": 2
+    },
+    "actual": {
+      "revenue": 4000,
+      "recordCount": 4
+    }
+  },
+  {
+    "id": "FLOAT_PRECISION",
+    "ok": true,
+    "expected": {
+      "revenue": 1
+    },
+    "actual": {
+      "revenue": 0.9999999999999999
+    }
+  },
+  {
+    "id": "DUPLICATE_TRANSACTION",
+    "ok": true,
+    "expected": "documented: API sums both rows (2000); duplicate detection lives in tools/qa/data_quality.py",
+    "actual": {
+      "revenue": 2000
+    }
+  },
+  {
+    "id": "INCONSISTENT_AGENCY_ID",
+    "ok": true,
+    "expected": {
+      "revenue": 1000
+    },
+    "actual": {
+      "revenue": 1000
+    }
+  }
+]

@@ -1,0 +1,127 @@
+[
+  {
+    "mutation": "duplicate customer id",
+    "table": "customers",
+    "expectedCategory": "duplicate_primary_key",
+    "detectedCategories": [
+      "duplicate_primary_key"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "orphan invoice line (unknown invoice)",
+    "table": "sales_invoice_lines",
+    "expectedCategory": "broken_foreign_key",
+    "detectedCategories": [
+      "broken_foreign_key",
+      "inventory_movements",
+      "invoice_totals"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "missing invoice number",
+    "table": "sales_invoices",
+    "expectedCategory": "missing_value",
+    "detectedCategories": [
+      "missing_value"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "header total off by 1 millime",
+    "table": "sales_invoices",
+    "expectedCategory": "invoice_totals",
+    "detectedCategories": [
+      "invoice_totals"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "line VAT wrong",
+    "table": "sales_invoice_lines",
+    "expectedCategory": "financial_reconciliation",
+    "detectedCategories": [
+      "financial_reconciliation",
+      "invoice_totals"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "over-payment",
+    "table": "payments",
+    "expectedCategory": "payment_balance",
+    "detectedCategories": [
+      "payment_balance"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "payment before invoice date",
+    "table": "payments",
+    "expectedCategory": "invalid_date",
+    "detectedCategories": [
+      "invalid_date"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "negative payment",
+    "table": "payments",
+    "expectedCategory": "invalid_numeric",
+    "detectedCategories": [
+      "invalid_numeric",
+      "payment_balance"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "non-integer quantity",
+    "table": "sales_invoice_lines",
+    "expectedCategory": "invalid_type",
+    "detectedCategories": [
+      "financial_reconciliation",
+      "invalid_type",
+      "inventory_movements"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "invoice in wrong agency",
+    "table": "sales_invoices",
+    "expectedCategory": "cross_agency_integrity",
+    "detectedCategories": [
+      "cross_agency_integrity"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "stock drift",
+    "table": "inventory",
+    "expectedCategory": "inventory_movements",
+    "detectedCategories": [
+      "inventory_movements"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "duplicate supplier invoice number",
+    "table": "supplier_invoices",
+    "expectedCategory": "duplicate_invoice",
+    "detectedCategories": [
+      "duplicate_invoice",
+      "referential_integrity"
+    ],
+    "detected": true
+  },
+  {
+    "mutation": "unknown VAT rate",
+    "table": "sales_invoice_lines",
+    "expectedCategory": "invalid_numeric",
+    "detectedCategories": [
+      "financial_reconciliation",
+      "invalid_numeric"
+    ],
+    "detected": true
+  }
+]

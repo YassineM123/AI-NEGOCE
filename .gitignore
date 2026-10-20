@@ -1,0 +1,35 @@
+node_modules/
+dist/
+coverage/
+
+# Secrets and local environment: only the documented template is versioned
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local runtime data: ERP sandbox databases, Postgres dumps, uploaded documents
+var/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.dump
+
+# Generated scratch output (includes realistic-looking test invoices without a [FICTIF] marker)
+tmp/
+output/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# QA datasets: synthetic outputs are reproducible from the generator; real exports must never be committed
+datasets/synthetic/
+datasets/exports/
+reports/evidence/tmp/
+test-results/
+playwright-report/

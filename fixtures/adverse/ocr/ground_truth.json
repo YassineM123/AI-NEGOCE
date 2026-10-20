@@ -1,0 +1,1022 @@
+[
+  {
+    "file": "clean_invoice.png",
+    "condition": "clean 150-dpi scan, French",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "clean_invoice.jpg",
+    "condition": "clean JPEG q85",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "rotated_7deg.png",
+    "condition": "skewed 7 degrees",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "rotated_90.jpg",
+    "condition": "rotated 90 degrees",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "blurry.png",
+    "condition": "Gaussian blur r=3.2",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "low_resolution.png",
+    "condition": "downscaled to 310x438 px",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "low_resolution_scan.pdf",
+    "condition": "low-resolution image-only PDF",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "scanned_no_text_layer.pdf",
+    "condition": "image-only PDF, no text layer",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "multipage_scanned.pdf",
+    "condition": "2-page image-only PDF (page 2 = continuation)",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0043",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        },
+        {
+          "productId": null,
+          "description": "Article test 01",
+          "quantity": 1,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "2.500",
+          "lineVat": "0.475"
+        },
+        {
+          "productId": null,
+          "description": "Article test 02",
+          "quantity": 2,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "5.000",
+          "lineVat": "0.950"
+        },
+        {
+          "productId": null,
+          "description": "Article test 03",
+          "quantity": 3,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "7.500",
+          "lineVat": "1.425"
+        },
+        {
+          "productId": null,
+          "description": "Article test 04",
+          "quantity": 4,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "10.000",
+          "lineVat": "1.900"
+        },
+        {
+          "productId": null,
+          "description": "Article test 05",
+          "quantity": 5,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "12.500",
+          "lineVat": "2.375"
+        },
+        {
+          "productId": null,
+          "description": "Article test 06",
+          "quantity": 6,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "15.000",
+          "lineVat": "2.850"
+        },
+        {
+          "productId": null,
+          "description": "Article test 07",
+          "quantity": 7,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "17.500",
+          "lineVat": "3.325"
+        },
+        {
+          "productId": null,
+          "description": "Article test 08",
+          "quantity": 8,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "20.000",
+          "lineVat": "3.800"
+        },
+        {
+          "productId": null,
+          "description": "Article test 09",
+          "quantity": 9,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "22.500",
+          "lineVat": "4.275"
+        },
+        {
+          "productId": null,
+          "description": "Article test 10",
+          "quantity": 10,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "25.000",
+          "lineVat": "4.750"
+        },
+        {
+          "productId": null,
+          "description": "Article test 11",
+          "quantity": 11,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "27.500",
+          "lineVat": "5.225"
+        },
+        {
+          "productId": null,
+          "description": "Article test 12",
+          "quantity": 12,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "30.000",
+          "lineVat": "5.700"
+        },
+        {
+          "productId": null,
+          "description": "Article test 13",
+          "quantity": 13,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "32.500",
+          "lineVat": "6.175"
+        },
+        {
+          "productId": null,
+          "description": "Article test 14",
+          "quantity": 14,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "35.000",
+          "lineVat": "6.650"
+        },
+        {
+          "productId": null,
+          "description": "Article test 15",
+          "quantity": 15,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "37.500",
+          "lineVat": "7.125"
+        },
+        {
+          "productId": null,
+          "description": "Article test 16",
+          "quantity": 16,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "40.000",
+          "lineVat": "7.600"
+        },
+        {
+          "productId": null,
+          "description": "Article test 17",
+          "quantity": 17,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "42.500",
+          "lineVat": "8.075"
+        },
+        {
+          "productId": null,
+          "description": "Article test 18",
+          "quantity": 18,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "45.000",
+          "lineVat": "8.550"
+        },
+        {
+          "productId": null,
+          "description": "Article test 19",
+          "quantity": 19,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "47.500",
+          "lineVat": "9.025"
+        },
+        {
+          "productId": null,
+          "description": "Article test 20",
+          "quantity": 20,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "50.000",
+          "lineVat": "9.500"
+        },
+        {
+          "productId": null,
+          "description": "Article test 21",
+          "quantity": 21,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "52.500",
+          "lineVat": "9.975"
+        },
+        {
+          "productId": null,
+          "description": "Article test 22",
+          "quantity": 22,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "55.000",
+          "lineVat": "10.450"
+        },
+        {
+          "productId": null,
+          "description": "Article test 23",
+          "quantity": 23,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "57.500",
+          "lineVat": "10.925"
+        },
+        {
+          "productId": null,
+          "description": "Article test 24",
+          "quantity": 24,
+          "unitPrice": "2.500",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "60.000",
+          "lineVat": "11.400"
+        }
+      ],
+      "totals": {
+        "ht": "2055.000",
+        "vat": "333.450",
+        "stamp": "1.000",
+        "ttc": "2389.450"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "bilingual_fr_ar.png",
+    "condition": "French + Arabic headings (pre-shaped glyphs)",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "decimal_comma.png",
+    "condition": "decimal comma, dot thousands separator (1.234,500)",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "incomplete_invoice.png",
+    "condition": "invoice number and VAT/TTC totals absent; must be reported missing, not invented",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": null,
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": null,
+        "stamp": null,
+        "ttc": null
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "unusual_layout.png",
+    "condition": "totals printed above the line table",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "ocr_confusables.png",
+    "condition": "printed invoice number uses O/l instead of 0/1 (expected normalisation to F001-2026-0042)",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": false
+  },
+  {
+    "file": "text_layer_invoice.pdf",
+    "condition": "born-digital PDF with text layer",
+    "groundTruth": {
+      "supplierId": "SUP-001",
+      "supplierName": "STE Ravino SARL [FICTIF]",
+      "invoiceNumber": "F001-2026-0042",
+      "invoiceDate": "2026-03-12",
+      "purchaseOrderId": "PO-00001",
+      "currency": "TND",
+      "lines": [
+        {
+          "productId": null,
+          "description": "Ramette A4 Eco 80g",
+          "quantity": 50,
+          "unitPrice": "9.500",
+          "discountPct": 0,
+          "vatRate": 7,
+          "lineHt": "475.000",
+          "lineVat": "33.250"
+        },
+        {
+          "productId": null,
+          "description": "Toner Ravi Pro 85A",
+          "quantity": 4,
+          "unitPrice": "185.000",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "740.000",
+          "lineVat": "140.600"
+        },
+        {
+          "productId": null,
+          "description": "Classeur dos 8cm",
+          "quantity": 24,
+          "unitPrice": "3.750",
+          "discountPct": 0,
+          "vatRate": 19,
+          "lineHt": "90.000",
+          "lineVat": "17.100"
+        }
+      ],
+      "totals": {
+        "ht": "1305.000",
+        "vat": "190.950",
+        "stamp": "1.000",
+        "ttc": "1496.950"
+      },
+      "supplierTaxId": "1234567A/A/M/000"
+    },
+    "textLayer": true
+  }
+]

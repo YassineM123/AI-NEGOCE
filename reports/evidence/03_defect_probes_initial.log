@@ -1,0 +1,80 @@
+ × tests/qa/defects.test.ts > BUG-001 / BUG-002 agency scope > BUG-001 a verified token WITHOUT agencies claim must not get company-wide data 53ms
+   → expected 200 to be 403 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-001 / BUG-002 agency scope > BUG-001 an empty agencies list must not get company-wide copilot answers 16ms
+   → expected 200 to be 403 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-001 / BUG-002 agency scope > BUG-002 a two-agency user requesting 'all' only sees those two agencies (no Sousse) 5ms
+   → expected 6 to be 4 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-003 BI date filters > from/to restrict the period (Feb 2025 = 3 invoices) 6ms
+   → expected 6 to be 3 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-003 BI date filters > rejects malformed dates with 400 6ms
+   → expected 200 to be 400 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-004 HTTP error mapping > malformed JSON returns 400, not 500 7ms
+   → expected 500 to be 400 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-004 HTTP error mapping > oversized JSON returns 413, not 500 8ms
+   → expected 500 to be 413 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-005 a question about customer payments is not refused as HR data 6ms
+   → expected 'denied' not to be 'denied' // Object.is equality
+ × tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-006 an out-of-domain question is declined, not answered with a margin figure 9ms
+   → expected 'ok' to be 'unsupported' // Object.is equality
+ × tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-006 supplier questions are declined (no supplier data in scope) 9ms
+   → expected 'ok' to be 'unsupported' // Object.is equality
+ × tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-007 a Tunis commercial asking for Sfax figures is refused 7ms
+   → expected 'ok' to be 'denied' // Object.is equality
+ × tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-007 an admin asking about Sfax gets Sfax figures only 10ms
+   → expected [ Array(6) ] to deeply equal [ 'FV-2501-0377', 'FV-2502-0471' ]
+ × tests/qa/defects.test.ts > BUG-008..BUG-012 document workflow > BUG-008 approval is refused when the configured OCR returned an incomplete extraction 19ms
+   → expected 200 to be 409 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-008..BUG-012 document workflow > BUG-009 an OCR failure marks the document failed (no orphan 'needs_review' record) and returns 502 10ms
+   → expected 500 to be 502 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-008..BUG-012 document workflow > BUG-010 re-uploading the same file is detected as a duplicate (409) 13ms
+   → expected 201 to be 409 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-008..BUG-012 document workflow > BUG-011 uploading into a foreign agency returns 403 (not 400) 5ms
+   → expected 400 to be 403 // Object.is equality
+ × tests/qa/defects.test.ts > BUG-008..BUG-012 document workflow > BUG-012 a document cannot be approved twice 11ms
+   → expected 200 to be 409 // Object.is equality
+⎯⎯⎯⎯⎯⎯ Failed Tests 17 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  tests/qa/defects.test.ts > BUG-001 / BUG-002 agency scope > BUG-001 a verified token WITHOUT agencies claim must not get company-wide data
+AssertionError: expected 200 to be 403 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-001 / BUG-002 agency scope > BUG-001 an empty agencies list must not get company-wide copilot answers
+AssertionError: expected 200 to be 403 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-001 / BUG-002 agency scope > BUG-002 a two-agency user requesting 'all' only sees those two agencies (no Sousse)
+AssertionError: expected 6 to be 4 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-003 BI date filters > from/to restrict the period (Feb 2025 = 3 invoices)
+AssertionError: expected 6 to be 3 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-003 BI date filters > rejects malformed dates with 400
+AssertionError: expected 200 to be 400 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-004 HTTP error mapping > malformed JSON returns 400, not 500
+AssertionError: expected 500 to be 400 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-004 HTTP error mapping > oversized JSON returns 413, not 500
+AssertionError: expected 500 to be 413 // Object.is equality
+- Expected
++ Received
+ FAIL  tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-005 a question about customer payments is not refused as HR data
+AssertionError: expected 'denied' not to be 'denied' // Object.is equality
+ FAIL  tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-006 an out-of-domain question is declined, not answered with a margin figure
+AssertionError: expected 'ok' to be 'unsupported' // Object.is equality
+Expected: "unsupported"
+Received: "ok"
+ FAIL  tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-006 supplier questions are declined (no supplier data in scope)
+AssertionError: expected 'ok' to be 'unsupported' // Object.is equality
+Expected: "unsupported"
+Received: "ok"
+ FAIL  tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-007 a Tunis commercial asking for Sfax figures is refused
+AssertionError: expected 'ok' to be 'denied' // Object.is equality
+Expected: "denied"
+Received: "ok"
+ FAIL  tests/qa/defects.test.ts > BUG-005 / BUG-006 / BUG-007 copilot routing > BUG-007 an admin asking about Sfax gets Sfax figures only
+AssertionError: expected [ Array(6) ] to deeply equal [ 'FV-2501-0377', 'FV-2502-0471' ]
+- Expected

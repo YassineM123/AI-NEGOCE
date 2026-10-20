@@ -1,0 +1,6 @@
+EXPORT REFUSED: BLOCKED — no ERP read adapter/contract is available. Provide an authorised staging endpoint, read-only credentials and the entity schema; then implement ErpReadAdapter. No data was exported.
+exit=3
+exported 3 tables to datasets\exports\fixture-2026-10-15T12-47-41-649Z
+exit=0
+EXPORT REFUSED: exports are not run from a production environment.
+exit=2

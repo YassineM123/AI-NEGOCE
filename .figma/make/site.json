@@ -1,0 +1,10 @@
+{
+  "description": "Enhances ERP systems with intelligent invoice processing, comprehensive business analytics, and an AI assistant to optimize financial workflows for enterprises.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

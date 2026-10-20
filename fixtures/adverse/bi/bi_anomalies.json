@@ -1,0 +1,464 @@
+[
+  {
+    "id": "NEGATIVE_MARGIN",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 500,
+        "cost": 800,
+        "paid": true
+      }
+    ],
+    "expect": {
+      "revenue": 500,
+      "cost": 800,
+      "grossMargin": -300,
+      "grossMarginPercent": -60
+    }
+  },
+  {
+    "id": "ZERO_REVENUE_PERIOD",
+    "sales": [],
+    "expect": {
+      "revenue": 0,
+      "grossMargin": 0,
+      "grossMarginPercent": null
+    },
+    "note": "Margin % must be null (undefined), never NaN/Infinity or a fabricated 0."
+  },
+  {
+    "id": "MISSING_COST",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-002",
+        "invoiceId": "BI-002",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": null,
+        "paid": true
+      }
+    ],
+    "expect": {
+      "revenue": 2000,
+      "cost": 700,
+      "missingCostRecords": 1,
+      "marginCoverage": "partial"
+    },
+    "note": "Missing cost must not be read as 0 (which would show 100 % margin)."
+  },
+  {
+    "id": "CANCELLED_INVOICE",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-002",
+        "invoiceId": "BI-002",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true,
+        "status": "cancelled"
+      }
+    ],
+    "expect": {
+      "revenue": 1000,
+      "recordCount": 1
+    }
+  },
+  {
+    "id": "CREDIT_NOTE",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-002",
+        "invoiceId": "BI-002",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 200,
+        "cost": 140,
+        "paid": true,
+        "kind": "credit_note"
+      }
+    ],
+    "expect": {
+      "revenue": 800,
+      "cost": 560
+    }
+  },
+  {
+    "id": "PARTIAL_PAYMENT",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": false,
+        "outstanding": 400
+      }
+    ],
+    "expect": {
+      "receivables": 400
+    }
+  },
+  {
+    "id": "DUPLICATE_TRANSACTION",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      }
+    ],
+    "expect": {
+      "duplicateIds": [
+        "BI-001"
+      ]
+    },
+    "note": "Duplicate fact ids must be detected (data quality), not double counted silently."
+  },
+  {
+    "id": "OUT_OF_PERIOD",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-01-31",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-002",
+        "invoiceId": "BI-002",
+        "date": "2026-02-01",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-003",
+        "invoiceId": "BI-003",
+        "date": "2026-02-28",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-004",
+        "invoiceId": "BI-004",
+        "date": "2026-03-01",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      }
+    ],
+    "filters": {
+      "from": "2026-02-01",
+      "to": "2026-02-28"
+    },
+    "expect": {
+      "revenue": 2000,
+      "recordCount": 2
+    }
+  },
+  {
+    "id": "INCONSISTENT_AGENCY_ID",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-002",
+        "invoiceId": "BI-002",
+        "date": "2026-02-10",
+        "agency": "TUNIS CENTRE ",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      },
+      {
+        "id": "BI-003",
+        "invoiceId": "BI-003",
+        "date": "2026-02-10",
+        "agency": "AG01",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 1000,
+        "cost": 700,
+        "paid": true
+      }
+    ],
+    "filters": {
+      "agency": "Tunis Centre"
+    },
+    "expect": {
+      "revenue": 1000,
+      "unmatchedAgencyLabels": [
+        "AG01",
+        "TUNIS CENTRE "
+      ]
+    },
+    "note": "Unknown agency labels must be surfaced by data-quality checks."
+  },
+  {
+    "id": "FLOAT_PRECISION",
+    "sales": [
+      {
+        "id": "BI-001",
+        "invoiceId": "BI-001",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-002",
+        "invoiceId": "BI-002",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-003",
+        "invoiceId": "BI-003",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-004",
+        "invoiceId": "BI-004",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-005",
+        "invoiceId": "BI-005",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-006",
+        "invoiceId": "BI-006",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-007",
+        "invoiceId": "BI-007",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-008",
+        "invoiceId": "BI-008",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-009",
+        "invoiceId": "BI-009",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      },
+      {
+        "id": "BI-010",
+        "invoiceId": "BI-010",
+        "date": "2026-02-10",
+        "agency": "Tunis Centre",
+        "customer": "CLIENT A [FICTIF]",
+        "product": "Produit A",
+        "family": "Bureaux",
+        "representative": "Rep A",
+        "revenue": 0.1,
+        "cost": 0.0,
+        "paid": true
+      }
+    ],
+    "expect": {
+      "revenue": 1.0
+    },
+    "note": "0.1 x 10 must equal exactly 1.000 TND."
+  }
+]
