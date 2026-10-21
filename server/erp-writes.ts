@@ -115,7 +115,7 @@ function nextId(db: ErpDatabase, table: string, column: string, prefix: string, 
   return `${prefix}${String((n ?? 0) + 1).padStart(width, "0")}`
 }
 
-function agencyId(db: ErpDatabase, scope: AgencyScope, agency: string) {
+export function agencyId(db: ErpDatabase, scope: AgencyScope, agency: string) {
   const row = db.one<{ id: string } | undefined>("SELECT id FROM agencies WHERE name = ? OR id = ?", agency, agency)
   if (!row) throw new ErpError("Agence inconnue")
   if (scope !== "*" && !scope.includes(agency) && !db.all<{ name: string }>("SELECT name FROM agencies WHERE id = ?", row.id).some((a) => scope.includes(a.name)))
@@ -160,7 +160,7 @@ function resolveProduct(db: ErpDatabase, ref: ProductRef, defaults: { unitCost?:
 }
 
 /** Applies a signed quantity to the stock of one product in one agency (weighted average cost on receipts). */
-function moveStock(
+export function moveStock(
   db: ErpDatabase,
   m: { productId: string; agencyId: string; date: string; type: string; quantity: number; unitCost: number; reference: string },
 ) {

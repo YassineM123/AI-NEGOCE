@@ -28,7 +28,7 @@ const schema = z.object({
   ERP_SANDBOX_ORGANIZATION: z.string().min(1).default("demo-fictive"),
   ERP_BASE_URL: z.string().url().optional(),
   ERP_API_TOKEN: z.string().min(16).optional(),
-  OCR_PROVIDER: z.enum(["disabled", "http"]).default("disabled"),
+  OCR_PROVIDER: z.enum(["disabled", "http", "local"]).default("disabled"),
   OCR_ENDPOINT: z.string().url().optional(),
   OCR_API_KEY: z.string().min(8).optional(),
 })

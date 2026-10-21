@@ -81,6 +81,22 @@ test.describe("BI 360", () => {
 })
 
 test.describe("Smart OCR", () => {
+  test("the protected original is fetched with the session and rendered", async ({ page }) => {
+    const name = `viewer-${crypto.randomUUID().slice(0, 8)}.png`
+    await go(page, "Smart OCR")
+    const fileResponse = page.waitForResponse(
+      (response) =>
+        /\/api\/v1\/documents\/[0-9a-f-]+\/file$/.test(response.url()) &&
+        response.request().method() === "GET",
+    )
+    await page.locator('input[type="file"]').setInputFiles({ name, mimeType: "image/png", buffer: uniquePng() })
+    expect((await fileResponse).status()).toBe(200)
+    const preview = page.locator(".so-viewer-frame img")
+    await expect(preview).toBeVisible()
+    await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0)
+    await expect(page.locator(".so-viewer").getByRole("link", { name: "Ouvrir" })).toHaveAttribute("href", /^blob:/)
+  })
+
   test("upload a real invoice image: stored, fields left empty, no ERP success claimed", async ({ page }) => {
     await go(page, "Smart OCR")
     await page.locator('input[type="file"]').setInputFiles({ name: "facture.png", mimeType: "image/png", buffer: uniquePng() })
@@ -88,6 +104,53 @@ test.describe("Smart OCR", () => {
     await expect(page.getByText(/Soumission ERP : non effectuée/)).toBeVisible()
     await expect(page.locator("body")).not.toContainText("importée avec succès")
   })
+  test("missing OCR coordinates never enable source navigation", async ({ page }) => {
+    await page.route("**/api/v1/documents", async (route) => {
+      if (route.request().method() !== "POST") return route.continue()
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: "11111111-1111-4111-8111-111111111111",
+          filename: "sans-coordonnees.png",
+          mimeType: "image/png",
+          size: 128,
+          status: "needs_review",
+          extraction: {
+            fields: { invoiceNumber: "TEST-SANS-COORDONNEES" },
+            missingFields: ["lines"],
+            provider: "fixture-contract",
+            confidence: null,
+          },
+          erpSubmission: { status: "not_submitted", adapter: "none" },
+        }),
+      })
+    })
+    await page.route("**/api/v1/documents/11111111-1111-4111-8111-111111111111/file", (route) =>
+      route.fulfill({ status: 200, contentType: "image/png", body: uniquePng() }),
+    )
+    await go(page, "Smart OCR")
+    await page.locator('input[type="file"]').setInputFiles({ name: "sans-coordonnees.png", mimeType: "image/png", buffer: uniquePng() })
+    const source = page.getByRole("button", { name: "Voir dans le document" })
+    await expect(source).toBeDisabled()
+    await expect(source).toHaveAttribute("title", "Coordonnées source non fournies")
+  })
+
+  test("reduced motion keeps the workspace usable and suppresses long animation", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await go(page, "Smart OCR")
+    const button = page.getByRole("button", { name: "Sélectionner un fichier" })
+    await expect(button).toBeVisible()
+    const duration = await button.evaluate((element) =>
+      Math.max(
+        ...getComputedStyle(element)
+          .transitionDuration.split(",")
+          .map((value) => Number.parseFloat(value) * (value.includes("ms") ? 1 : 1000)),
+      ),
+    )
+    expect(duration).toBeLessThanOrEqual(1)
+  })
+
   test("a duplicate upload opens the existing document", async ({ page }) => {
     await go(page, "Smart OCR")
     const file = { name: "dup.png", mimeType: "image/png", buffer: uniquePng() }
@@ -114,8 +177,38 @@ test.describe("Smart OCR", () => {
     await expect(page.locator("table")).toContainText(name)
     await page.getByRole("button", { name: "Ouvrir" }).first().click()
     await expect(page.locator(".modal")).toContainText(name)
-    await page.locator(".modal").getByRole("button", { name: "Fermer" }).click()
+    await page.locator(".modal").getByRole("button", { name: "Fermer", exact: true }).click()
     await expect(page.locator("table")).not.toContainText("fake.png")
+  })
+  test("keyboard navigation and document dialog remain accessible", async ({ page }) => {
+    const name = `accessible-${crypto.randomUUID().slice(0, 8)}.png`
+    await go(page, "Smart OCR")
+    const tablist = page.getByRole("tablist", { name: "Étapes Smart OCR" })
+    const importTab = tablist.getByRole("tab", { name: /Importer/ })
+    await expect(importTab).toHaveAttribute("aria-selected", "true")
+    await importTab.press("ArrowRight")
+    await expect(tablist.getByRole("tab", { name: /Vérifier/ })).toBeFocused()
+    await expect(page.getByRole("tabpanel", { name: /Vérifier/ })).toBeVisible()
+    await importTab.click()
+    const chooser = page.waitForEvent("filechooser")
+    await page.getByRole("button", { name: "Sélectionner un fichier" }).click()
+    await (await chooser).setFiles({ name, mimeType: "image/png", buffer: uniquePng() })
+    await expect(page.getByText("Révision humaine requise")).toBeVisible()
+    const reviewTabs = page.getByRole("tablist", { name: "Données du document" })
+    await reviewTabs.getByRole("tab", { name: /Validations/ }).click()
+    await expect(page.getByRole("heading", { level: 3, name: /Aucune anomalie détectée|à corriger/ })).toBeVisible()
+    await reviewTabs.getByRole("tab", { name: /Historique/ }).click()
+    await expect(page.locator(".so-audit-list").getByText("Document importé", { exact: true })).toBeVisible()
+    await tablist.getByRole("tab", { name: /Historique/ }).click()
+    const row = page.locator("tr", { hasText: name })
+    const openButton = row.getByRole("button", { name: /Ouvrir/ })
+    await openButton.click()
+    const dialog = page.getByRole("dialog", { name })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole("button", { name: "Fermer la fenêtre" })).toBeFocused()
+    await page.keyboard.press("Escape")
+    await expect(dialog).toBeHidden()
+    await expect(openButton).toBeFocused()
   })
 })
 

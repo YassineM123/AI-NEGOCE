@@ -38,3 +38,6 @@ playwright-report/
 
 # Real invoice dataset provided by the owner: confidential, never versioned
 Dataset/
+
+# Locally installed agent plugins (third-party clones with their own .git)
+.agents/

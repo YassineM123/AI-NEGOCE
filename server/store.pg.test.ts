@@ -107,6 +107,13 @@ describe.skipIf(!url)("PostgreSQL store, tenancy and migrations (TEST_DATABASE_U
       await expect(b.saveExtraction(d.id, { fields: {}, missingFields: [], provider: "x", confidence: null })).rejects.toThrow()
       const conv = await store.forTenant("org-a").createConversation("usr-test", "c")
       expect(await b.getConversation(conv.id, "usr-test")).toBeUndefined()
+      // Audit trail: readable by its own organization only, with the actor's display name.
+      await store.forTenant("org-a").recordUser({ id: "usr-hist", displayName: "Relecteur Test", role: "admin", agencies: ["*"] })
+      await store.forTenant("org-a").audit({ actorId: "usr-hist", action: "document.uploaded", resourceType: "document", resourceId: d.id })
+      await store.forTenant("org-a").audit({ actorId: "usr-gone", action: "document.file_read", resourceType: "document", resourceId: d.id })
+      const trail = await store.forTenant("org-a").listAuditEvents("document", d.id)
+      expect(trail.map((e) => [e.action, e.actorName])).toEqual([["document.uploaded", "Relecteur Test"], ["document.file_read", null]])
+      expect(await b.listAuditEvents("document", d.id)).toEqual([])
     } finally {
       await store.close()
     }

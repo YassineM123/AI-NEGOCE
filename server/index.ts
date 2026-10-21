@@ -30,6 +30,7 @@ server.on("error", (error) => {
 })
 async function shutdown() {
   server.close(async () => {
+    await deps.ocr.close?.()
     await deps.store.close()
     deps.erpDb?.close()
     process.exit(0)

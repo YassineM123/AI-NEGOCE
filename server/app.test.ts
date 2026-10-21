@@ -64,6 +64,21 @@ describe("security boundary", () => {
       })
     expect(r.status).toBe(403)
   })
+  it("enforces approval permissions before document state transitions", async () => {
+    const upload = await request(app)
+      .post("/api/v1/documents")
+      .set(admin)
+      .field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%unauthorized-approval\n%%EOF"), {
+        filename: "unauthorized-approval.pdf",
+        contentType: "application/pdf",
+      })
+    expect(upload.status).toBe(201)
+    const manager = bearer("dev-manager-sfax")
+    expect((await request(app).post(`/api/v1/documents/${upload.body.id}/approve`).set(manager)).status).toBe(403)
+    expect((await request(app).post(`/api/v1/documents/${upload.body.id}/reject`).set(manager).send({ reason: "Non autorise" })).status).toBe(403)
+    expect((await request(app).get(`/api/v1/documents/${upload.body.id}`).set(admin)).body.status).toBe("needs_review")
+  })
 })
 describe("documents and BI", () => {
   it("calculates reconciled BI metrics", async () => {
@@ -151,6 +166,50 @@ describe("documents and BI", () => {
       .set(admin)
     expect(r.status).toBe(409)
     expect(r.body.error.code).toBe("EXTRACTION_INCOMPLETE")
+  })
+  it("exposes truthful workspace state and validation without fabricating fields", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%workspace\n%%EOF"), { filename: "workspace.pdf", contentType: "application/pdf" })
+    const detail = await request(app).get(`/api/v1/documents/${upload.body.id}`).set(admin)
+    expect(detail.status).toBe(200)
+    expect(detail.body.processing).toEqual({ status: "succeeded", events: [], error: null })
+    expect(detail.body.capabilities).toMatchObject({ canCorrect: true, canApprove: false, canReject: true, canRetry: true })
+    const validation = await request(app).get(`/api/v1/documents/${upload.body.id}/validation`).set(admin)
+    expect(validation.status).toBe(200)
+    expect(validation.body.ready).toBe(false)
+    expect(validation.body.issues.map((issue: { field: string }) => issue.field)).toContain("supplier")
+  })
+  it("requires a reason to reject and supports an audited reopen transition", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%reject\n%%EOF"), { filename: "reject.pdf", contentType: "application/pdf" })
+    expect((await request(app).post(`/api/v1/documents/${upload.body.id}/reject`).set(admin).send({})).status).toBe(400)
+    const rejected = await request(app).post(`/api/v1/documents/${upload.body.id}/reject`).set(admin).send({ reason: "Document illisible" })
+    expect(rejected.body.status).toBe("rejected")
+    const reopened = await request(app).post(`/api/v1/documents/${upload.body.id}/reopen`).set(admin)
+    expect(reopened.body.status).toBe("needs_review")
+    expect(store.approvalEvents.filter(event => event.documentId === upload.body.id).map(event => event.decision)).toEqual(["rejected", "reopened"])
+  })
+  it("returns the document's real audit trail, confined to tenant and agency", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%history\n%%EOF"), { filename: "history.pdf", contentType: "application/pdf" })
+    await request(app).post(`/api/v1/documents/${upload.body.id}/reject`).set(admin).send({ reason: "Montants illisibles" })
+    const history = await request(app).get(`/api/v1/documents/${upload.body.id}/history`).set(admin)
+    expect(history.status).toBe(200)
+    expect(history.body.events.map((event: { action: string }) => event.action)).toEqual(["document.uploaded", "document.rejected"])
+    expect(history.body.events[1]).toMatchObject({ actorId: "usr-admin", metadata: { reason: "Montants illisibles" } })
+    expect(typeof history.body.events[0].createdAt).toBe("string")
+    // other organization: same id is invisible
+    expect((await request(app).get(`/api/v1/documents/${upload.body.id}/history`).set(bearer("dev-admin-org-b"))).status).toBe(404)
+    // same organization, other agency
+    expect((await request(app).get(`/api/v1/documents/${upload.body.id}/history`).set(bearer("dev-manager-sfax"))).status).toBe(403)
+    expect((await request(app).get(`/api/v1/documents/${upload.body.id}/history`)).status).toBe(401)
+  })
+  it("allows reprocessing documents created while OCR was disabled", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%retry-state\n%%EOF"), { filename: "retry-state.pdf", contentType: "application/pdf" })
+    const retry = await request(app).post(`/api/v1/documents/${upload.body.id}/retry`).set(admin)
+    expect(retry.status).toBe(200)
+    expect(retry.body.extraction.provider).toBe("disabled")
   })
 })
 describe("copilot persistence", () => {

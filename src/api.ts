@@ -1,4 +1,18 @@
 export type ApiState<T> = { data?: T; error?: string }
+export type ValidationIssue = { code: string; message: string; severity: "blocking" | "warning"; field?: string; line?: number }
+export type DocumentValidation = {
+  ready: boolean
+  issues: ValidationIssue[]
+  rules: { revision: number; verified: boolean; source?: string } | null
+}
+export type DocumentHistoryEvent = {
+  id: string
+  actorId: string
+  actorName: string | null
+  action: string
+  metadata: Record<string, unknown>
+  createdAt: string
+}
 export type DashboardPeriod = "month" | "quarter" | "year"
 export type DashboardData = {
   asOf: string
@@ -158,6 +172,34 @@ export type Extraction = {
   missingFields: string[]
   provider: string
   confidence: number | null
+  sources?: Record<string, { page: number; bbox: BoundingBox }>
+  events?: ProcessingEvent[]
+  document?: {
+    provider: string
+    engine: string
+    languages: string[]
+    warnings: string[]
+    durationMs: number
+    pages: Array<{
+      page: number
+      width: number
+      height: number
+      source: "native_text" | "image_ocr"
+      rotationApplied: 0 | 90 | 180 | 270
+      meanConfidence: number | null
+      lines: Array<{ text: string; bbox: BoundingBox }>
+    }>
+  }
+}
+
+export type BoundingBox = { x0: number; y0: number; x1: number; y1: number }
+export type ProcessingEvent = {
+  stage: string
+  at: string
+  page?: number
+  pages?: number
+  progress?: number
+  detail?: string
 }
 
 export type DocumentResponse = {
@@ -167,6 +209,19 @@ export type DocumentResponse = {
   size: number
   status: string
   extraction: Extraction | null
+  processing?: {
+    status: "pending" | "succeeded" | "failed"
+    events: ProcessingEvent[]
+    error: { code: string; message: string } | null
+  }
+  capabilities?: {
+    canCorrect: boolean
+    canApprove: boolean
+    canReject: boolean
+    canReopen: boolean
+    canRetry: boolean
+    canIntegrate: boolean
+  }
   erpSubmission: { status: string; adapter: string }
 }
 
@@ -250,6 +305,27 @@ async function request<T>(
   return body as T
 }
 
+async function requestBlob(path: string, retried = false): Promise<Blob> {
+  const headers = new Headers()
+  const token = await devSession.token()
+  if (token) headers.set("Authorization", `Bearer ${token}`)
+  const response = await fetch(`${API_URL}${path}`, { headers })
+  if (response.status === 401 && token && !retried) {
+    devSession.reset()
+    return requestBlob(path, true)
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new ApiError(
+      body?.error?.message || `Erreur API ${response.status}`,
+      response.status,
+      body?.error?.code,
+      body?.error?.details,
+    )
+  }
+  return response.blob()
+}
+
 export const api = {
   me: () => request<Session>("/me"),
   financialRules: () => request<FinancialRulesResponse>("/settings/financial-rules"),
@@ -298,6 +374,20 @@ export const api = {
   },
   document: (id: string) =>
     request<DocumentResponse>(`/documents/${encodeURIComponent(id)}`),
+  documentFile: (id: string) =>
+    requestBlob(`/documents/${encodeURIComponent(id)}/file`),
+  documentValidation: (id: string) =>
+    request<DocumentValidation>(`/documents/${encodeURIComponent(id)}/validation`),
+  documentHistory: (id: string) =>
+    request<{ events: DocumentHistoryEvent[] }>(`/documents/${encodeURIComponent(id)}/history`),
+  approveDocument: (id: string) =>
+    post<{ id: string; status: string }>(`/documents/${encodeURIComponent(id)}/approve`, {}),
+  rejectDocument: (id: string, reason: string) =>
+    post<{ id: string; status: string }>(`/documents/${encodeURIComponent(id)}/reject`, { reason }),
+  reopenDocument: (id: string) =>
+    post<{ id: string; status: string }>(`/documents/${encodeURIComponent(id)}/reopen`, {}),
+  retryDocument: (id: string) =>
+    post<DocumentResponse>(`/documents/${encodeURIComponent(id)}/retry`, {}),
   documents: (agency = "all") =>
     request<{ documents: DocumentSummary[] }>(
       `/documents?${new URLSearchParams({ agency })}`,

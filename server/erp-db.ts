@@ -14,6 +14,10 @@ export class ErpDatabase {
   constructor(file: string) {
     this.db = new DatabaseSync(file)
     this.db.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000")
+    this.db.exec(`CREATE TABLE IF NOT EXISTS ocr_purchase_imports (
+      organization_id TEXT NOT NULL, document_id TEXT NOT NULL,
+      supplier_invoice_id TEXT NOT NULL REFERENCES supplier_invoices(id),
+      PRIMARY KEY (organization_id, document_id))`)
     // Bases built before app_settings existed
     this.db.exec("CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
   }

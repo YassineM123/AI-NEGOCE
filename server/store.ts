@@ -34,7 +34,9 @@ export type AuditEvent = {
   resourceId: string
   metadata?: Record<string, unknown>
 }
-export type StoredAuditEvent = AuditEvent & { organizationId: string }
+export type StoredAuditEvent = AuditEvent & { organizationId: string; createdAt: string }
+/** One audit row as shown in a resource's history (oldest first). */
+export type AuditEntry = Omit<StoredAuditEvent, "organizationId" | "resourceType" | "resourceId"> & { id: string; actorName: string | null }
 export type UserRecord = { id: string; displayName: string; role: string; agencies: string[] }
 export type ApprovalEvent = {
   documentId: string
@@ -60,6 +62,7 @@ export type Conversation = {
 /** Every operation is confined to one organization; it cannot be widened by its arguments. */
 export interface TenantStore {
   readonly organizationId: string
+  transaction?<T>(fn: (client: PoolClient) => Promise<T>): Promise<T>
   createDocument(record: Omit<DocumentRecord, "organizationId">): Promise<void>
   getDocument(id: string): Promise<DocumentRecord | undefined>
   findDocumentByHash(sha256: string): Promise<DocumentRecord | undefined>
@@ -67,7 +70,10 @@ export interface TenantStore {
   saveExtraction(documentId: string, extraction: Extraction): Promise<void>
   getExtraction(documentId: string): Promise<Extraction | undefined>
   updateDocumentStatus(id: string, status: string): Promise<void>
+  /** Atomic compare-and-set used for review decisions to prevent concurrent transitions. */
+  transitionDocumentStatus(id: string, expected: string[], status: string): Promise<boolean>
   audit(event: AuditEvent): Promise<void>
+  listAuditEvents(resourceType: string, resourceId: string): Promise<AuditEntry[]>
   createConversation(ownerId: string, title: string): Promise<Conversation>
   getConversation(id: string, ownerId: string): Promise<Conversation | undefined>
   addMessage(id: string, message: Conversation["messages"][number]): Promise<void>
@@ -153,9 +159,21 @@ export class MemoryStore implements Store {
         const d = doc(id)
         if (d) this.documents.set(id, { ...d, status })
       },
-      audit: async (e) => {
-        this.audits.push({ ...e, organizationId: org })
+      transitionDocumentStatus: async (id, expected, status) => {
+        const d = doc(id)
+        if (!d || !expected.includes(d.status)) return false
+        this.documents.set(id, { ...d, status })
+        return true
       },
+      audit: async (e) => {
+        this.audits.push({ ...e, organizationId: org, createdAt: new Date().toISOString() })
+      },
+      listAuditEvents: async (resourceType, resourceId) =>
+        this.audits.flatMap((a, index) =>
+          a.organizationId === org && a.resourceType === resourceType && a.resourceId === resourceId
+            ? [{ id: String(index + 1), actorId: a.actorId, actorName: this.users.get(`${org}|${a.actorId}`)?.displayName ?? null, action: a.action, metadata: a.metadata ?? {}, createdAt: a.createdAt }]
+            : [],
+        ),
       createConversation: async (ownerId, title) => {
         const c = { id: crypto.randomUUID(), ownerId, title, createdAt: new Date().toISOString(), messages: [] }
         this.conversations.set(c.id, { ...c, organizationId: org })
@@ -233,6 +251,10 @@ export class PostgresStore implements Store {
    * set, so row-level security confines every statement to this organization even if a
    * query forgot its explicit filter.
    */
+  async catalogTransaction<T>(organizationId: string, fn: (c: PoolClient) => Promise<T>): Promise<T> {
+    return this.tenantTx(requireTenant(organizationId), fn)
+  }
+
   private async tenantTx<T>(organizationId: string, fn: (c: PoolClient) => Promise<T>): Promise<T> {
     const client = await this.pool.connect()
     try {
@@ -269,6 +291,7 @@ export class PostgresStore implements Store {
     const tx = <T>(fn: (c: PoolClient) => Promise<T>) => this.tenantTx(org, fn)
     return {
       organizationId: org,
+      transaction: tx,
       createDocument: (r) =>
         tx(async (c) => {
           await c.query(
@@ -300,6 +323,11 @@ export class PostgresStore implements Store {
         tx(async (c) => {
           await c.query("UPDATE documents SET status=$3, updated_at=now() WHERE organization_id=$1 AND id=$2", [org, id, status])
         }),
+      transitionDocumentStatus: (id, expected, status) =>
+        tx(async (c) => {
+          const result = await c.query("UPDATE documents SET status=$4, updated_at=now() WHERE organization_id=$1 AND id=$2 AND status = ANY($3)", [org, id, expected, status])
+          return result.rowCount === 1
+        }),
       audit: (e) =>
         tx(async (c) => {
           await c.query(
@@ -307,6 +335,13 @@ export class PostgresStore implements Store {
             [org, e.actorId, e.action, e.resourceType, e.resourceId, e.metadata ?? {}],
           )
         }),
+      listAuditEvents: (resourceType, resourceId) =>
+        tx(async (c) =>
+          (await c.query(
+            'SELECT a.id::text AS id,a.actor_id AS "actorId",u.display_name AS "actorName",a.action,a.metadata,a.created_at AS "createdAt" FROM audit_logs a LEFT JOIN users u ON u.organization_id=a.organization_id AND u.id=a.actor_id WHERE a.organization_id=$1 AND a.resource_type=$2 AND a.resource_id=$3 ORDER BY a.created_at, a.id LIMIT 500',
+            [org, resourceType, resourceId],
+          )).rows.map((row) => ({ ...row, createdAt: new Date(row.createdAt).toISOString() })),
+        ),
       createConversation: (ownerId, title) =>
         tx(async (c) => {
           const q = await c.query(

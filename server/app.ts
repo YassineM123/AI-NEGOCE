@@ -1,3 +1,4 @@
+import { importPurchase, purchaseSubmission } from "./ocr-purchases.js"
 import express from "express"
 import cors from "cors"
 import helmet from "helmet"
@@ -18,7 +19,7 @@ import {
   requireRoles,
   scopedAgencies,
 } from "./auth.js"
-import { requirePermission } from "./permissions.js"
+import { hasPermission, requirePermission } from "./permissions.js"
 import { loadConfig, type AppConfig } from "./config.js"
 import {
   defaultDataset,
@@ -34,6 +35,7 @@ import {
 } from "./financial-rules.js"
 import {
   DisabledOcrProvider,
+  LocalExtractionProvider,
   HttpOcrProvider,
   type OcrProvider,
 } from "./ocr.js"
@@ -85,7 +87,9 @@ export function defaultDependencies(env = process.env): Dependencies {
     ocr:
       config.OCR_PROVIDER === "http"
         ? new HttpOcrProvider(config.OCR_ENDPOINT!, config.OCR_API_KEY!)
-        : new DisabledOcrProvider(),
+        : config.OCR_PROVIDER === "local"
+          ? new LocalExtractionProvider()
+          : new DisabledOcrProvider(),
     erp: new UnconfiguredErpAdapter(),
     erpDb: ErpDatabase.open(),
   }
@@ -257,6 +261,14 @@ export function createApp(deps = defaultDependencies()) {
   })
   /** Store confined to the caller's organization. */
   const tenant = (req: express.Request) => store.forTenant(req.principal!.organizationId)
+  const documentCapabilities = (req: express.Request, status: string, extraction?: { missingFields: string[]; provider?: string } | null) => ({
+    canCorrect: status === "needs_review" && hasPermission(req.principal?.role, "invoice.correct"),
+    canApprove: status === "needs_review" && !!extraction && extraction.missingFields.length === 0 && hasPermission(req.principal?.role, "invoice.approve"),
+    canReject: status === "needs_review" && hasPermission(req.principal?.role, "invoice.approve"),
+    canReopen: ["approved", "rejected", "failed"].includes(status) && hasPermission(req.principal?.role, "invoice.correct"),
+    canRetry: (status === "failed" || (status === "needs_review" && (!extraction || extraction.provider === "disabled"))) && hasPermission(req.principal?.role, "documents.upload"),
+    canIntegrate: status === "approved" && hasPermission(req.principal?.role, "erp.integrate") && sandboxTenant(req) && !!deps.erpDb,
+  })
   app.get("/api/v1/me", async (req, res) => {
     const org = res.locals.organization as Organization
     // What the screens are really reading, so the UI never implies a production ERP link.
@@ -720,7 +732,7 @@ export function createApp(deps = defaultDependencies()) {
         size: req.file.size,
         status: "needs_review",
         extraction,
-        erpSubmission: { status: "not_submitted", adapter: erp.name },
+        erpSubmission: (sandboxTenant(req) ? purchaseSubmission(deps.erpDb, req.principal!.organizationId, id) : null) ?? { status: "not_submitted", adapter: erp.name },
       })
     },
   )
@@ -747,7 +759,7 @@ export function createApp(deps = defaultDependencies()) {
           status: doc.status,
           agency: doc.agency,
           createdAt: doc.createdAt,
-          erpSubmission: { status: "not_submitted", adapter: erp.name },
+          erpSubmission: (sandboxTenant(req) ? purchaseSubmission(deps.erpDb, req.principal!.organizationId, doc.id) : null) ?? { status: "not_submitted", adapter: erp.name },
         })),
       })
     },
@@ -775,8 +787,107 @@ export function createApp(deps = defaultDependencies()) {
         storageKey: undefined,
         sha256: undefined,
         extraction: extraction ?? null,
-        erpSubmission: { status: "not_submitted", adapter: erp.name },
+        processing: {
+          status: doc.status === "failed" ? "failed" : extraction ? "succeeded" : "pending",
+          events: extraction?.events ?? [],
+          error: doc.status === "failed" ? { code: "OCR_FAILED", message: "La dernière extraction OCR a échoué" } : null,
+        },
+        capabilities: documentCapabilities(req, doc.status, extraction),
+        erpSubmission: (sandboxTenant(req) ? purchaseSubmission(deps.erpDb, req.principal!.organizationId, doc.id) : null) ?? { status: "not_submitted", adapter: erp.name },
       })
+    },
+  )
+  app.post(
+    "/api/v1/documents/:id/retry",
+    requirePermission("documents.upload"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
+      if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+      const previous = await tenant(req).getExtraction(doc.id)
+      const mayReprocessMissingOrDisabled = doc.status === "needs_review" && (!previous || previous.provider === "disabled")
+      if (doc.status !== "failed" && !mayReprocessMissingOrDisabled) return res.status(409).json({ error: { code: "INVALID_STATE", message: `Nouvelle extraction impossible au statut ${doc.status}` } })
+      let content: Buffer
+      try { content = await fs.readFile(path.resolve(uploadDir, doc.storageKey)) }
+      catch { return res.status(410).json({ error: { code: "FILE_MISSING", message: "Fichier original indisponible" } }) }
+      try {
+        const extraction = await ocr.extract({ buffer: content, mimeType: doc.mimeType })
+        await tenant(req).saveExtraction(doc.id, extraction)
+        await tenant(req).updateDocumentStatus(doc.id, "needs_review")
+        await tenant(req).audit({ actorId: req.principal!.id, action: "document.ocr_retried", resourceType: "document", resourceId: doc.id })
+        return res.json({ id: doc.id, status: "needs_review", extraction, processing: { status: "succeeded", events: extraction.events ?? [], error: null } })
+      } catch (error) {
+        req.log.warn({ err: error, documentId: doc.id }, "ocr retry failed")
+        await tenant(req).updateDocumentStatus(doc.id, "failed")
+        await tenant(req).audit({ actorId: req.principal!.id, action: "document.ocr_retry_failed", resourceType: "document", resourceId: doc.id })
+        return res.status(502).json({ error: { code: "OCR_FAILED", message: "Extraction OCR indisponible, réessayez plus tard", details: { id: doc.id, status: "failed" } } })
+      }
+    },
+  )
+  app.get(
+    "/api/v1/documents/:id/validation",
+    requirePermission("documents.read"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
+      if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+      const extraction = await tenant(req).getExtraction(doc.id)
+      const stored = await tenant(req).getFinancialRules()
+      const ruleState = rulesUsable(stored?.rules, res.locals.organization as Organization)
+      if (!extraction) return res.json({ ready: false, issues: [{ code: "EXTRACTION_MISSING", severity: "blocking", message: "Aucune extraction disponible" }], rules: stored ? { revision: stored.revision, verified: stored.rules.verified } : null })
+      if (extraction.missingFields.length) return res.json({ ready: false, issues: extraction.missingFields.map(field => ({ code: "FIELD_MISSING", severity: "blocking", field, message: `Champ requis absent : ${field}` })), rules: stored ? { revision: stored.revision, verified: stored.rules.verified } : null })
+      if (!ruleState.ok) return res.json({ ready: false, issues: [{ code: ruleState.code, severity: "blocking", message: ruleState.message }], rules: stored ? { revision: stored.revision, verified: stored.rules.verified } : null })
+      const fields = extraction.fields as InvoiceInput & { supplier?: string }
+      const issues = validateInvoice({ ...fields, supplierId: fields.supplierId ?? fields.supplier }, { rules: stored!.rules })
+      return res.json({ ready: issues.length === 0, issues, rules: { revision: stored!.revision, verified: stored!.rules.verified, source: stored!.rules.source } })
+    },
+  )
+  // Audit trail of one document, oldest first. Same checks as the document itself; the
+  // lookup and the audit query are both tenant-scoped.
+  app.get(
+    "/api/v1/documents/:id/history",
+    requirePermission("documents.read"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
+      if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+      return res.json({ events: await tenant(req).listAuditEvents("document", doc.id) })
+    },
+  )
+  app.post(
+    "/api/v1/documents/:id/reject",
+    requirePermission("invoice.approve"),
+    async (req, res) => {
+      const id = String(req.params.id), reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : ""
+      if (!reason || reason.length > 500) return res.status(400).json({ error: { code: "REASON_REQUIRED", message: "Un motif de rejet est requis (500 caractères maximum)" } })
+      const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
+      if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+      if (doc.status !== "needs_review") return res.status(409).json({ error: { code: "INVALID_STATE", message: `Rejet impossible au statut ${doc.status}` } })
+      if (!await tenant(req).transitionDocumentStatus(doc.id, ["needs_review"], "rejected"))
+        return res.status(409).json({ error: { code: "STATE_CONFLICT", message: "Le document a été modifié par un autre utilisateur" } })
+      await tenant(req).recordApprovalEvent({ documentId: doc.id, actorId: req.principal!.id, decision: "rejected", correction: { reason } })
+      await tenant(req).audit({ actorId: req.principal!.id, action: "document.rejected", resourceType: "document", resourceId: doc.id, metadata: { reason } })
+      return res.json({ id: doc.id, status: "rejected" })
+    },
+  )
+  app.post(
+    "/api/v1/documents/:id/reopen",
+    requirePermission("invoice.correct"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
+      if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+      if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+      if (!["approved", "rejected", "failed"].includes(doc.status)) return res.status(409).json({ error: { code: "INVALID_STATE", message: `Réouverture impossible au statut ${doc.status}` } })
+      if (!await tenant(req).transitionDocumentStatus(doc.id, ["approved", "rejected", "failed"], "needs_review"))
+        return res.status(409).json({ error: { code: "STATE_CONFLICT", message: "Le document a été modifié par un autre utilisateur" } })
+      await tenant(req).recordApprovalEvent({ documentId: doc.id, actorId: req.principal!.id, decision: "reopened" })
+      await tenant(req).audit({ actorId: req.principal!.id, action: "document.reopened", resourceType: "document", resourceId: doc.id })
+      return res.json({ id: doc.id, status: "needs_review" })
     },
   )
   // Original file, for the review viewer. Same checks as the metadata: permission, tenant
@@ -862,7 +973,8 @@ export function createApp(deps = defaultDependencies()) {
             details: { issues },
           },
         })
-      await tenant(req).updateDocumentStatus(doc.id, "approved")
+      if (!await tenant(req).transitionDocumentStatus(doc.id, ["needs_review"], "approved"))
+        return res.status(409).json({ error: { code: "STATE_CONFLICT", message: "Le document a été modifié par un autre utilisateur" } })
       await tenant(req).recordApprovalEvent({ documentId: doc.id, actorId: req.principal!.id, decision: "approved" })
       await tenant(req).audit({
         actorId: req.principal!.id,
@@ -878,6 +990,29 @@ export function createApp(deps = defaultDependencies()) {
       })
     },
   )
+  app.post("/api/v1/documents/:id/purchases", requirePermission("erp.integrate"), erpGuard, async (req, res) => {
+    const doc = uuid.safeParse(req.params.id).success ? await tenant(req).getDocument(String(req.params.id)) : undefined
+    if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
+    if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
+    if (doc.status !== "approved") return res.status(409).json({ error: { code: "NOT_APPROVED", message: "La facture doit être approuvée" } })
+    const parsed = z.object({ supplierId: z.string().min(1), productIds: z.array(z.string().min(1)).min(1).max(500), receiptConfirmed: z.literal(true) }).strict().safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Fournisseur, articles et confirmation de réception requis" } })
+    const extraction = await tenant(req).getExtraction(doc.id)
+    const stored = await tenant(req).getFinancialRules()
+    const usable = rulesUsable(stored?.rules, res.locals.organization as Organization)
+    if (!usable.ok || !extraction || extraction.missingFields.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "Extraction ou règles financières non validées" } })
+    const invoice = { ...extraction.fields, supplierId: parsed.data.supplierId } as InvoiceInput
+    const issues = validateInvoice(invoice, { rules: stored!.rules })
+    if (issues.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "La facture comporte des incohérences", details: { issues } } })
+    try {
+      const result = importPurchase(deps.erpDb!, scopedAgencies(req, doc.agency)!, req.principal!.organizationId, doc.id, doc.agency, invoice, parsed.data.supplierId, parsed.data.productIds)
+      await tenant(req).audit({ actorId: req.principal!.id, action: "document.purchases_integrated", resourceType: "document", resourceId: doc.id, metadata: result })
+      return res.json(result)
+    } catch (error) {
+      if (error instanceof ErpError) return res.status(error.status).json({ error: { code: "PURCHASE_IMPORT_FAILED", message: error.message } })
+      throw error
+    }
+  })
   // Organization financial rules. Reading is open to document reviewers; changing them is
   // reserved to settings.manage. Any change clears the verification unless the same request
   // marks them verified, which records the acting user and time.
