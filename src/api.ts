@@ -86,8 +86,8 @@ export type Lookups = {
   agencies: { id: string; name: string }[]
   categories: { id: string; name: string; vatRate: number }[]
   customers: { id: string; name: string }[]
-  suppliers: { id: string; name: string }[]
-  products: { id: string; sku: string; name: string; unitCost: number | null; listPrice: number | null; vatRate: number | null }[]
+  suppliers: { id: string; name: string; taxId?: string | null }[]
+  products: { id: string; sku: string; name: string; categoryId?: string; unitCost: number | null; listPrice: number | null; vatRate: number | null }[]
   openInvoices: { id: string; number: string; customer: string; outstanding: number }[]
 }
 export type BiPeriod = "month" | "quarter" | "year" | "all"
@@ -708,7 +708,15 @@ export const api = {
     post<{ id: string; status: string }>(`/documents/${encodeURIComponent(id)}/reopen`, {}),
   retryDocument: (id: string) =>
     post<DocumentResponse>(`/documents/${encodeURIComponent(id)}/retry`, {}),
-  integrateDocumentPurchase: (id: string, body: { supplierId: string; productIds: string[]; receiptConfirmed: true }) =>
+  integrateDocumentPurchase: (
+    id: string,
+    body: {
+      supplierId?: string
+      newSupplier?: { name: string; taxId?: string }
+      lines: Array<{ productId: string } | { newProduct: { name: string; categoryId: string } }>
+      receiptConfirmed: true
+    },
+  ) =>
     post<{ status: string; adapter: string; invoiceId: string }>(`/documents/${encodeURIComponent(id)}/purchases`, body),
   documents: (agency = "all") =>
     request<{ documents: DocumentSummary[] }>(

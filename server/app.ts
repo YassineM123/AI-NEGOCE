@@ -1436,8 +1436,22 @@ export function createApp(deps = defaultDependencies()) {
     if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
     if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
     if (doc.status !== "approved") return res.status(409).json({ error: { code: "NOT_APPROVED", message: "La facture doit être approuvée" } })
-    const parsed = z.object({ supplierId: z.string().min(1), productIds: z.array(z.string().min(1)).min(1).max(500), receiptConfirmed: z.literal(true) }).strict().safeParse(req.body)
+    // Each line is either a catalogue article or a new one the reviewer asked to create.
+    const newProduct = z.object({ name: z.string().trim().min(2).max(120), categoryId: z.string().min(1).max(20) }).strict()
+    const parsed = z
+      .object({
+        supplierId: z.string().min(1).optional(),
+        newSupplier: z.object({ name: z.string().trim().min(2).max(120), taxId: z.string().trim().max(40).optional() }).strict().optional(),
+        productIds: z.array(z.string().min(1)).min(1).max(500).optional(),
+        lines: z.array(z.union([z.object({ productId: z.string().min(1) }).strict(), z.object({ newProduct }).strict()])).min(1).max(500).optional(),
+        receiptConfirmed: z.literal(true),
+      })
+      .strict()
+      .refine((b) => Boolean(b.supplierId) !== Boolean(b.newSupplier) && Boolean(b.productIds) !== Boolean(b.lines))
+      .safeParse(req.body)
     if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Fournisseur, articles et confirmation de réception requis" } })
+    const supplierRef = parsed.data.newSupplier ?? parsed.data.supplierId!
+    const productRefs = parsed.data.productIds ?? parsed.data.lines!.map((l) => ("productId" in l ? l.productId : l.newProduct))
     const extraction = await tenant(req).getExtraction(doc.id)
     const stored = await tenant(req).getFinancialRules()
     const usable = rulesUsable(stored?.rules, res.locals.organization as Organization)
@@ -1445,12 +1459,12 @@ export function createApp(deps = defaultDependencies()) {
     // step. A supplier name missed by OCR must not invalidate that explicit human choice.
     const integrationMissing = missingFieldsForPurchase(extraction?.missingFields ?? [])
     if (!usable.ok || !extraction || integrationMissing.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "Extraction ou règles financières non validées", details: { missingFields: integrationMissing } } })
-    const invoice = { ...extraction.fields, supplierId: parsed.data.supplierId } as InvoiceInput
+    const invoice = { ...extraction.fields, supplierId: parsed.data.supplierId ?? `new:${parsed.data.newSupplier!.name}` } as InvoiceInput
     const issues = validateInvoice(invoice, { rules: stored!.rules })
     const blockingIssues = issues.filter((issue) => issue.severity === "blocking")
     if (blockingIssues.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "La facture comporte des incohérences", details: { issues: blockingIssues } } })
     try {
-      const result = importPurchase(deps.erpDb!, scopedAgencies(req, doc.agency)!, req.principal!.organizationId, doc.id, doc.agency, invoice, parsed.data.supplierId, parsed.data.productIds)
+      const result = importPurchase(deps.erpDb!, scopedAgencies(req, doc.agency)!, req.principal!.organizationId, doc.id, doc.agency, invoice, supplierRef, productRefs)
       await tenant(req).audit({ actorId: req.principal!.id, action: "document.purchases_integrated", resourceType: "document", resourceId: doc.id, metadata: result })
       return res.json(result)
     } catch (error) {

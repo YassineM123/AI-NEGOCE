@@ -44,4 +44,20 @@ describe.skipIf(!fs.existsSync(csvDir))("OCR purchase integration", () => {
     expect(after - before).toBe(2)
     expect(db.one<{ n: number }>("SELECT count(*) n FROM supplier_invoices WHERE id=?", first.invoiceId).n).toBe(1)
   })
+  it("creates the supplier and articles the reviewer asked for, then receives them", () => {
+    const agency = db.one<{ id: string; name: string }>("SELECT id,name FROM agencies WHERE name='Tunis Centre'")
+    const name = `Support technique ${Date.now()}`
+    const invoice = {
+      invoiceNumber: `OCR-NEW-${Date.now()}`,
+      invoiceDate: db.asOf(),
+      currency: "TND",
+      lines: [{ quantity: "8", unitPrice: "60.000", vatRate: "19", lineHt: "480.000", lineVat: "91.200" }],
+      totals: { ht: "480.000", vat: "91.200", ttc: "571.200" },
+    }
+    const result = importPurchase(db, "*", "demo-fictive", "document-new", agency.name, invoice, { name: "Cloud Services Test", taxId: "1234567A/B/C/000" }, [{ name, categoryId: "CAT06" }])
+    const product = db.one<{ id: string; unit_cost: number; vat_rate: number }>("SELECT id, unit_cost, vat_rate FROM products WHERE name=?", name)
+    expect(result.supplierName).toBe("Cloud Services Test")
+    expect(product).toMatchObject({ unit_cost: 60, vat_rate: 19 })
+    expect(db.one<{ q: number }>("SELECT current_quantity q FROM inventory WHERE product_id=? AND agency_id=?", product.id, agency.id).q).toBe(8)
+  })
 })

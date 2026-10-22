@@ -1056,71 +1056,88 @@ function ReviewPanel({
   )
 }
 
+/** Sentinel select value: create this supplier/article in the ERP on confirmation. */
+const CREATE_NEW = "__new__"
+/** Minimum share of a line's significant words a catalogue entry must contain to be auto-matched. */
+const MATCH_THRESHOLD = 0.6
+const STOP_WORDS = new Set(["des", "les", "pour", "avec", "sur", "une", "par", "aux", "the", "and"])
+const LEGAL_FORMS = new Set(["sarl", "suarl", "ste", "societe", "ets", "fictif", "company", "sas", "spa"])
+
+function matchTokens(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
+}
+
+/** Share of the source's significant characters found as whole words in the candidate. */
+function overlapScore(source: string[], candidate: string) {
+  if (!source.length) return 0
+  const words = new Set(matchTokens(candidate))
+  const total = source.reduce((sum, w) => sum + w.length, 0)
+  return source.filter((w) => words.has(w)).reduce((sum, w) => sum + w.length, 0) / total
+}
+
+const normalizeTaxId = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "")
+
 function findBestSupplier(
   suppliers: Lookups["suppliers"],
   extractedSupplier?: string,
   supplierTaxId?: string,
 ): string {
-  if (!suppliers.length) return ""
   if (supplierTaxId) {
-    const taxMatch = suppliers.find(
-      (s) => s.id.toLowerCase() === supplierTaxId.toLowerCase(),
-    )
+    const tax = normalizeTaxId(supplierTaxId)
+    const taxMatch = suppliers.find((s) => s.taxId && normalizeTaxId(s.taxId) === tax)
     if (taxMatch) return taxMatch.id
   }
   if (!extractedSupplier) return ""
-  const cleanExtracted = extractedSupplier
-    .toLowerCase()
-    .replace(/\b(sarl|sa|suarl|ste|societe|ets|fictif|company)\b/gi, "")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .trim()
-  const extractedWords = cleanExtracted.split(/\s+/).filter((w) => w.length > 2)
-
-  let bestId = ""
-  let bestScore = 0
-
+  const words = matchTokens(extractedSupplier).filter((w) => !LEGAL_FORMS.has(w))
+  let best = { id: "", score: 0 }
   for (const s of suppliers) {
-    const sName = s.name.toLowerCase()
-    let score = 0
-    for (const word of extractedWords) {
-      if (sName.includes(word)) score += word.length
-    }
-    if (score > bestScore) {
-      bestScore = score
-      bestId = s.id
-    }
+    const score = overlapScore(words, s.name)
+    if (score > best.score) best = { id: s.id, score }
   }
-  return bestId
+  return best.score >= MATCH_THRESHOLD ? best.id : ""
+}
+
+function rankProducts(products: Lookups["products"], lineDescription: string) {
+  const words = matchTokens(lineDescription)
+  let best = { product: undefined as Lookups["products"][number] | undefined, score: 0 }
+  for (const p of products) {
+    const score = overlapScore(words, `${p.sku} ${p.name}`)
+    if (score > best.score) best = { product: p, score }
+  }
+  return best
 }
 
 function findBestProduct(
   products: Lookups["products"],
   lineDescription?: string,
   supplierReference?: string,
-  _fallbackIndex = 0,
 ): string {
-  if (!products.length) return ""
-  const cleanText = `${supplierReference ?? ""} ${lineDescription ?? ""}`
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .trim()
-  const words = cleanText.split(/\s+/).filter((w) => w.length > 2)
-
-  let bestId = ""
-  let bestScore = 0
-
-  for (const p of products) {
-    const pText = `${p.sku} ${p.name}`.toLowerCase()
-    let score = 0
-    for (const word of words) {
-      if (pText.includes(word)) score += word.length
-    }
-    if (score > bestScore) {
-      bestScore = score
-      bestId = p.id
-    }
+  const ref = supplierReference?.trim().toLowerCase()
+  if (ref) {
+    const skuMatch = products.find((p) => p.sku.toLowerCase() === ref)
+    if (skuMatch) return skuMatch.id
   }
-  return bestId
+  const best = rankProducts(products, lineDescription ?? "")
+  return best.score >= MATCH_THRESHOLD && best.product ? best.product.id : ""
+}
+
+/** Family for a new article: that of the closest catalogue article, else by family name. */
+function guessCategory(l: Lookups, lineDescription: string): string {
+  const closest = rankProducts(l.products, lineDescription)
+  if (closest.product?.categoryId && closest.score > 0) return closest.product.categoryId
+  const words = matchTokens(lineDescription)
+  let best = { id: l.categories[0]?.id ?? "", score: 0 }
+  for (const c of l.categories) {
+    const score = overlapScore(words, c.name)
+    if (score > best.score) best = { id: c.id, score }
+  }
+  return best.id
 }
 
 function IntegrationDialog({
@@ -1139,14 +1156,16 @@ function IntegrationDialog({
   const [supplierId, setSupplierId] = useState("")
   const [supplierSearch, setSupplierSearch] = useState("")
 
-  const rawLines = Array.isArray(item.extraction?.fields?.lines)
-    ? (item.extraction.fields.lines as Array<Record<string, unknown>>)
-    : []
   const totals = item.extraction?.fields?.totals as
     | Record<string, unknown>
     | undefined
-  const lines =
-    rawLines.length > 0
+  // Memoized so applyAutoMatch keeps a stable identity; otherwise the lookup
+  // effect re-runs every render and wipes the user's manual article choices.
+  const lines = useMemo(() => {
+    const rawLines = Array.isArray(item.extraction?.fields?.lines)
+      ? (item.extraction.fields.lines as Array<Record<string, unknown>>)
+      : []
+    return rawLines.length > 0
       ? rawLines
       : [
           {
@@ -1158,6 +1177,7 @@ function IntegrationDialog({
             vatRate: "19",
           },
         ]
+  }, [item, totals])
 
   const [productIds, setProductIds] = useState<string[]>(() =>
     lines.map(() => ""),
@@ -1168,6 +1188,11 @@ function IntegrationDialog({
   const [autoMatched, setAutoMatched] = useState<boolean[]>(() =>
     lines.map(() => false),
   )
+  // Articles to create in the ERP for lines with no catalogue match (productIds[i] === CREATE_NEW).
+  const [newProducts, setNewProducts] = useState<{ name: string; categoryId: string }[]>(() =>
+    lines.map(() => ({ name: "", categoryId: "" })),
+  )
+  const [newSupplier, setNewSupplier] = useState({ name: "", taxId: "" })
   const [confirmed, setConfirmed] = useState(true)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
@@ -1175,23 +1200,28 @@ function IntegrationDialog({
 
   const applyAutoMatch = useCallback(
     (l: Lookups) => {
-      const bestSupp = findBestSupplier(
-        l.suppliers,
-        item.extraction?.fields?.supplier as string | undefined,
-        item.extraction?.fields?.supplierTaxId as string | undefined,
-      )
-      setSupplierId(bestSupp)
+      const extractedName = String(item.extraction?.fields?.supplier ?? "").trim()
+      const extractedTaxId = String(item.extraction?.fields?.supplierTaxId ?? "").trim()
+      const bestSupp = findBestSupplier(l.suppliers, extractedName, extractedTaxId)
+      // Unknown but readable supplier: propose creating it rather than leaving the field empty.
+      setSupplierId(bestSupp || (extractedName ? CREATE_NEW : ""))
+      setNewSupplier({ name: extractedName, taxId: extractedTaxId })
 
-      const matches = lines.map((line, idx) =>
+      const matches = lines.map((line) =>
         findBestProduct(
           l.products,
           String(line.description ?? ""),
           String(line.supplierReference ?? ""),
-          idx,
         ),
       )
-      setProductIds(matches)
+      setProductIds(matches.map((id) => id || CREATE_NEW))
       setAutoMatched(matches.map(Boolean))
+      setNewProducts(
+        lines.map((line) => {
+          const description = String(line.description ?? "").trim()
+          return { name: description, categoryId: guessCategory(l, description) }
+        }),
+      )
     },
     [item, lines],
   )
@@ -1219,10 +1249,20 @@ function IntegrationDialog({
     }
   }, [applyAutoMatch])
 
+  const supplierReady =
+    supplierId === CREATE_NEW ? newSupplier.name.trim().length >= 2 : Boolean(supplierId)
+  const lineReady = (index: number) =>
+    productIds[index] === CREATE_NEW
+      ? (newProducts[index]?.name.trim().length ?? 0) >= 2 && Boolean(newProducts[index]?.categoryId)
+      : Boolean(productIds[index])
+  const readyLines = lines.filter((_, index) => lineReady(index)).length
+  const newLineCount = productIds.filter((id) => id === CREATE_NEW).length
+  const readyToSubmit = Boolean(lookups && supplierReady && readyLines === lines.length && confirmed)
+
   const submit = async () => {
-    if (!supplierId || productIds.some((id) => !id) || !confirmed) {
+    if (!readyToSubmit) {
       setError(
-        "Choisissez le fournisseur et un article ERP pour chaque ligne, puis confirmez la réception.",
+        "Choisissez ou créez le fournisseur et un article ERP pour chaque ligne, puis confirmez la réception.",
       )
       return
     }
@@ -1230,8 +1270,14 @@ function IntegrationDialog({
     setError("")
     try {
       const res = await api.integrateDocumentPurchase(item.id, {
-        supplierId,
-        productIds,
+        ...(supplierId === CREATE_NEW
+          ? { newSupplier: { name: newSupplier.name.trim(), taxId: newSupplier.taxId.trim() || undefined } }
+          : { supplierId }),
+        lines: productIds.map((id, index) =>
+          id === CREATE_NEW
+            ? { newProduct: { name: newProducts[index].name.trim(), categoryId: newProducts[index].categoryId } }
+            : { productId: id },
+        ),
         receiptConfirmed: true,
       })
       setCreatedInvoiceId(res.invoiceId)
@@ -1244,9 +1290,6 @@ function IntegrationDialog({
       setSaving(false)
     }
   }
-  const readyToSubmit = Boolean(
-    lookups && supplierId && productIds.length === lines.length && productIds.every(Boolean) && confirmed,
-  )
 
   const filteredSuppliers = useMemo(() => {
     if (!lookups) return []
@@ -1307,7 +1350,7 @@ function IntegrationDialog({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <span style={{ fontSize: 11, color: "#64748b" }}>Fournisseur catalogue</span>
                 <strong style={{ fontSize: 12, color: "#0f172a" }}>
-                  {lookups?.suppliers.find((s) => s.id === supplierId)?.name || extractedSupplier || "Fournisseur"}
+                  {lookups?.suppliers.find((s) => s.id === supplierId)?.name || newSupplier.name || extractedSupplier || "Fournisseur"}
                 </strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -1446,6 +1489,7 @@ function IntegrationDialog({
                     }}
                   >
                     <option value="">Sélectionner un fournisseur ({filteredSuppliers.length})</option>
+                    <option value={CREATE_NEW}>➕ Créer un nouveau fournisseur dans l’ERP</option>
                     {filteredSuppliers.map((supplier) => (
                       <option key={supplier.id} value={supplier.id}>
                         {supplier.name} ({supplier.id})
@@ -1453,6 +1497,31 @@ function IntegrationDialog({
                     ))}
                   </select>
                 </div>
+                {supplierId === CREATE_NEW && (
+                  <div className="so-new-entity">
+                    <p className="so-new-entity-hint">
+                      <Icon name="spark" size={12} /> Fournisseur absent du catalogue : il sera créé dans l’ERP à la confirmation.
+                    </p>
+                    <div className="so-new-entity-grid">
+                      <input
+                        type="text"
+                        className="so-search-input"
+                        placeholder="Raison sociale du fournisseur"
+                        aria-label="Raison sociale du nouveau fournisseur"
+                        value={newSupplier.name}
+                        onChange={(e) => setNewSupplier((cur) => ({ ...cur, name: e.target.value }))}
+                      />
+                      <input
+                        type="text"
+                        className="so-search-input"
+                        placeholder="Matricule fiscal (optionnel)"
+                        aria-label="Matricule fiscal du nouveau fournisseur"
+                        value={newSupplier.taxId}
+                        onChange={(e) => setNewSupplier((cur) => ({ ...cur, taxId: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="so-integration-section-title">
@@ -1508,6 +1577,13 @@ function IntegrationDialog({
                             >
                               <Icon name="check" size={11} /> Auto
                             </span>
+                          ) : productIds[index] === CREATE_NEW ? (
+                            <span
+                              className="so-automatch-pill so-automatch-pill--new"
+                              title="Aucun article équivalent dans le catalogue"
+                            >
+                              Nouveau
+                            </span>
                           ) : (
                             <span className="so-automatch-pill so-automatch-pill--manual">
                               Manuel
@@ -1531,6 +1607,7 @@ function IntegrationDialog({
                           <option value="">
                             Rapprocher avec un article ERP ({filteredProducts.length} disponibles)
                           </option>
+                          <option value={CREATE_NEW}>➕ Créer un nouvel article dans l’ERP</option>
                           {filteredProducts.map((product) => (
                             <option key={product.id} value={product.id}>
                               {product.sku} — {product.name} (Stock coût: {product.unitCost ?? 0} DT)
@@ -1538,6 +1615,42 @@ function IntegrationDialog({
                           ))}
                         </select>
                       </div>
+                      {productIds[index] === CREATE_NEW && (
+                        <div className="so-new-entity">
+                          <p className="so-new-entity-hint">
+                            <Icon name="spark" size={12} /> Article absent du catalogue : il sera créé dans l’ERP
+                            (coût unitaire {String(line.unitPrice ?? "")} TND, TVA {String(line.vatRate ?? "")}%) puis réceptionné en stock.
+                          </p>
+                          <div className="so-new-entity-grid">
+                            <input
+                              type="text"
+                              className="so-search-input"
+                              placeholder="Désignation du nouvel article"
+                              aria-label={`Désignation du nouvel article, ligne ${index + 1}`}
+                              value={newProducts[index]?.name ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value
+                                setNewProducts((cur) => cur.map((p, i) => (i === index ? { ...p, name: val } : p)))
+                              }}
+                            />
+                            <select
+                              aria-label={`Famille du nouvel article, ligne ${index + 1}`}
+                              value={newProducts[index]?.categoryId ?? ""}
+                              onChange={(e) => {
+                                const val = e.target.value
+                                setNewProducts((cur) => cur.map((p, i) => (i === index ? { ...p, categoryId: val } : p)))
+                              }}
+                            >
+                              <option value="">Choisir une famille</option>
+                              {lookups.categories.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name} (TVA {c.vatRate}%)
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -1563,7 +1676,8 @@ function IntegrationDialog({
         <div className="so-integration-dialog-footer">
           <div className="so-dialog-footer-hint">
             <span>{readyToSubmit ? "Prêt pour transmission" : "Rapprochement incomplet"} •</span>
-            <strong>{productIds.filter(Boolean).length}/{lines.length} article{lines.length > 1 ? "s" : ""}</strong>
+            <strong>{readyLines}/{lines.length} article{lines.length > 1 ? "s" : ""}</strong>
+            {newLineCount > 0 && <span>• {newLineCount} à créer dans l’ERP</span>}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Button variant="secondary" onClick={onClose} disabled={saving}>

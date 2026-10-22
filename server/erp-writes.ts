@@ -94,9 +94,9 @@ export function lookups(db: ErpDatabase, scope: AgencyScope) {
       "SELECT id, name, default_vat_rate vatRate FROM product_categories ORDER BY name",
     ),
     customers: db.all<{ id: string; name: string }>(`SELECT id, name FROM customers WHERE ${inScope("agency_id")} ORDER BY name`),
-    suppliers: db.all<{ id: string; name: string }>("SELECT id, name FROM suppliers ORDER BY name"),
-    products: db.all<{ id: string; sku: string; name: string; unitCost: number | null; listPrice: number | null; vatRate: number | null }>(
-      "SELECT id, sku, name, unit_cost unitCost, list_price listPrice, vat_rate vatRate FROM products ORDER BY name",
+    suppliers: db.all<{ id: string; name: string; taxId: string | null }>("SELECT id, name, tax_id taxId FROM suppliers ORDER BY name"),
+    products: db.all<{ id: string; sku: string; name: string; categoryId: string; unitCost: number | null; listPrice: number | null; vatRate: number | null }>(
+      "SELECT id, sku, name, category_id categoryId, unit_cost unitCost, list_price listPrice, vat_rate vatRate FROM products ORDER BY name",
     ),
     openInvoices: db.all<{ id: string; number: string; customer: string; outstanding: number }>(
       `SELECT r.sales_invoice_id id, s.number, c.name customer, r.outstanding
@@ -123,8 +123,8 @@ export function agencyId(db: ErpDatabase, scope: AgencyScope, agency: string) {
   return row.id
 }
 
-type ProductRef = z.infer<typeof productRef>
-function resolveProduct(db: ErpDatabase, ref: ProductRef, defaults: { unitCost?: number; listPrice?: number; vatRate?: number }) {
+export type ProductRef = z.infer<typeof productRef>
+export function resolveProduct(db: ErpDatabase, ref: ProductRef, defaults: { unitCost?: number; listPrice?: number; vatRate?: number }) {
   if (ref.productId) {
     const p = db.one<{ id: string; unit_cost: number | null; vat_rate: number | null } | undefined>(
       "SELECT id, unit_cost, vat_rate FROM products WHERE id = ?",
