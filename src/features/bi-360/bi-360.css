@@ -1,0 +1,774 @@
+/* AI-NÉGOCE / NEXORA — BI 360 ENTERPRISE DESIGN SYSTEM */
+
+.bi-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0 0.25rem;
+  font-family: inherit;
+}
+
+/* 1. Header & Freshness */
+.bi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.bi-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bi-header-title h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text, #17243d);
+  letter-spacing: -0.02em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bi-badge-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background: var(--blue-soft, #edf4ff);
+  color: var(--blue, #2d6cdf);
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bi-badge-pill.success {
+  background: var(--green-soft, #eaf8f3);
+  color: var(--green, #15956f);
+}
+
+.bi-badge-pill.warning {
+  background: var(--amber-soft, #fff7e8);
+  color: var(--amber, #d88716);
+}
+
+.bi-badge-pill.danger {
+  background: var(--red-soft, #fff0f0);
+  color: var(--red, #d04444);
+}
+
+.bi-badge-pill.info {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.bi-header-subtitle {
+  font-size: 0.85rem;
+  color: var(--muted, #687386);
+}
+
+.bi-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.bi-freshness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--muted, #687386);
+  padding: 0.35rem 0.75rem;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e3e7ed);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.bi-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green, #15956f);
+  box-shadow: 0 0 0 3px rgba(21, 149, 111, 0.2);
+}
+
+/* Action Buttons */
+.bi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  height: 34px;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+.bi-btn-secondary {
+  background: var(--surface, #ffffff);
+  border-color: var(--line, #e3e7ed);
+  color: var(--text, #17243d);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.bi-btn-secondary:hover {
+  background: #fafbfc;
+  border-color: var(--line-strong, #d4dae3);
+}
+
+.bi-btn-primary {
+  background: var(--blue, #2d6cdf);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(45, 108, 223, 0.25);
+}
+
+.bi-btn-primary:hover {
+  background: var(--blue-dark, #1f56bd);
+}
+
+.bi-btn-copilot {
+  background: linear-gradient(135deg, #2d6cdf 0%, #4f46e5 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+
+.bi-btn-copilot:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+/* 2. Universal Filter Toolbar */
+.bi-filter-toolbar {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e3e7ed);
+  border-radius: 8px;
+  padding: 0.65rem 0.95rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  box-shadow: 0 1px 2px rgba(21, 34, 54, 0.03);
+}
+
+.bi-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.bi-filter-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  white-space: nowrap;
+}
+
+.bi-select, .bi-input {
+  font-size: 0.82rem;
+  height: 32px;
+  padding: 0 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong, #d4dae3);
+  background: #ffffff;
+  color: var(--text, #17243d);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.bi-select:focus, .bi-input:focus {
+  border-color: var(--blue, #2d6cdf);
+  box-shadow: 0 0 0 2px rgba(45, 108, 223, 0.12);
+}
+
+.bi-filter-dates {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bi-btn-reset {
+  background: none;
+  border: 1px dashed var(--line-strong, #d4dae3);
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bi-btn-reset:hover {
+  background: #f8fafc;
+  color: var(--text, #17243d);
+  border-color: var(--muted, #687386);
+}
+
+/* 3. Navigation Sub-Tabs */
+.bi-nav-tabs {
+  display: flex;
+  gap: 0.3rem;
+  border-bottom: 1px solid var(--line, #e3e7ed);
+  padding-bottom: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.bi-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.bi-tab-btn:hover {
+  background: rgba(45, 108, 223, 0.05);
+  color: var(--text, #17243d);
+}
+
+.bi-tab-btn.active {
+  background: var(--blue-soft, #edf4ff);
+  color: var(--blue-dark, #1f56bd);
+  box-shadow: inset 0 -2px var(--blue, #2d6cdf);
+}
+
+.bi-tab-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.bi-tab-badge {
+  font-size: 0.68rem;
+  background: var(--red, #d04444);
+  color: #ffffff;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-weight: 700;
+}
+
+/* 4. KPI Cards & Grid */
+.bi-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.bi-kpi-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e3e7ed);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.4rem;
+  box-shadow: var(--shadow, 0 1px 2px rgba(21, 34, 54, 0.03));
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  min-height: 112px;
+}
+
+.bi-kpi-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(21, 34, 54, 0.06);
+}
+
+.bi-kpi-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bi-kpi-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted, #687386);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bi-kpi-formula-info {
+  font-size: 0.75rem;
+  color: var(--muted-2, #8e98a8);
+  cursor: help;
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+}
+
+.bi-kpi-formula-info:hover {
+  color: var(--blue, #2d6cdf);
+  background: var(--blue-soft, #edf4ff);
+}
+
+/* Money Display Sub-component */
+.bi-money {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  font-feature-settings: "tnum";
+}
+
+.bi-money-sign {
+  margin-right: 2px;
+}
+
+.bi-money-int {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.bi-money-dec {
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.bi-money-unit {
+  font-size: 0.72em;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  margin-left: 0.25rem;
+}
+
+.bi-kpi-value {
+  font-size: 1.35rem;
+  color: var(--text, #17243d);
+  line-height: 1.15;
+  margin: 0.15rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bi-kpi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.73rem;
+  margin-top: auto;
+}
+
+.bi-delta-pill {
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.bi-delta-pill.positive {
+  background: var(--green-soft, #eaf8f3);
+  color: var(--green, #15956f);
+}
+
+.bi-delta-pill.negative {
+  background: var(--red-soft, #fff0f0);
+  color: var(--red, #d04444);
+}
+
+.bi-delta-pill.neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.bi-delta-pill.warning {
+  background: var(--amber-soft, #fff7e8);
+  color: var(--amber, #d88716);
+}
+
+.bi-kpi-subtitle {
+  color: var(--muted, #687386);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+  flex: 1;
+}
+
+/* 5. Panels & Layout Sections */
+.bi-panel {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e3e7ed);
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow, 0 1px 2px rgba(21, 34, 54, 0.03));
+  display: flex;
+  flex-direction: column;
+}
+
+.bi-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.bi-panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text, #17243d);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.bi-panel-desc {
+  font-size: 0.8rem;
+  color: var(--muted, #687386);
+  margin-top: 0.2rem;
+}
+
+.bi-section-grid {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 1.15rem;
+}
+
+@media (max-width: 1024px) {
+  .bi-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 6. Clean Progress Bar & Track (Fixes the Giant Blue Bar) */
+.bi-progress-track {
+  width: 100%;
+  height: 7px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 0.4rem 0;
+  position: relative;
+}
+
+.bi-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--blue, #2d6cdf);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 7. Bar Chart Design */
+.bi-chart-grid {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  height: 200px;
+  padding-top: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line, #e3e7ed);
+  position: relative;
+}
+
+.bi-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  border-radius: 4px;
+  padding: 0 2px;
+  transition: background 0.15s;
+}
+
+.bi-bar-col:hover {
+  background: rgba(45, 108, 223, 0.04);
+}
+
+.bi-bar-stack {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.bi-bar {
+  width: 10px;
+  max-width: 14px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.25s ease, filter 0.15s ease;
+  min-height: 2px;
+  position: relative;
+}
+
+.bi-bar:hover {
+  filter: brightness(1.15);
+}
+
+.bi-bar.revenue {
+  background: var(--blue, #2d6cdf);
+}
+
+.bi-bar.margin {
+  background: var(--green, #15956f);
+}
+
+.bi-bar.purchases {
+  background: var(--amber, #d88716);
+}
+
+.bi-bar-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  margin-top: 0.4rem;
+}
+
+/* 8. Waterfall Margin Bridge */
+.bi-waterfall-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 0.75rem;
+  height: 180px;
+  padding-top: 1.5rem;
+  border-bottom: 1px solid var(--line, #e3e7ed);
+  margin-top: 0.5rem;
+}
+
+.bi-waterfall-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bi-waterfall-bar-wrap {
+  width: 100%;
+  max-width: 44px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bi-waterfall-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  transition: height 0.3s ease;
+}
+
+.bi-waterfall-bar.base, .bi-waterfall-bar.current {
+  background: var(--blue, #2d6cdf);
+}
+
+.bi-waterfall-bar.positive {
+  background: var(--green, #15956f);
+}
+
+.bi-waterfall-bar.negative {
+  background: var(--red, #d04444);
+}
+
+.bi-waterfall-val {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.bi-waterfall-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  margin-top: 0.4rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* 9. Tables */
+.bi-table-wrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.bi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.bi-table th {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--line, #e3e7ed);
+  color: var(--muted, #687386);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+.bi-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--line, #e3e7ed);
+  color: var(--text, #17243d);
+}
+
+.bi-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.bi-table tbody tr:hover {
+  background: rgba(45, 108, 223, 0.03);
+}
+
+/* 10. Aging Grid (Finance) */
+.bi-aging-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .bi-aging-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.bi-aging-card {
+  background: #ffffff;
+  border: 1px solid var(--line, #e3e7ed);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.bi-aging-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted, #687386);
+}
+
+.bi-aging-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text, #17243d);
+}
+
+.bi-aging-count {
+  font-size: 0.72rem;
+  color: var(--muted, #687386);
+}
+
+/* 11. Alerts Journal */
+.bi-alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--line, #e3e7ed);
+  border-radius: 8px;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.bi-alert-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.bi-alert-body {
+  flex: 1;
+}
+
+.bi-alert-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text, #17243d);
+  display: flex;
+  align-items: center;
+}
+
+.bi-alert-subject {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted, #687386);
+  margin-top: 0.15rem;
+}
+
+.bi-alert-desc {
+  font-size: 0.8rem;
+  color: var(--text, #17243d);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.bi-alert-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Skeleton Loading */
+.bi-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: bi-shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes bi-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

@@ -1,12 +1,34 @@
-﻿import crypto from "node:crypto"
+import crypto from "node:crypto"
 import type { InvoiceInput } from "./invoice-validation.js"
 import { ErpDatabase, shiftDays } from "./erp-db.js"
 import { agencyId, moveStock, ErpError } from "./erp-writes.js"
 import type { AgencyScope } from "./auth.js"
 
+/** A supplier missed by OCR is resolved by the explicit catalogue choice submitted by the
+ * reviewer. Every other required extraction field must still be present for posting. */
+export const missingFieldsForPurchase = (missingFields: string[]) =>
+  missingFields.filter((field) => field !== "supplier")
+
 export function purchaseSubmission(db: ErpDatabase | null | undefined, organizationId: string, documentId: string) {
-  const row = db?.one<{ supplier_invoice_id: string } | undefined>("SELECT supplier_invoice_id FROM ocr_purchase_imports WHERE organization_id = ? AND document_id = ?", organizationId, documentId)
-  return row ? { status: "integrated", adapter: "local-purchases", invoiceId: row.supplier_invoice_id } : null
+  const row = db?.one<{ supplier_invoice_id: string; invoice_number: string | null; supplier_name: string | null; total_ttc: number | null } | undefined>(
+    `SELECT i.supplier_invoice_id, s.supplier_invoice_number invoice_number, p.name supplier_name, s.total_ttc
+       FROM ocr_purchase_imports i
+       LEFT JOIN supplier_invoices s ON s.id = i.supplier_invoice_id
+       LEFT JOIN suppliers p ON p.id = s.supplier_id
+      WHERE i.organization_id = ? AND i.document_id = ?`,
+    organizationId,
+    documentId,
+  )
+  return row
+    ? {
+        status: "integrated",
+        adapter: "local-purchases",
+        invoiceId: row.supplier_invoice_id,
+        invoiceNumber: row.invoice_number ?? undefined,
+        supplierName: row.supplier_name ?? undefined,
+        totalTtc: row.total_ttc ?? undefined,
+      }
+    : null
 }
 
 /** Only reviewed catalogue identities are accepted; never creates products or a fictitious PO. */
@@ -15,7 +37,7 @@ export function importPurchase(db: ErpDatabase, scope: AgencyScope, org: string,
     const agencyKey = agencyId(db, scope, agency)
     const previous = purchaseSubmission(db, org, doc)
     if (previous) return previous
-    const supplier = db.one<{ payment_terms_days: number | null } | undefined>("SELECT payment_terms_days FROM suppliers WHERE id = ?", supplierId)
+    const supplier = db.one<{ name: string; payment_terms_days: number | null } | undefined>("SELECT name, payment_terms_days FROM suppliers WHERE id = ?", supplierId)
     if (!supplier) throw new ErpError("Choisissez un fournisseur du catalogue")
     if (!invoice.lines?.length || invoice.lines.length !== productIds.length) throw new ErpError("Chaque ligne doit être rapprochée avec un article")
     if (invoice.currency !== "TND" || !invoice.invoiceNumber || !invoice.invoiceDate || !/^\d{4}-\d{2}-\d{2}$/.test(invoice.invoiceDate) || !Number.isFinite(Date.parse(invoice.invoiceDate)) || new Date(invoice.invoiceDate).toISOString().slice(0, 10) !== invoice.invoiceDate) throw new ErpError("Numéro, date ou devise invalide")
@@ -37,6 +59,13 @@ export function importPurchase(db: ErpDatabase, scope: AgencyScope, org: string,
       moveStock(db, { productId: productIds[i], agencyId: agencyKey, date: invoice.invoiceDate!, type: "receipt", quantity, unitCost: ht / quantity, reference: id })
     })
     db.run("INSERT INTO ocr_purchase_imports (organization_id, document_id, supplier_invoice_id) VALUES (?, ?, ?)", org, doc, id)
-    return { status: "integrated", adapter: "local-purchases", invoiceId: id }
+    return {
+      status: "integrated",
+      adapter: "local-purchases",
+      invoiceId: id,
+      invoiceNumber: invoice.invoiceNumber,
+      supplierName: supplier.name,
+      totalTtc: amounts[2],
+    }
   })
 }

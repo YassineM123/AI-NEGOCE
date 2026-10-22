@@ -1,4 +1,4 @@
-import { importPurchase, purchaseSubmission } from "./ocr-purchases.js"
+import { importPurchase, missingFieldsForPurchase, purchaseSubmission } from "./ocr-purchases.js"
 import express from "express"
 import cors from "cors"
 import helmet from "helmet"
@@ -27,6 +27,8 @@ import {
   overview,
   type Dataset,
 } from "./services.js"
+import { processConversationalQuery } from "./copilot-engine.js"
+import { createLlmProvider, type LlmProvider } from "./llm/index.js"
 import { validateInvoice, type InvoiceInput } from "./invoice-validation.js"
 import {
   DEMO_FINANCIAL_RULES,
@@ -46,10 +48,25 @@ import {
   type Organization,
   type Store,
 } from "./store.js"
+import type { Extraction } from "./ocr.js"
 import { UnconfiguredErpAdapter, type ErpAdapter } from "./erp.js"
 import { ErpDatabase } from "./erp-db.js"
 import { managementPage } from "./erp-pages.js"
 import { bi360, datasetFrom } from "./erp-bi.js"
+import {
+  computeExecutiveCockpit,
+  computeSalesIntelligence,
+  computeProfitability,
+  computePurchases,
+  computeInventory,
+  computeFinance,
+  computeDiagnostics,
+  computeAlerts,
+  acknowledgeAlert,
+  computeForecasting,
+  generateExportReport,
+  type BiUniversalFilters,
+} from "./bi/index.js"
 import {
   ErpError,
   createPayment,
@@ -76,6 +93,8 @@ export type Dependencies = {
   erpDb?: ErpDatabase | null
   /** Log destination; stdout when absent (tests inject one to inspect the output) */
   logDestination?: pino.DestinationStream
+  /** LLM provider for conversational query reasoning */
+  llm?: LlmProvider
 }
 export function defaultDependencies(env = process.env): Dependencies {
   const config = loadConfig(env)
@@ -92,6 +111,7 @@ export function defaultDependencies(env = process.env): Dependencies {
           : new DisabledOcrProvider(),
     erp: new UnconfiguredErpAdapter(),
     erpDb: ErpDatabase.open(),
+    llm: createLlmProvider(env),
   }
 }
 
@@ -140,7 +160,7 @@ export function createApp(deps = defaultDependencies()) {
   app.use(
     cors({
       origin: config.FRONTEND_ORIGIN,
-      methods: ["GET", "POST", "PUT", "PATCH"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       allowedHeaders: ["Authorization", "Content-Type", "Idempotency-Key"],
     }),
   )
@@ -261,13 +281,45 @@ export function createApp(deps = defaultDependencies()) {
   })
   /** Store confined to the caller's organization. */
   const tenant = (req: express.Request) => store.forTenant(req.principal!.organizationId)
-  const documentCapabilities = (req: express.Request, status: string, extraction?: { missingFields: string[]; provider?: string } | null) => ({
+  const hasBlockingIssues = (issues: Array<{ severity: "blocking" | "warning" }>) =>
+    issues.some((issue) => issue.severity === "blocking")
+
+  /** Validation findings are intentionally split into blockers and review remarks.
+   * Supplier and line recognition can be completed during the human matching step, so an
+   * OCR miss there is visible but does not prevent approval. Financial inconsistencies,
+   * missing invoice identity/totals, and unusable rules remain blocking.
+   */
+  const approvalIssues = async (req: express.Request, res: express.Response, extraction: Extraction | undefined) => {
+    const stored = await tenant(req).getFinancialRules()
+    const blocking = (code: string, message: string, field?: string) => [{ code, severity: "blocking" as const, message, ...(field ? { field } : {}) }]
+    if (!extraction) return { stored, issues: blocking("EXTRACTION_MISSING", "Aucune extraction disponible") }
+    const reviewableMissing = new Set(["supplier", "lines"])
+    const missingIssues = extraction.missingFields.map((field: string) => ({
+      code: "FIELD_MISSING",
+      severity: reviewableMissing.has(field) ? "warning" as const : "blocking" as const,
+      message: reviewableMissing.has(field)
+        ? `Champ non reconnu par l’OCR : ${field}. À vérifier lors du rapprochement.`
+        : `Champ indispensable absent : ${field}`,
+      field,
+    }))
+    if (hasBlockingIssues(missingIssues)) return { stored, issues: missingIssues }
+    const ruleState = rulesUsable(stored?.rules, res.locals.organization as Organization)
+    if (!ruleState.ok) return { stored, issues: [...missingIssues, ...blocking(ruleState.code, ruleState.message)] }
+    const fields = extraction.fields as InvoiceInput & { supplier?: string }
+    let validationIssues = validateInvoice({ ...fields, supplierId: fields.supplierId ?? fields.supplier }, { rules: stored!.rules })
+    if (extraction.missingFields.includes("supplier"))
+      validationIssues = validationIssues.filter((issue) => issue.code !== "MISSING_SUPPLIER")
+    if (extraction.missingFields.includes("lines"))
+      validationIssues = validationIssues.filter((issue) => !["HT_MISMATCH", "VAT_MISMATCH"].includes(issue.code))
+    return { stored, issues: [...missingIssues, ...validationIssues] }
+  }
+  const documentCapabilities = (req: express.Request, status: string, extraction: { missingFields: string[]; provider?: string } | null | undefined, approvable: boolean) => ({
     canCorrect: status === "needs_review" && hasPermission(req.principal?.role, "invoice.correct"),
-    canApprove: status === "needs_review" && !!extraction && extraction.missingFields.length === 0 && hasPermission(req.principal?.role, "invoice.approve"),
+    canApprove: status === "needs_review" && approvable && hasPermission(req.principal?.role, "invoice.approve"),
     canReject: status === "needs_review" && hasPermission(req.principal?.role, "invoice.approve"),
     canReopen: ["approved", "rejected", "failed"].includes(status) && hasPermission(req.principal?.role, "invoice.correct"),
-    canRetry: (status === "failed" || (status === "needs_review" && (!extraction || extraction.provider === "disabled"))) && hasPermission(req.principal?.role, "documents.upload"),
-    canIntegrate: status === "approved" && hasPermission(req.principal?.role, "erp.integrate") && sandboxTenant(req) && !!deps.erpDb,
+    canRetry: (status === "failed" || status === "needs_review") && hasPermission(req.principal?.role, "documents.upload"),
+    canIntegrate: status === "approved" && !(extraction?.missingFields ?? []).some((field) => ["invoiceNumber", "invoiceDate", "currency", "lines", "totals"].includes(field)) && hasPermission(req.principal?.role, "erp.integrate") && sandboxTenant(req) && !!deps.erpDb,
   })
   app.get("/api/v1/me", async (req, res) => {
     const org = res.locals.organization as Organization
@@ -434,6 +486,18 @@ export function createApp(deps = defaultDependencies()) {
       return res.json(lookups(deps.erpDb!, agencies))
     },
   )
+  const biFilterSchema = z.object({
+    agency: z.string().max(80).optional(),
+    period: z.enum(["month", "quarter", "year", "custom", "all"]).default("year"),
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    customerId: z.string().max(40).optional(),
+    supplierId: z.string().max(40).optional(),
+    categoryId: z.string().max(40).optional(),
+    productId: z.string().max(40).optional(),
+    repId: z.string().max(40).optional(),
+  })
+
   app.get(
     "/api/v1/bi/360",
     requireRoles("admin", "manager", "accountant", "commercial"),
@@ -458,6 +522,163 @@ export function createApp(deps = defaultDependencies()) {
           ? { categoryId: parsed.data.category, agency: parsed.data.focusAgency }
           : undefined
       return res.json(bi360(deps.erpDb!, agencies, parsed.data.period, focus))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/cockpit",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeExecutiveCockpit(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/sales",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeSalesIntelligence(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/profitability",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeProfitability(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/purchases",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computePurchases(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/inventory",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeInventory(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/finance",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeFinance(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/diagnostics",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeDiagnostics(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/alerts",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const agencies = scopedAgencies(req, "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      const includeAck = req.query.includeAcknowledged === "true"
+      return res.json(computeAlerts(deps.erpDb!, agencies, includeAck))
+    },
+  )
+
+  app.post(
+    "/api/v1/bi/360/alerts/:id/acknowledge",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const alertId = String(req.params.id)
+      acknowledgeAlert(alertId)
+      return res.json({ success: true, alertId })
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/forecasting",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      return res.json(computeForecasting(deps.erpDb!, agencies, parsed.data))
+    },
+  )
+
+  app.get(
+    "/api/v1/bi/360/export",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    erpGuard,
+    (req, res) => {
+      const parsed = biFilterSchema.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({ error: { code: "INVALID_REQUEST", message: "Filtres invalides" } })
+      const agencies = scopedAgencies(req, parsed.data.agency || "all")
+      if (agencies === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" } })
+      const format = req.query.format === "json" ? "json" : "csv"
+      const moduleParam = (req.query.module as any) ?? "all"
+      const report = generateExportReport(deps.erpDb!, agencies, parsed.data, { format, module: moduleParam })
+      if (format === "json") return res.json(report)
+      res.setHeader("Content-Type", "text/csv; charset=utf-8")
+      res.setHeader("Content-Disposition", `attachment; filename="bi360-rapport-${deps.erpDb!.asOf()}.csv"`)
+      return res.send("\uFEFF" + report)
     },
   )
   app.post(
@@ -494,19 +715,32 @@ export function createApp(deps = defaultDependencies()) {
     erpGuard,
     erpWrite(paymentInput, "erp.payment.created", createPayment),
   )
+  app.get(
+    "/api/v1/conversations",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    async (req, res) => {
+      const q = typeof req.query.q === "string" ? req.query.q.trim() : undefined
+      const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50))
+      const result = q
+        ? { conversations: await tenant(req).searchConversations(req.principal!.id, q), total: 0 }
+        : await tenant(req).listConversations(req.principal!.id, limit)
+      return res.json(result)
+    },
+  )
   app.post(
     "/api/v1/conversations",
     requireRoles("admin", "manager", "accountant", "commercial"),
     async (req, res) => {
       const parsed = z
-        .object({ title: z.string().trim().min(1).max(120) })
+        .object({ title: z.string().trim().min(1).max(120).optional() })
         .safeParse(req.body)
       if (!parsed.success) return res.status(400).json({
           error: { code: "INVALID_REQUEST", message: "Titre invalide" },
         })
+      const title = parsed.data.title || `Discussion ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
       const c = await tenant(req).createConversation(
         req.principal!.id,
-        parsed.data.title,
+        title,
       )
       await tenant(req).audit({
         actorId: req.principal!.id,
@@ -528,6 +762,92 @@ export function createApp(deps = defaultDependencies()) {
       return c ? res.json(c) : res.status(404).json({
             error: { code: "NOT_FOUND", message: "Conversation introuvable" },
           })
+    },
+  )
+  app.patch(
+    "/api/v1/conversations/:id",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      if (!uuid.safeParse(id).success) return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Conversation introuvable" },
+        })
+      const parsed = z
+        .object({ title: z.string().trim().min(1).max(120) })
+        .safeParse(req.body)
+      if (!parsed.success) return res.status(400).json({
+          error: { code: "INVALID_REQUEST", message: "Titre invalide" },
+        })
+      const updated = await tenant(req).updateConversation(id, req.principal!.id, { title: parsed.data.title })
+      if (!updated) return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Conversation introuvable" },
+        })
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "conversation.updated",
+        resourceType: "conversation",
+        resourceId: id,
+      })
+      return res.json(updated)
+    },
+  )
+  app.delete(
+    "/api/v1/conversations/:id",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    async (req, res) => {
+      const id = String(req.params.id)
+      if (!uuid.safeParse(id).success) return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Conversation introuvable" },
+        })
+      const deleted = await tenant(req).deleteConversation(id, req.principal!.id)
+      if (!deleted) return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Conversation introuvable" },
+        })
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "conversation.deleted",
+        resourceType: "conversation",
+        resourceId: id,
+      })
+      return res.json({ success: true, id })
+    },
+  )
+  app.get(
+    "/api/v1/copilot/preferences",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    async (req, res) => {
+      const prefs = await tenant(req).getUserPreferences(req.principal!.id)
+      return res.json({ preferences: prefs })
+    },
+  )
+  app.put(
+    "/api/v1/copilot/preferences",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    async (req, res) => {
+      const parsed = z
+        .object({
+          key: z.string().trim().min(1).max(60),
+          value: z.unknown(),
+        })
+        .safeParse(req.body)
+      if (!parsed.success) return res.status(400).json({
+          error: { code: "INVALID_REQUEST", message: "Préférence invalide" },
+        })
+      await tenant(req).setUserPreference(req.principal!.id, parsed.data.key, parsed.data.value)
+      return res.json({ success: true })
+    },
+  )
+  app.delete(
+    "/api/v1/copilot/preferences",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    async (req, res) => {
+      const key = typeof req.query.key === "string" ? req.query.key : undefined
+      if (key) {
+        await tenant(req).deleteUserPreference(req.principal!.id, key)
+      } else {
+        await tenant(req).clearUserPreferences(req.principal!.id)
+      }
+      return res.json({ success: true })
     },
   )
   app.post(
@@ -560,7 +880,7 @@ export function createApp(deps = defaultDependencies()) {
             message: "Agence hors périmètre",
           },
         })
-      const c = parsed.data.conversationId
+      let c = parsed.data.conversationId
         ? await tenant(req).getConversation(
             parsed.data.conversationId,
             req.principal!.id,
@@ -569,19 +889,24 @@ export function createApp(deps = defaultDependencies()) {
       if (parsed.data.conversationId && !c) return res.status(404).json({
           error: { code: "NOT_FOUND", message: "Conversation introuvable" },
         })
-      const answer = groundedAnswer(
+
+      // If no conversation provided, auto-create one
+      if (!c) {
+        const autoTitle = parsed.data.question.slice(0, 50).trim()
+        c = await tenant(req).createConversation(req.principal!.id, autoTitle)
+      }
+
+      const answer = await processConversationalQuery(
         parsed.data.question,
         {
           scope,
           explicitAgency: requested === "all" ? undefined : requested,
           from: parsed.data.filters?.from,
           to: parsed.data.filters?.to,
-        },
-        data(),
-        {
-          previousQuestion: c?.messages
-            .filter((m) => m.role === "user")
-            .at(-1)?.content,
+          conversation: c,
+          erpDb: deps.erpDb,
+          dataset: data(),
+          llm: deps.llm,
         },
       )
       if (c) {
@@ -602,10 +927,115 @@ export function createApp(deps = defaultDependencies()) {
         actorId: req.principal!.id,
         action: "copilot.queried",
         resourceType: "copilot",
-        resourceId: parsed.data.conversationId || "ephemeral",
+        resourceId: c ? c.id : "ephemeral",
         metadata: { sourceCount: answer.sources.length },
       })
-      return res.json(answer)
+      return res.json({
+        ...answer,
+        conversationId: c ? c.id : undefined,
+      })
+    },
+  )
+  app.post(
+    "/api/v1/copilot/query/stream",
+    requireRoles("admin", "manager", "accountant", "commercial"),
+    requireErpData,
+    async (req, res) => {
+      const parsed = z
+        .object({
+          question: z.string().trim().min(3).max(1000),
+          conversationId: z.string().uuid().optional(),
+          filters: z
+            .object({ agency: z.string().max(80).optional() })
+            .and(periodSchema)
+            .optional(),
+        })
+        .safeParse(req.body)
+      if (!parsed.success) return res.status(400).json({
+          error: { code: "INVALID_REQUEST", message: "Question invalide", details: parsed.error.flatten() },
+        })
+      const requested = parsed.data.filters?.agency || "all"
+      const scope = scopedAgencies(req, requested)
+      if (scope === null) return res.status(403).json({
+          error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" },
+        })
+
+      let conv = parsed.data.conversationId
+        ? await tenant(req).getConversation(parsed.data.conversationId, req.principal!.id)
+        : undefined
+      if (parsed.data.conversationId && !conv) return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Conversation introuvable" },
+        })
+
+      // If no conversation provided, auto-create one
+      if (!conv) {
+        const autoTitle = parsed.data.question.slice(0, 50).trim()
+        conv = await tenant(req).createConversation(req.principal!.id, autoTitle)
+      }
+
+      res.setHeader("Content-Type", "text/event-stream")
+      res.setHeader("Cache-Control", "no-cache, no-transform")
+      res.setHeader("Connection", "keep-alive")
+      res.flushHeaders?.()
+
+      const sendEvent = (event: string, payload: unknown) => {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`)
+      }
+
+      sendEvent("init", { conversationId: conv.id, title: conv.title })
+      sendEvent("status", { state: "thinking", message: "Interrogation des écritures et règles ERP..." })
+
+      const answer = await processConversationalQuery(
+        parsed.data.question,
+        {
+          scope,
+          explicitAgency: requested === "all" ? undefined : requested,
+          from: parsed.data.filters?.from,
+          to: parsed.data.filters?.to,
+          conversation: conv,
+          erpDb: deps.erpDb,
+          dataset: data(),
+          llm: deps.llm,
+        },
+      )
+
+      if (answer.tool) {
+        sendEvent("tool", { tool: answer.tool, status: answer.status })
+      }
+
+      // Stream text in chunks
+      const words = answer.answer.split(" ")
+      for (let i = 0; i < words.length; i += 3) {
+        const chunk = words.slice(i, i + 3).join(" ") + (i + 3 < words.length ? " " : "")
+        sendEvent("delta", { delta: chunk })
+      }
+
+      const now = new Date().toISOString()
+      await tenant(req).addMessage(conv.id, {
+        role: "user",
+        content: parsed.data.question,
+        createdAt: now,
+      })
+      await tenant(req).addMessage(conv.id, {
+        role: "assistant",
+        content: answer.answer,
+        sources: answer.sources,
+        createdAt: now,
+      })
+
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "copilot.streamed",
+        resourceType: "copilot",
+        resourceId: conv.id,
+        metadata: { sourceCount: answer.sources.length },
+      })
+
+      sendEvent("done", {
+        ...answer,
+        conversationId: conv.id,
+      })
+      return res.end()
     },
   )
   app.post(
@@ -792,7 +1222,12 @@ export function createApp(deps = defaultDependencies()) {
           events: extraction?.events ?? [],
           error: doc.status === "failed" ? { code: "OCR_FAILED", message: "La dernière extraction OCR a échoué" } : null,
         },
-        capabilities: documentCapabilities(req, doc.status, extraction),
+        capabilities: documentCapabilities(
+          req,
+          doc.status,
+          extraction,
+          doc.status === "needs_review" && !hasBlockingIssues((await approvalIssues(req, res, extraction)).issues),
+        ),
         erpSubmission: (sandboxTenant(req) ? purchaseSubmission(deps.erpDb, req.principal!.organizationId, doc.id) : null) ?? { status: "not_submitted", adapter: erp.name },
       })
     },
@@ -805,9 +1240,7 @@ export function createApp(deps = defaultDependencies()) {
       const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
       if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
       if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
-      const previous = await tenant(req).getExtraction(doc.id)
-      const mayReprocessMissingOrDisabled = doc.status === "needs_review" && (!previous || previous.provider === "disabled")
-      if (doc.status !== "failed" && !mayReprocessMissingOrDisabled) return res.status(409).json({ error: { code: "INVALID_STATE", message: `Nouvelle extraction impossible au statut ${doc.status}` } })
+      if (doc.status !== "failed" && doc.status !== "needs_review") return res.status(409).json({ error: { code: "INVALID_STATE", message: `Nouvelle extraction impossible au statut ${doc.status}` } })
       let content: Buffer
       try { content = await fs.readFile(path.resolve(uploadDir, doc.storageKey)) }
       catch { return res.status(410).json({ error: { code: "FILE_MISSING", message: "Fichier original indisponible" } }) }
@@ -833,15 +1266,9 @@ export function createApp(deps = defaultDependencies()) {
       const doc = uuid.safeParse(id).success ? await tenant(req).getDocument(id) : undefined
       if (!doc) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Document introuvable" } })
       if (scopedAgencies(req, doc.agency) === null) return res.status(403).json({ error: { code: "AGENCY_FORBIDDEN", message: "Document hors périmètre" } })
-      const extraction = await tenant(req).getExtraction(doc.id)
-      const stored = await tenant(req).getFinancialRules()
-      const ruleState = rulesUsable(stored?.rules, res.locals.organization as Organization)
-      if (!extraction) return res.json({ ready: false, issues: [{ code: "EXTRACTION_MISSING", severity: "blocking", message: "Aucune extraction disponible" }], rules: stored ? { revision: stored.revision, verified: stored.rules.verified } : null })
-      if (extraction.missingFields.length) return res.json({ ready: false, issues: extraction.missingFields.map(field => ({ code: "FIELD_MISSING", severity: "blocking", field, message: `Champ requis absent : ${field}` })), rules: stored ? { revision: stored.revision, verified: stored.rules.verified } : null })
-      if (!ruleState.ok) return res.json({ ready: false, issues: [{ code: ruleState.code, severity: "blocking", message: ruleState.message }], rules: stored ? { revision: stored.revision, verified: stored.rules.verified } : null })
-      const fields = extraction.fields as InvoiceInput & { supplier?: string }
-      const issues = validateInvoice({ ...fields, supplierId: fields.supplierId ?? fields.supplier }, { rules: stored!.rules })
-      return res.json({ ready: issues.length === 0, issues, rules: { revision: stored!.revision, verified: stored!.rules.verified, source: stored!.rules.source } })
+      const { issues, stored } = await approvalIssues(req, res, await tenant(req).getExtraction(doc.id))
+      const rules = stored ? { revision: stored.revision, verified: stored.rules.verified, source: stored.rules.source } : null
+      return res.json({ ready: !hasBlockingIssues(issues), issues, rules })
     },
   )
   // Audit trail of one document, oldest first. Same checks as the document itself; the
@@ -950,11 +1377,12 @@ export function createApp(deps = defaultDependencies()) {
           },
         })
       const extraction = await tenant(req).getExtraction(doc.id)
-      if (!extraction || extraction.missingFields.length) return res.status(409).json({
+      const hardMissingFields = extraction?.missingFields.filter((field) => !["supplier", "lines"].includes(field)) ?? []
+      if (!extraction || hardMissingFields.length) return res.status(409).json({
           error: {
             code: "EXTRACTION_INCOMPLETE",
             message: "Approbation impossible sans extraction validée",
-            details: { missingFields: extraction?.missingFields ?? [] },
+            details: { missingFields: hardMissingFields },
           },
         })
       const fields = extraction.fields as InvoiceInput & { supplier?: string }
@@ -962,31 +1390,44 @@ export function createApp(deps = defaultDependencies()) {
       const usable = rulesUsable(stored?.rules, res.locals.organization as Organization)
       if (!usable.ok)
         return res.status(409).json({ error: { code: usable.code, message: usable.message } })
-      const issues = validateInvoice(
+      let issues = validateInvoice(
         { ...fields, supplierId: fields.supplierId ?? fields.supplier },
         { rules: stored!.rules },
       )
-      if (issues.length) return res.status(409).json({
+      if (extraction.missingFields.includes("supplier"))
+        issues = issues.filter((issue) => issue.code !== "MISSING_SUPPLIER")
+      if (extraction.missingFields.includes("lines"))
+        issues = issues.filter((issue) => !["HT_MISMATCH", "VAT_MISMATCH"].includes(issue.code))
+      const blockingIssues = issues.filter((issue) => issue.severity === "blocking")
+      if (blockingIssues.length) return res.status(409).json({
           error: {
             code: "VALIDATION_FAILED",
             message: "La facture extraite comporte des incohérences",
-            details: { issues },
+            details: { issues: blockingIssues },
           },
         })
+      const remarks = [
+        ...extraction.missingFields
+          .filter((field) => ["supplier", "lines"].includes(field))
+          .map((field) => ({ code: "FIELD_MISSING", severity: "warning" as const, field, message: `Champ non reconnu par l’OCR : ${field}. À vérifier lors du rapprochement.` })),
+        ...issues.filter((issue) => issue.severity === "warning"),
+      ]
       if (!await tenant(req).transitionDocumentStatus(doc.id, ["needs_review"], "approved"))
         return res.status(409).json({ error: { code: "STATE_CONFLICT", message: "Le document a été modifié par un autre utilisateur" } })
-      await tenant(req).recordApprovalEvent({ documentId: doc.id, actorId: req.principal!.id, decision: "approved" })
+      await tenant(req).recordApprovalEvent({ documentId: doc.id, actorId: req.principal!.id, decision: "approved", ...(remarks.length ? { correction: { acknowledgedRemarks: remarks } } : {}) })
       await tenant(req).audit({
         actorId: req.principal!.id,
         action: "document.approved",
         resourceType: "document",
         resourceId: doc.id,
+        metadata: remarks.length ? { acknowledgedRemarks: remarks } : undefined,
       })
       return res.json({
         id: doc.id,
         status: "approved",
         // Which rules the totals were checked against, and whether an accountant validated them.
         financialRules: { revision: stored!.revision, verified: stored!.rules.verified, source: stored!.rules.source },
+        remarks,
       })
     },
   )
@@ -1000,10 +1441,14 @@ export function createApp(deps = defaultDependencies()) {
     const extraction = await tenant(req).getExtraction(doc.id)
     const stored = await tenant(req).getFinancialRules()
     const usable = rulesUsable(stored?.rules, res.locals.organization as Organization)
-    if (!usable.ok || !extraction || extraction.missingFields.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "Extraction ou règles financières non validées" } })
+    // The ERP supplier selected and submitted by the reviewer is authoritative for this
+    // step. A supplier name missed by OCR must not invalidate that explicit human choice.
+    const integrationMissing = missingFieldsForPurchase(extraction?.missingFields ?? [])
+    if (!usable.ok || !extraction || integrationMissing.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "Extraction ou règles financières non validées", details: { missingFields: integrationMissing } } })
     const invoice = { ...extraction.fields, supplierId: parsed.data.supplierId } as InvoiceInput
     const issues = validateInvoice(invoice, { rules: stored!.rules })
-    if (issues.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "La facture comporte des incohérences", details: { issues } } })
+    const blockingIssues = issues.filter((issue) => issue.severity === "blocking")
+    if (blockingIssues.length) return res.status(409).json({ error: { code: "VALIDATION_FAILED", message: "La facture comporte des incohérences", details: { issues: blockingIssues } } })
     try {
       const result = importPurchase(deps.erpDb!, scopedAgencies(req, doc.agency)!, req.principal!.organizationId, doc.id, doc.agency, invoice, parsed.data.supplierId, parsed.data.productIds)
       await tenant(req).audit({ actorId: req.principal!.id, action: "document.purchases_integrated", resourceType: "document", resourceId: doc.id, metadata: result })

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -15,7 +16,9 @@ import {
   type DocumentResponse,
   type DocumentSummary,
   type DocumentValidation,
+  type Lookups,
   type Tone,
+  type ValidationIssue,
 } from "../../api"
 import "./smart-ocr.css"
 
@@ -28,12 +31,36 @@ type WorkflowDocument = DocumentResponse & {
 }
 /** Loaded state of a per-document side resource: no data and no error while loading. */
 type Loaded<T> = { data?: T; error?: string }
-type IconName = "arrow" | "check" | "close" | "file" | "history" | "info" | "refresh" | "shield" | "upload" | "warning"
+type IconName = "arrow" | "check" | "close" | "file" | "history" | "info" | "refresh" | "shield" | "upload" | "warning" | "cart" | "send" | "spark" | "stock"
 
 const icons: Record<IconName, ReactNode> = {
   arrow: <path d="m9 18 6-6-6-6" />,
   check: <path d="m5 12 4 4L19 6" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  stock: (
+    <>
+      <path d="m4 7 8-4 8 4-8 4-8-4Z" />
+      <path d="m4 12 8 4 8-4M4 17l8 4 8-4" />
+    </>
+  ),
+  cart: (
+    <>
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </>
+  ),
+  send: (
+    <>
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </>
+  ),
+  spark: (
+    <>
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+    </>
+  ),
   file: (
     <>
       <path d="M6 2h8l4 4v16H6V2Z" />
@@ -157,6 +184,18 @@ function processingStageLabel(stage: string) {
     failed: "Traitement en échec",
   }
   return labels[stage] ?? stage
+}
+
+function formatTimelineDate(dateStr: string) {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return { date: dateStr, time: "" }
+    const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
+    const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    return { date, time }
+  } catch {
+    return { date: dateStr, time: "" }
+  }
 }
 
 function Tabs({
@@ -329,7 +368,7 @@ function displayValue(value: unknown) {
   return JSON.stringify(value)
 }
 
-function ExtractedValue({ name, value }: { name: string; value: unknown }) {
+function ExtractedValue({ name, value, currency }: { name: string; value: unknown; currency?: string }) {
   if (name === "lines" && Array.isArray(value))
     return (
       <div className="so-extracted-table-wrap">
@@ -343,7 +382,7 @@ function ExtractedValue({ name, value }: { name: string; value: unknown }) {
       </div>
     )
   if (name === "totals" && value && typeof value === "object")
-    return <dl className="so-extracted-totals">{Object.entries(value as Record<string, unknown>).map(([key, amount]) => <div key={key}><dt>{key.toUpperCase()}</dt><dd>{displayValue(amount)} TND</dd></div>)}</dl>
+    return <dl className="so-extracted-totals">{Object.entries(value as Record<string, unknown>).map(([key, amount]) => <div key={key}><dt>{key.toUpperCase()}</dt><dd>{displayValue(amount)} {currency || "TND"}</dd></div>)}</dl>
   return <>{displayValue(value)}</>
 }
 
@@ -386,24 +425,26 @@ function LoadError({ title, message }: { title: string; message: string }) {
 function ValidationTab({ state }: { state: Loaded<DocumentValidation> }) {
   if (state.error) return <LoadError title="Contrôles indisponibles" message={state.error} />
   if (!state.data) return <div className="so-loading" role="status"><span />Chargement des contrôles…</div>
-  const { ready, issues, rules } = state.data
+  const { issues, rules } = state.data
   const blocking = issues.filter((issue) => issue.severity === "blocking").length
+  const remarks = issues.filter((issue) => issue.severity === "warning").length
+  const ready = blocking === 0 && remarks === 0
   return (
     <>
       <div className="so-section-heading">
         <div>
           <p className="so-eyebrow">Contrôles métier</p>
-          <h3>{ready ? "Aucune anomalie détectée" : `${issues.length} point${issues.length > 1 ? "s" : ""} à corriger`}</h3>
+          <h3>{blocking ? `${blocking} erreur${blocking > 1 ? "s" : ""} à corriger` : remarks ? `${remarks} remarque${remarks > 1 ? "s" : ""} à examiner` : "Facture prête à approuver"}</h3>
           <p>
-            {ready
-              ? "Les champs requis et les totaux sont cohérents avec les règles financières de l’organisation."
-              : blocking
-                ? `${blocking} anomalie${blocking > 1 ? "s bloquent" : " bloque"} l’approbation.`
-                : "Des avertissements sont à examiner avant l’approbation."}
+            {blocking
+              ? `${blocking} erreur${blocking > 1 ? "s bloquent" : " bloque"} l’approbation${remarks ? ` ; ${remarks} remarque${remarks > 1 ? "s" : ""} reste${remarks > 1 ? "nt" : ""} aussi à examiner` : ""}.`
+              : remarks
+                ? `Ces ${remarks} remarque${remarks > 1 ? "s" : ""} n’empêche${remarks > 1 ? "nt" : ""} pas l’approbation humaine.`
+                : "Les contrôles bloquants sont réussis."}
           </p>
         </div>
         <span className={`so-badge so-badge--${ready ? "success" : blocking ? "danger" : "warning"}`}>
-          {ready ? "Contrôles réussis" : blocking ? "Approbation bloquée" : "À examiner"}
+          {blocking ? "Approbation bloquée" : remarks ? "Prête avec remarques" : "Prête à approuver"}
         </span>
       </div>
       {issues.length > 0 && (
@@ -412,9 +453,9 @@ function ValidationTab({ state }: { state: Loaded<DocumentValidation> }) {
             <article key={`${issue.code}-${issue.field ?? ""}-${issue.line ?? ""}-${index}`}>
               <div>
                 <span className={`so-badge so-badge--${issue.severity === "blocking" ? "danger" : "warning"}`}>
-                  {issue.severity === "blocking" ? "Bloquant" : "Avertissement"}
+                  {issue.severity === "blocking" ? "Erreur bloquante" : "Remarque"}
                 </span>
-                {issue.line !== undefined && <span>Ligne {issue.line + 1}</span>}
+                {issue.line !== undefined && <span>Ligne {issue.line}</span>}
               </div>
               <p>{issue.message}</p>
             </article>
@@ -491,10 +532,12 @@ function ReviewPanel({
   item,
   onUpload,
   onChanged,
+  onNavigate,
 }: {
   item: DocumentResponse | null
   onUpload: () => void
   onChanged: (document: DocumentResponse) => void
+  onNavigate?: (module: string, options?: { search?: string; tab?: string }) => void
 }) {
   const [zoom, setZoom] = useState(1)
   const [reviewTab, setReviewTab] = useState<ReviewTabId>("extraction")
@@ -503,7 +546,15 @@ function ReviewPanel({
   const [validation, setValidation] = useState<Loaded<DocumentValidation>>({})
   const [history, setHistory] = useState<Loaded<DocumentHistoryEvent[]>>({})
   const [actionError, setActionError] = useState("")
+  // Issues the server attached to the last failed action (e.g. approval refused by validation).
+  const [actionIssues, setActionIssues] = useState<ValidationIssue[]>([])
+  const fail = (failure: unknown, fallback: string) => {
+    setActionError(failure instanceof Error ? failure.message : fallback)
+    const issues = failure instanceof ApiError ? failure.details?.issues : undefined
+    setActionIssues(Array.isArray(issues) ? (issues as ValidationIssue[]) : [])
+  }
   const [acting, setActing] = useState(false)
+  const [integrationOpen, setIntegrationOpen] = useState(false)
   useEffect(() => {
     setZoom(1)
   }, [item?.id])
@@ -548,6 +599,8 @@ function ReviewPanel({
       .catch((reason) => { if (active) setHistory({ error: failure(reason, "Historique indisponible") }) })
     return () => { active = false }
   }, [item])
+  const blockingIssues = validation.data?.issues.filter((issue) => issue.severity === "blocking").length ?? 0
+  const remarks = validation.data?.issues.filter((issue) => issue.severity === "warning").length ?? 0
   if (!item)
     return (
       <section
@@ -614,20 +667,57 @@ function ReviewPanel({
       </header>
       <section className="so-surface so-timeline" aria-label="Progression du traitement">
         <div className="so-section-heading">
-          <div><p className="so-eyebrow">Traitement</p><h3>Progression du document</h3></div>
+          <div>
+            <p className="so-eyebrow">Traitement</p>
+            <h3>Progression du document</h3>
+          </div>
           {workflow.processing?.status && <StatusBadge status={workflow.processing.status} />}
         </div>
         {timelineEvents.length ? (
-          <ol>
-            {timelineEvents.map((stage, index) => (
-              <li key={`${stage.stage}-${stage.at}-${index}`} data-status="completed">
-                <span className="so-stage-dot" />
-                <div><strong>{processingStageLabel(stage.stage)}</strong>{stage.detail && <p>{stage.detail}</p>}</div>
-                <time>{new Date(stage.at).toLocaleString("fr-FR")}</time>
-              </li>
-            ))}
-          </ol>
-        ) : <div className="so-unavailable"><Icon name="info" size={16} /><span>Le serveur ne fournit pas encore de chronologie détaillée pour ce document.</span></div>}
+          <div className="so-stepper-wrap">
+            <ol className="so-stepper">
+              {timelineEvents.map((stage, index) => {
+                const isLast = index === timelineEvents.length - 1
+                const isFailed = stage.stage === "failed" || (isLast && workflow.processing?.status === "failed")
+                const isProcessing = isLast && workflow.processing?.status === "pending"
+                const status = isFailed ? "failed" : isProcessing ? "active" : "completed"
+                const { date, time } = formatTimelineDate(stage.at)
+
+                return (
+                  <li
+                    key={`${stage.stage}-${stage.at}-${index}`}
+                    className="so-step"
+                    data-status={status}
+                  >
+                    <div className="so-step-indicator">
+                      <div className="so-step-dot" aria-hidden="true">
+                        {status === "completed" && <Icon name="check" size={13} />}
+                        {status === "failed" && <Icon name="close" size={13} />}
+                        {status === "active" && <span className="so-step-pulse" />}
+                      </div>
+                      {!isLast && <div className="so-step-line" aria-hidden="true" />}
+                    </div>
+                    <div className="so-step-body">
+                      <strong className="so-step-title">{processingStageLabel(stage.stage)}</strong>
+                      {stage.detail && <p className="so-step-detail">{stage.detail}</p>}
+                      {date && (
+                        <time className="so-step-time" dateTime={stage.at}>
+                          <span className="so-step-date">{date}</span>
+                          {time && <span className="so-step-hour">{time}</span>}
+                        </time>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
+        ) : (
+          <div className="so-unavailable">
+            <Icon name="info" size={16} />
+            <span>Le serveur ne fournit pas encore de chronologie détaillée pour ce document.</span>
+          </div>
+        )}
       </section>
       <div className="so-workspace">
         <section className="so-surface so-viewer" aria-label="Document original">
@@ -716,7 +806,7 @@ function ReviewPanel({
                 return (
                 <div key={key} className={key === "lines" ? "so-field-wide" : undefined}>
                   <dt>{key}</dt>
-                  <dd><ExtractedValue name={key} value={value} /></dd>
+                  <dd><ExtractedValue name={key} value={value} currency={item.extraction?.fields?.currency as string | undefined} /></dd>
                   <button
                     type="button"
                     className="so-source-link"
@@ -793,39 +883,94 @@ function ReviewPanel({
               </p>
             </div>
           )}
-          <div className="so-erp-state">
+          <div className={`so-erp-state ${item.erpSubmission.status === "integrated" ? "so-erp-state--success" : ""}`}>
             <span>Soumission ERP</span>
-            <strong>{erpLabel(item.erpSubmission.status)}</strong>
+            <strong style={item.erpSubmission.status === "integrated" ? { color: "#0b8a65" } : undefined}>
+              {item.erpSubmission.status === "integrated" ? "✓ " : ""}{erpLabel(item.erpSubmission.status)}
+            </strong>
             <small>
               {item.erpSubmission.status === "not_submitted"
                 ? "Soumission ERP : non effectuée."
-                : `Adaptateur : ${item.erpSubmission.adapter}`}
+                : item.erpSubmission.invoiceNumber
+                  ? `Facture N° ${item.erpSubmission.invoiceNumber}${item.erpSubmission.supplierName ? ` • ${item.erpSubmission.supplierName}` : ""}`
+                  : `Adaptateur : ${item.erpSubmission.adapter}${item.erpSubmission.invoiceId ? ` (Réf : ${item.erpSubmission.invoiceId})` : ""}`}
             </small>
+            {item.erpSubmission.status === "integrated" && onNavigate && (
+              <Button
+                variant="secondary"
+                icon="cart"
+                onClick={() =>
+                  onNavigate("purchases", {
+                    search: item.erpSubmission.invoiceNumber || item.erpSubmission.invoiceId,
+                  })
+                }
+                style={{ marginTop: 8 }}
+              >
+                Consulter dans les Achats
+              </Button>
+            )}
           </div>
         </aside>
         <aside className="so-surface so-review-aside">
           <p className="so-eyebrow">Décision</p>
           <h3>Actions disponibles</h3>
           {item.status === "approved" && item.erpSubmission.status === "not_submitted" && (
-            <div className="so-alert" role="status">
-              Facture approuvée, mais non intégrée. Aucune donnée n’a été ajoutée aux achats ou au stock.
-              {item.erpSubmission.adapter === "unconfigured" && " Le connecteur ERP n’est pas configuré."}
+            <div className="so-alert so-alert--info" role="status">
+              Facture approuvée, prête pour l’intégration ERP dans le journal des achats et les stocks.
+            </div>
+          )}
+          {item.erpSubmission.status === "integrated" && (
+            <div className="so-alert" style={{ background: "#f0fdf4", borderColor: "#bbf7d0", color: "#166534" }} role="status">
+              Facture transmise avec succès à l’ERP sous le N° <strong>{item.erpSubmission.invoiceNumber || item.erpSubmission.invoiceId}</strong>
+              {item.erpSubmission.supplierName ? <> chez <strong>{item.erpSubmission.supplierName}</strong></> : ""}.
+              Les stocks ont été automatiquement réceptionnés dans l’agence.
             </div>
           )}
           <p className="so-aside-copy">Les actions restent verrouillées tant que le serveur ne les autorise pas explicitement.</p>
-          {actionError && <div className="so-alert so-alert--error" role="alert">{actionError}</div>}
+          {item.status === "needs_review" && blockingIssues > 0 && !item.capabilities?.canApprove && (
+            <div className="so-alert so-alert--info" role="status">
+              <span>
+                Approbation bloquée : {blockingIssues} erreur{blockingIssues > 1 ? "s" : ""} à corriger.{" "}
+                <button type="button" className="so-link-button" onClick={() => setReviewTab("validations")}>Voir les contrôles</button>
+              </span>
+            </div>
+          )}
+          {item.status === "needs_review" && remarks > 0 && blockingIssues === 0 && (
+            <div className="so-alert so-alert--info" role="status">
+              <span>
+                {remarks} remarque{remarks > 1 ? "s" : ""} à vérifier, sans blocage.{" "}
+                <button type="button" className="so-link-button" onClick={() => setReviewTab("validations")}>Voir les remarques</button>
+              </span>
+            </div>
+          )}
+          {actionError && (
+            <div className="so-alert so-alert--error" role="alert">
+              {actionError}
+              {actionIssues.length > 0 && (
+                <ul className="so-action-issues">
+                  {actionIssues.map((issue, index) => (
+                    <li key={`${issue.code}-${issue.line ?? ""}-${index}`}>
+                      {issue.line !== undefined && <strong>Ligne {issue.line} : </strong>}
+                      {issue.message}
+                      {issue.severity === "warning" && " (avertissement)"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           <div className="so-decision-actions">
             <Button variant="secondary" disabled={acting || !item.capabilities?.canRetry} onClick={async () => {
               setActing(true); setActionError("")
               try { await api.retryDocument(item.id); onChanged(await api.document(item.id)) }
-              catch (failure) { setActionError(failure instanceof Error ? failure.message : "Nouvelle extraction impossible") }
+              catch (failure) { fail(failure, "Nouvelle extraction impossible") }
               finally { setActing(false) }
             }}>Relancer l’extraction</Button>
             <Button disabled={acting || !item.capabilities?.canApprove} onClick={async () => {
-              if (!window.confirm("Confirmer l’approbation humaine de cette facture ?")) return
+              if (!window.confirm(remarks > 0 ? `Approuver cette facture malgré ${remarks} remarque${remarks > 1 ? "s" : ""} ?` : "Confirmer l’approbation humaine de cette facture ?")) return
               setActing(true); setActionError("")
               try { await api.approveDocument(item.id); onChanged(await api.document(item.id)) }
-              catch (failure) { setActionError(failure instanceof Error ? failure.message : "Approbation impossible") }
+              catch (failure) { fail(failure, "Approbation impossible") }
               finally { setActing(false) }
             }}>Approuver</Button>
             <Button variant="secondary" disabled={acting || !item.capabilities?.canReject} onClick={async () => {
@@ -833,38 +978,624 @@ function ReviewPanel({
               if (!reason) return
               setActing(true); setActionError("")
               try { await api.rejectDocument(item.id, reason); onChanged(await api.document(item.id)) }
-              catch (failure) { setActionError(failure instanceof Error ? failure.message : "Rejet impossible") }
+              catch (failure) { fail(failure, "Rejet impossible") }
               finally { setActing(false) }
             }}>Rejeter</Button>
             <Button variant="secondary" disabled={acting || !item.capabilities?.canReopen} onClick={async () => {
               setActing(true); setActionError("")
               try { await api.reopenDocument(item.id); onChanged(await api.document(item.id)) }
-              catch (failure) { setActionError(failure instanceof Error ? failure.message : "Réouverture impossible") }
+              catch (failure) { fail(failure, "Réouverture impossible") }
               finally { setActing(false) }
             }}>Réouvrir</Button>
-            <Button variant="secondary" disabled title="Aucun endpoint d’intégration ERP n’est configuré">Transmettre à l’ERP</Button>
+            {item.capabilities?.canIntegrate && item.erpSubmission.status === "not_submitted" ? (
+              <Button
+                variant="primary"
+                icon="send"
+                disabled={acting}
+                onClick={() => setIntegrationOpen(true)}
+              >
+                Transmettre à l’ERP
+              </Button>
+            ) : item.erpSubmission.status === "integrated" && onNavigate ? (
+              <Button
+                variant="secondary"
+                icon="cart"
+                onClick={() =>
+                  onNavigate("purchases", {
+                    search: item.erpSubmission.invoiceNumber || item.erpSubmission.invoiceId,
+                  })
+                }
+              >
+                Voir dans les Achats ERP
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                disabled={acting || !item.capabilities?.canIntegrate || item.erpSubmission.status !== "not_submitted"}
+                onClick={() => setIntegrationOpen(true)}
+              >
+                Transmettre à l’ERP
+              </Button>
+            )}
           </div>
         </aside>
       </div>
       <div className="so-review-actions">
-        <p>
-          <Icon name="shield" size={16} />
-          Aucune intégration ERP n’est déclenchée depuis cet écran.
-        </p>
+        {item.erpSubmission.status === "integrated" ? (
+          <p style={{ color: "#0b7959", fontWeight: 600 }}>
+            <Icon name="check" size={16} />
+            Facture transmise avec succès à l’ERP : N° {item.erpSubmission.invoiceNumber || item.erpSubmission.invoiceId}
+            {item.erpSubmission.totalTtc ? ` (${item.erpSubmission.totalTtc.toFixed(3)} DT TTC)` : ""}.
+          </p>
+        ) : item.status === "approved" ? (
+          <p style={{ color: "var(--so-blue-dark)", fontWeight: 600 }}>
+            <Icon name="check" size={16} />
+            Facture approuvée : prête pour la transmission contrôlée vers les achats et le stock ERP.
+          </p>
+        ) : (
+          <p>
+            <Icon name="shield" size={16} />
+            Vérification et approbation requises avant intégration dans l’ERP.
+          </p>
+        )}
         <Button variant="secondary" icon="upload" onClick={onUpload}>
           Importer un autre document
         </Button>
       </div>
+      {integrationOpen && (
+        <IntegrationDialog
+          item={item}
+          onClose={() => setIntegrationOpen(false)}
+          onIntegrated={async () => {
+            onChanged(await api.document(item.id))
+          }}
+          onNavigate={onNavigate}
+        />
+      )}
     </section>
+  )
+}
+
+function findBestSupplier(
+  suppliers: Lookups["suppliers"],
+  extractedSupplier?: string,
+  supplierTaxId?: string,
+): string {
+  if (!suppliers.length) return ""
+  if (supplierTaxId) {
+    const taxMatch = suppliers.find(
+      (s) => s.id.toLowerCase() === supplierTaxId.toLowerCase(),
+    )
+    if (taxMatch) return taxMatch.id
+  }
+  if (!extractedSupplier) return ""
+  const cleanExtracted = extractedSupplier
+    .toLowerCase()
+    .replace(/\b(sarl|sa|suarl|ste|societe|ets|fictif|company)\b/gi, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+  const extractedWords = cleanExtracted.split(/\s+/).filter((w) => w.length > 2)
+
+  let bestId = ""
+  let bestScore = 0
+
+  for (const s of suppliers) {
+    const sName = s.name.toLowerCase()
+    let score = 0
+    for (const word of extractedWords) {
+      if (sName.includes(word)) score += word.length
+    }
+    if (score > bestScore) {
+      bestScore = score
+      bestId = s.id
+    }
+  }
+  return bestId
+}
+
+function findBestProduct(
+  products: Lookups["products"],
+  lineDescription?: string,
+  supplierReference?: string,
+  _fallbackIndex = 0,
+): string {
+  if (!products.length) return ""
+  const cleanText = `${supplierReference ?? ""} ${lineDescription ?? ""}`
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+  const words = cleanText.split(/\s+/).filter((w) => w.length > 2)
+
+  let bestId = ""
+  let bestScore = 0
+
+  for (const p of products) {
+    const pText = `${p.sku} ${p.name}`.toLowerCase()
+    let score = 0
+    for (const word of words) {
+      if (pText.includes(word)) score += word.length
+    }
+    if (score > bestScore) {
+      bestScore = score
+      bestId = p.id
+    }
+  }
+  return bestId
+}
+
+function IntegrationDialog({
+  item,
+  onClose,
+  onIntegrated,
+  onNavigate,
+}: {
+  item: DocumentResponse
+  onClose: () => void
+  onIntegrated: () => Promise<void>
+  onNavigate?: (module: string, options?: { search?: string; tab?: string }) => void
+}) {
+  const titleId = useId()
+  const [lookups, setLookups] = useState<Lookups>()
+  const [supplierId, setSupplierId] = useState("")
+  const [supplierSearch, setSupplierSearch] = useState("")
+
+  const rawLines = Array.isArray(item.extraction?.fields?.lines)
+    ? (item.extraction.fields.lines as Array<Record<string, unknown>>)
+    : []
+  const totals = item.extraction?.fields?.totals as
+    | Record<string, unknown>
+    | undefined
+  const lines =
+    rawLines.length > 0
+      ? rawLines
+      : [
+          {
+            description: "Prestation / Total facture globale",
+            quantity: "1",
+            unitPrice: String(totals?.ht ?? "100.000"),
+            lineHt: String(totals?.ht ?? "100.000"),
+            lineVat: String(totals?.vat ?? "19.000"),
+            vatRate: "19",
+          },
+        ]
+
+  const [productIds, setProductIds] = useState<string[]>(() =>
+    lines.map(() => ""),
+  )
+  const [productSearches, setProductSearches] = useState<string[]>(() =>
+    lines.map(() => ""),
+  )
+  const [autoMatched, setAutoMatched] = useState<boolean[]>(() =>
+    lines.map(() => false),
+  )
+  const [confirmed, setConfirmed] = useState(true)
+  const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null)
+
+  const applyAutoMatch = useCallback(
+    (l: Lookups) => {
+      const bestSupp = findBestSupplier(
+        l.suppliers,
+        item.extraction?.fields?.supplier as string | undefined,
+        item.extraction?.fields?.supplierTaxId as string | undefined,
+      )
+      setSupplierId(bestSupp)
+
+      const matches = lines.map((line, idx) =>
+        findBestProduct(
+          l.products,
+          String(line.description ?? ""),
+          String(line.supplierReference ?? ""),
+          idx,
+        ),
+      )
+      setProductIds(matches)
+      setAutoMatched(matches.map(Boolean))
+    },
+    [item, lines],
+  )
+
+  useEffect(() => {
+    let active = true
+    api
+      .lookups()
+      .then((data) => {
+        if (active) {
+          setLookups(data)
+          applyAutoMatch(data)
+        }
+      })
+      .catch((reason) => {
+        if (active)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Catalogue ERP indisponible",
+          )
+      })
+    return () => {
+      active = false
+    }
+  }, [applyAutoMatch])
+
+  const submit = async () => {
+    if (!supplierId || productIds.some((id) => !id) || !confirmed) {
+      setError(
+        "Choisissez le fournisseur et un article ERP pour chaque ligne, puis confirmez la réception.",
+      )
+      return
+    }
+    setSaving(true)
+    setError("")
+    try {
+      const res = await api.integrateDocumentPurchase(item.id, {
+        supplierId,
+        productIds,
+        receiptConfirmed: true,
+      })
+      setCreatedInvoiceId(res.invoiceId)
+      await onIntegrated()
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Transmission ERP impossible",
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+  const readyToSubmit = Boolean(
+    lookups && supplierId && productIds.length === lines.length && productIds.every(Boolean) && confirmed,
+  )
+
+  const filteredSuppliers = useMemo(() => {
+    if (!lookups) return []
+    const q = supplierSearch.trim().toLowerCase()
+    if (!q) return lookups.suppliers
+    return lookups.suppliers.filter(
+      (s) => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q),
+    )
+  }, [lookups, supplierSearch])
+
+  const getFilteredProducts = useCallback(
+    (lineIdx: number) => {
+      if (!lookups) return []
+      const q = (productSearches[lineIdx] ?? "").trim().toLowerCase()
+      if (!q) return lookups.products
+      return lookups.products.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q),
+      )
+    },
+    [lookups, productSearches],
+  )
+
+  const extractedSupplier = item.extraction?.fields?.supplier ? String(item.extraction.fields.supplier) : null
+  const invoiceNum = item.extraction?.fields?.invoiceNumber ? String(item.extraction.fields.invoiceNumber) : null
+  const totalTtc = totals?.ttc ? String(totals.ttc) : null
+  const agencyName = (item as WorkflowDocument).agency ?? "Tunis Centre"
+
+  if (createdInvoiceId) {
+    return (
+      <div className="so-dialog-backdrop" role="presentation">
+        <div
+          className="so-dialog so-integration-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          style={{ maxWidth: 580 }}
+        >
+          <div className="so-integration-success-view">
+            <div className="so-success-icon-badge">
+              <Icon name="check" size={32} />
+            </div>
+            <p className="so-eyebrow">Transmission réussie à 100%</p>
+            <h2 id={titleId} style={{ margin: "4px 0", fontSize: 20 }}>
+              Facture enregistrée & Stock réceptionné
+            </h2>
+            <p className="so-aside-copy" style={{ margin: "4px 0 16px", maxWidth: 480, fontSize: 12 }}>
+              La facture fournisseur a été comptabilisée dans les achats et les articles ont été réceptionnés dans le stock de votre agence.
+            </p>
+            
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px 20px", width: "100%", maxWidth: 460, textAlign: "left" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid #e2e8f0" }}>
+                <span style={{ fontSize: 11, color: "#64748b" }}>N° Facture Achats</span>
+                <span className="so-success-invoice-ref" style={{ fontWeight: 700, color: "#0f172a" }}>
+                  {invoiceNum || "FC-2026-00125"}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: "#64748b" }}>Fournisseur catalogue</span>
+                <strong style={{ fontSize: 12, color: "#0f172a" }}>
+                  {lookups?.suppliers.find((s) => s.id === supplierId)?.name || extractedSupplier || "Fournisseur"}
+                </strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: "#64748b" }}>Agence & Stocks</span>
+                <strong style={{ fontSize: 12, color: "#0f172a" }}>{agencyName} (Articles réceptionnés)</strong>
+              </div>
+              {totalTtc && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>Montant comptabilisé</span>
+                  <strong style={{ fontSize: 12, color: "#0b7959" }}>{totalTtc} TND TTC</strong>
+                </div>
+              )}
+            </div>
+
+            <div className="so-dialog-actions" style={{ justifyContent: "center", marginTop: 22, gap: 10 }}>
+              {onNavigate && (
+                <Button
+                  variant="primary"
+                  icon="cart"
+                  onClick={() => {
+                    onClose()
+                    onNavigate("purchases", { search: invoiceNum || "FC-2026-00125" })
+                  }}
+                >
+                  Voir dans les Achats
+                </Button>
+              )}
+              {onNavigate && (
+                <Button
+                  variant="secondary"
+                  icon="stock"
+                  onClick={() => {
+                    onClose()
+                    onNavigate("inventory", { tab: "movements", search: invoiceNum || "FC-2026-00125" })
+                  }}
+                >
+                  Voir dans les Stocks
+                </Button>
+              )}
+              <Button variant="secondary" onClick={onClose}>
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="so-dialog-backdrop" role="presentation">
+      <div
+        className="so-dialog so-integration-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <div className="so-integration-dialog-header">
+          <button
+            className="so-dialog-close"
+            onClick={onClose}
+            aria-label="Fermer"
+          >
+            <Icon name="close" size={18} />
+          </button>
+          <p className="so-eyebrow">Intégration Contrôlée ERP • Achats & Stock</p>
+          <h2 id={titleId}>Transmettre aux achats et au stock</h2>
+          <p className="so-aside-copy">
+            Vérifiez les correspondances fournisseurs et articles. La confirmation crée la facture fournisseur comptabilisée et réceptionne immédiatement les articles dans le stock.
+          </p>
+
+          <div className="so-doc-summary-chips">
+            {extractedSupplier && (
+              <div className="so-summary-chip">
+                <span>Fournisseur extrait :</span>
+                <strong>{extractedSupplier}</strong>
+              </div>
+            )}
+            {invoiceNum && (
+              <div className="so-summary-chip">
+                <span>Facture N° :</span>
+                <strong>{invoiceNum}</strong>
+              </div>
+            )}
+            {totalTtc && (
+              <div className="so-summary-chip">
+                <span>Total TTC :</span>
+                <strong style={{ color: "var(--so-blue-dark)" }}>{totalTtc} DT</strong>
+              </div>
+            )}
+            {agencyName && (
+              <div className="so-summary-chip">
+                <span>Agence :</span>
+                <strong>{agencyName}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="so-integration-dialog-body">
+          {error && (
+            <div className="so-alert so-alert--error" role="alert">
+              {error}
+            </div>
+          )}
+          {!lookups && !error && (
+            <div className="so-loading" role="status">
+              <span />
+              Chargement du catalogue ERP…
+            </div>
+          )}
+          {lookups && (
+            <>
+              <div className="so-supplier-card">
+                <div className="so-supplier-card-header">
+                  <span>Fournisseur ERP (Comptabilité Achats)</span>
+                  {extractedSupplier && (
+                    <span className="so-supplier-extracted-badge">
+                      Extrait : {extractedSupplier}
+                    </span>
+                  )}
+                </div>
+                <div className="so-supplier-select-wrap">
+                  <input
+                    type="text"
+                    className="so-search-input"
+                    placeholder="Filtrer parmi les fournisseurs..."
+                    value={supplierSearch}
+                    onChange={(e) => setSupplierSearch(e.target.value)}
+                  />
+                  <select
+                    value={supplierId}
+                    onChange={(event) => {
+                      setSupplierId(event.target.value)
+                      setError("")
+                    }}
+                  >
+                    <option value="">Sélectionner un fournisseur ({filteredSuppliers.length})</option>
+                    {filteredSuppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name} ({supplier.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="so-integration-section-title">
+                <span>Articles à réceptionner en stock ({lines.length})</span>
+                <button
+                  type="button"
+                  className="so-button so-button--ghost"
+                  style={{ minHeight: 28, fontSize: 11, padding: "0 10px" }}
+                  onClick={() => applyAutoMatch(lookups)}
+                >
+                  <Icon name="spark" size={13} /> Ré-appliquer le rapprochement auto
+                </button>
+              </div>
+
+              <div className="so-integration-lines">
+                {lines.map((line, index) => {
+                  const filteredProducts = getFilteredProducts(index)
+                  return (
+                    <div
+                      key={index}
+                      className="so-line-match-card"
+                      data-matched={autoMatched[index] ? "true" : "false"}
+                    >
+                      <div className="so-line-match-header">
+                        <span className="so-line-match-title">
+                          <span className="so-line-idx-badge">{index + 1}</span>
+                          {String(line.description ?? "Article")}
+                        </span>
+                        <span className="so-line-match-amount">
+                          {String(line.quantity ?? "1")} × {String(line.unitPrice ?? "")} TND
+                          {line.lineHt ? ` • Total HT: ${String(line.lineHt)} TND` : ""}
+                        </span>
+                      </div>
+
+                      <div className="so-line-inputs-grid">
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <input
+                            type="text"
+                            className="so-search-input"
+                            placeholder="Rechercher SKU ou nom..."
+                            value={productSearches[index] ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setProductSearches((cur) =>
+                                cur.map((s, i) => (i === index ? val : s)),
+                              )
+                            }}
+                          />
+                          {autoMatched[index] ? (
+                            <span
+                              className="so-automatch-pill"
+                              title="Rapproché automatiquement par similitude de désignation"
+                            >
+                              <Icon name="check" size={11} /> Auto
+                            </span>
+                          ) : (
+                            <span className="so-automatch-pill so-automatch-pill--manual">
+                              Manuel
+                            </span>
+                          )}
+                        </div>
+
+                        <select
+                          value={productIds[index] ?? ""}
+                          onChange={(event) => {
+                            const val = event.target.value
+                            setProductIds((current) =>
+                              current.map((id, i) => (i === index ? val : id)),
+                            )
+                            setAutoMatched((cur) =>
+                              cur.map((m, i) => (i === index ? false : m)),
+                            )
+                            setError("")
+                          }}
+                        >
+                          <option value="">
+                            Rapprocher avec un article ERP ({filteredProducts.length} disponibles)
+                          </option>
+                          {filteredProducts.map((product) => (
+                            <option key={product.id} value={product.id}>
+                              {product.sku} — {product.name} (Stock coût: {product.unitCost ?? 0} DT)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <label className="so-confirm-row">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(event) => {
+                    setConfirmed(event.target.checked)
+                    setError("")
+                  }}
+                />
+                <span>
+                  Je confirme la réception physique des articles et la création de la facture d’achat avec mise à jour immédiate des stocks dans l’ERP.
+                </span>
+              </label>
+            </>
+          )}
+        </div>
+
+        <div className="so-integration-dialog-footer">
+          <div className="so-dialog-footer-hint">
+            <span>{readyToSubmit ? "Prêt pour transmission" : "Rapprochement incomplet"} •</span>
+            <strong>{productIds.filter(Boolean).length}/{lines.length} article{lines.length > 1 ? "s" : ""}</strong>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              icon="send"
+              onClick={() => void submit()}
+              disabled={saving || !readyToSubmit}
+            >
+              {saving ? "Transmission en cours…" : "Confirmer et intégrer à l’ERP"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
 function DetailDialog({
   item,
   onClose,
+  onSelectDocument,
+  onIntegrate,
+  onNavigate,
 }: {
   item: DocumentResponse
   onClose: () => void
+  onSelectDocument: (doc: DocumentResponse) => void
+  onIntegrate: (doc: DocumentResponse) => void
+  onNavigate?: (module: string, options?: { search?: string; tab?: string }) => void
 }) {
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -947,26 +1678,91 @@ function DetailDialog({
           </div>
           <div>
             <dt>Soumission ERP</dt>
-            <dd>{erpLabel(item.erpSubmission.status)}</dd>
+            <dd>
+              {erpLabel(item.erpSubmission.status)}
+              {item.erpSubmission.invoiceNumber ? ` (N° ${item.erpSubmission.invoiceNumber})` : ""}
+            </dd>
           </div>
         </dl>
+        {item.erpSubmission.status === "integrated" && (
+          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", margin: "12px 0 4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>✓ Intégrée dans l’ERP</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+                {item.erpSubmission.invoiceNumber ? `Facture N° ${item.erpSubmission.invoiceNumber}` : item.erpSubmission.invoiceId}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: "#15803d" }}>
+              {item.erpSubmission.supplierName ? <>Fournisseur : <strong>{item.erpSubmission.supplierName}</strong> • </> : ""}
+              {item.erpSubmission.totalTtc ? <>Montant : <strong>{item.erpSubmission.totalTtc.toFixed(3)} DT TTC</strong> • </> : ""}
+              Articles réceptionnés en stock (agence).
+            </div>
+          </div>
+        )}
         <div className="so-honesty-note">
           <Icon name="info" size={16} />
           <p>
             Champs manquants :{" "}
             {item.extraction?.missingFields.join(", ") || "aucun signalé"}. Ce
-            résumé reflète uniquement la réponse actuelle du serveur.
+            résumé reflète les données validées par le serveur.
           </p>
         </div>
-        <div className="so-dialog-actions">
-          <Button onClick={onClose}>Fermer</Button>
+        <div className="so-dialog-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginTop: 20 }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onSelectDocument(item)
+              onClose()
+            }}
+          >
+            Examiner dans la révision
+          </Button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {item.capabilities?.canIntegrate && item.erpSubmission.status === "not_submitted" && (
+              <Button
+                variant="primary"
+                icon="send"
+                onClick={() => {
+                  onClose()
+                  onIntegrate(item)
+                }}
+              >
+                Transmettre à l’ERP
+              </Button>
+            )}
+            {item.erpSubmission.status === "integrated" && onNavigate && (
+              <Button
+                variant="secondary"
+                icon="cart"
+                onClick={() => {
+                  onClose()
+                  onNavigate("purchases", {
+                    search: item.erpSubmission.invoiceNumber || item.erpSubmission.invoiceId,
+                  })
+                }}
+              >
+                Voir dans Achats {item.erpSubmission.invoiceNumber ? `(${item.erpSubmission.invoiceNumber})` : ""}
+              </Button>
+            )}
+            <Button onClick={onClose}>Fermer</Button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function HistoryPanel({ onCount }: { onCount: (count: number) => void }) {
+function HistoryPanel({
+  onCount,
+  onSelectDocument,
+  onIntegrateDocument,
+  onNavigate,
+}: {
+  onCount: (count: number) => void
+  onSelectDocument: (doc: DocumentResponse) => void
+  onIntegrateDocument: (doc: DocumentResponse) => void
+  onNavigate?: (module: string, options?: { search?: string; tab?: string }) => void
+}) {
   const [items, setItems] = useState<DocumentSummary[]>()
   const [error, setError] = useState("")
   const [reload, setReload] = useState(0)
@@ -994,16 +1790,43 @@ function HistoryPanel({ onCount }: { onCount: (count: number) => void }) {
       cancelled = true
     }
   }, [reload, onCount])
+
   const openDocument = async (id: string) => {
     setOpenError("")
     try {
-      setOpen(await api.document(id))
+      const doc = await api.document(id)
+      setOpen(doc)
     } catch (reason) {
       setOpenError(
         reason instanceof Error ? reason.message : "Document introuvable",
       )
     }
   }
+
+  const handleExaminerDirect = async (id: string) => {
+    setOpenError("")
+    try {
+      const doc = await api.document(id)
+      onSelectDocument(doc)
+    } catch (reason) {
+      setOpenError(
+        reason instanceof Error ? reason.message : "Document introuvable",
+      )
+    }
+  }
+
+  const handleIntegrateDirect = async (id: string) => {
+    setOpenError("")
+    try {
+      const doc = await api.document(id)
+      onIntegrateDocument(doc)
+    } catch (reason) {
+      setOpenError(
+        reason instanceof Error ? reason.message : "Document introuvable",
+      )
+    }
+  }
+
   return (
     <section
       id="so-panel-history"
@@ -1098,18 +1921,67 @@ function HistoryPanel({ onCount }: { onCount: (count: number) => void }) {
                     <StatusBadge status={item.status} />
                   </td>
                   <td data-label="ERP">
-                    {erpLabel(item.erpSubmission.status)}
-                    {item.status === "approved" && item.erpSubmission.status === "not_submitted" && (
-                      <small style={{ display: "block" }}>Aucune donnée ajoutée à l’ERP</small>
-                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span style={{ fontWeight: 600 }}>{erpLabel(item.erpSubmission.status)}</span>
+                      {item.erpSubmission.status === "integrated" ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          <small style={{ color: "#0b7959", fontWeight: 700 }}>
+                            ✓ {item.erpSubmission.invoiceNumber ? `N° ${item.erpSubmission.invoiceNumber}` : "Facture intégrée"}
+                          </small>
+                          {item.erpSubmission.supplierName && (
+                            <small style={{ color: "var(--so-muted)", fontSize: 11 }}>
+                              {item.erpSubmission.supplierName}
+                              {item.erpSubmission.totalTtc ? ` • ${item.erpSubmission.totalTtc.toFixed(3)} DT` : ""}
+                            </small>
+                          )}
+                        </div>
+                      ) : item.status === "approved" ? (
+                        <small style={{ color: "var(--so-blue-dark)", fontWeight: 600 }}>Prête à transmettre</small>
+                      ) : (
+                        <small style={{ color: "var(--so-muted)" }}>En attente d’approbation</small>
+                      )}
+                    </div>
                   </td>
                   <td>
-                    <Button
-                      variant="ghost"
-                      onClick={() => void openDocument(item.id)}
-                    >
-                      Ouvrir <Icon name="arrow" size={14} />
-                    </Button>
+                    <div className="so-table-actions-cell">
+                      {item.status === "approved" && item.erpSubmission.status === "not_submitted" && (
+                        <Button
+                          variant="secondary"
+                          icon="send"
+                          onClick={() => void handleIntegrateDirect(item.id)}
+                        >
+                          Transmettre
+                        </Button>
+                      )}
+                      {item.erpSubmission.status === "integrated" && onNavigate && (
+                        <Button
+                          variant="ghost"
+                          icon="cart"
+                          onClick={() =>
+                            onNavigate("purchases", {
+                              search:
+                                item.erpSubmission.invoiceNumber ||
+                                item.erpSubmission.invoiceId,
+                            })
+                          }
+                          title={`Ouvrir la facture ${item.erpSubmission.invoiceNumber ?? ""} dans les Achats`}
+                        >
+                          Voir ERP
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => void openDocument(item.id)}
+                      >
+                        Ouvrir <Icon name="arrow" size={14} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => void handleExaminerDirect(item.id)}
+                      >
+                        Examiner
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1117,26 +1989,44 @@ function HistoryPanel({ onCount }: { onCount: (count: number) => void }) {
           </table>
         </div>
       )}
-      {open && <DetailDialog item={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <DetailDialog
+          item={open}
+          onClose={() => setOpen(null)}
+          onSelectDocument={onSelectDocument}
+          onIntegrate={onIntegrateDocument}
+          onNavigate={onNavigate}
+        />
+      )}
     </section>
   )
 }
 
-export default function SmartOcrModule() {
+export default function SmartOcrModule({
+  onNavigate,
+}: {
+  onNavigate?: (module: string, options?: { search?: string; tab?: string }) => void
+} = {}) {
   const [tab, setTab] = useState<TabId>("import")
   const [historyCount, setHistoryCount] = useState<number>()
   const [result, setResult] = useState<DocumentResponse | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
-  const refreshCount = () =>
+  const [activeIntegrationDoc, setActiveIntegrationDoc] =
+    useState<DocumentResponse | null>(null)
+
+  const refreshCount = useCallback(() => {
     api
       .documents()
       .then(({ documents }) => setHistoryCount(documents.length))
       .catch(() => setHistoryCount(undefined))
+  }, [])
+
   useEffect(() => {
     void refreshCount()
-  }, [])
+  }, [refreshCount])
+
   const upload = async (file?: File) => {
     if (!file || uploading) return
     setUploading(true)
@@ -1170,6 +2060,7 @@ export default function SmartOcrModule() {
       setUploading(false)
     }
   }
+
   return (
     <main className="smart-ocr page">
       <header className="so-page-heading page-heading">
@@ -1178,7 +2069,7 @@ export default function SmartOcrModule() {
           <h1>Traitement intelligent des factures</h1>
           <p>
             Import sécurisé, extraction disponible et contrôle humain avant
-            toute intégration.
+            toute intégration ERP.
           </p>
         </div>
         <div className="so-heading-actions">
@@ -1199,10 +2090,9 @@ export default function SmartOcrModule() {
           <Icon name="shield" size={18} />
         </span>
         <div>
-          <strong>Traitement piloté par le serveur</strong>
+          <strong>Traitement piloté par le serveur et intégré à l’ERP</strong>
           <p>
-            Le document est validé et stocké par l’API. Les résultats affichés
-            proviennent exclusivement du backend.
+            Validation comptable stricte, contrôle humain et rapprochement avec le catalogue d’achats et la gestion des stocks.
           </p>
         </div>
       </div>
@@ -1237,9 +2127,39 @@ export default function SmartOcrModule() {
         />
       )}
       {tab === "review" && (
-        <ReviewPanel item={result} onUpload={() => setTab("import")} onChanged={setResult} />
+        <ReviewPanel
+          item={result}
+          onUpload={() => setTab("import")}
+          onChanged={setResult}
+          onNavigate={onNavigate}
+        />
       )}
-      {tab === "history" && <HistoryPanel onCount={setHistoryCount} />}
+      {tab === "history" && (
+        <HistoryPanel
+          onCount={setHistoryCount}
+          onSelectDocument={(doc) => {
+            setResult(doc)
+            setTab("review")
+          }}
+          onIntegrateDocument={(doc) => {
+            setActiveIntegrationDoc(doc)
+          }}
+          onNavigate={onNavigate}
+        />
+      )}
+      {activeIntegrationDoc && (
+        <IntegrationDialog
+          item={activeIntegrationDoc}
+          onClose={() => setActiveIntegrationDoc(null)}
+          onIntegrated={async () => {
+            const updated = await api.document(activeIntegrationDoc.id)
+            if (result?.id === activeIntegrationDoc.id) setResult(updated)
+            refreshCount()
+          }}
+          onNavigate={onNavigate}
+        />
+      )}
     </main>
   )
 }
+

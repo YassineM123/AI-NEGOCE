@@ -31,6 +31,12 @@ const schema = z.object({
   OCR_PROVIDER: z.enum(["disabled", "http", "local"]).default("disabled"),
   OCR_ENDPOINT: z.string().url().optional(),
   OCR_API_KEY: z.string().min(8).optional(),
+  LLM_PROVIDER_API_KEY: z.string().min(8).optional(),
+  GEMINI_API_KEY: z.string().min(8).optional(),
+  AI_PROVIDER: z.enum(["gemini", "mock"]).optional(),
+  GEMINI_MODEL: z.string().min(1).optional(),
+  LLM_PROVIDER: z.enum(["gemini", "mock"]).optional(),
+  LLM_MODEL: z.string().optional(),
 })
 
 export type AppConfig = Omit<z.infer<typeof schema>, "AUTH_MODE"> & {

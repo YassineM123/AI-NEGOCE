@@ -51,12 +51,23 @@ export type Conversation = {
   ownerId: string
   title: string
   createdAt: string
+  updatedAt?: string
   messages: {
+    id?: string
     role: "user" | "assistant"
     content: string
     sources?: string[]
     createdAt: string
   }[]
+}
+export type ConversationSummary = {
+  id: string
+  ownerId: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  messageCount: number
+  lastMessagePreview?: string
 }
 
 /** Every operation is confined to one organization; it cannot be widened by its arguments. */
@@ -76,6 +87,14 @@ export interface TenantStore {
   listAuditEvents(resourceType: string, resourceId: string): Promise<AuditEntry[]>
   createConversation(ownerId: string, title: string): Promise<Conversation>
   getConversation(id: string, ownerId: string): Promise<Conversation | undefined>
+  listConversations(ownerId: string, limit?: number): Promise<{ conversations: ConversationSummary[]; total: number }>
+  updateConversation(id: string, ownerId: string, patch: { title: string }): Promise<Conversation | undefined>
+  deleteConversation(id: string, ownerId: string): Promise<boolean>
+  searchConversations(ownerId: string, query: string): Promise<ConversationSummary[]>
+  getUserPreferences(userId: string): Promise<Record<string, unknown>>
+  setUserPreference(userId: string, key: string, value: unknown): Promise<void>
+  deleteUserPreference(userId: string, key: string): Promise<void>
+  clearUserPreferences(userId: string): Promise<void>
   addMessage(id: string, message: Conversation["messages"][number]): Promise<void>
   /** Upserts the user as seen in the verified token (history and foreign keys only). */
   recordUser(user: UserRecord): Promise<void>
@@ -113,6 +132,7 @@ export class MemoryStore implements Store {
   users = new Map<string, UserRecord & { organizationId: string; lastSeenAt: string }>()
   approvalEvents: (ApprovalEvent & { organizationId: string; createdAt: string })[] = []
   financialRules = new Map<string, StoredFinancialRules>()
+  userPreferences = new Map<string, Record<string, unknown>>()
 
   async getOrganization(id: string) {
     return this.organizations.get(id)
@@ -175,7 +195,8 @@ export class MemoryStore implements Store {
             : [],
         ),
       createConversation: async (ownerId, title) => {
-        const c = { id: crypto.randomUUID(), ownerId, title, createdAt: new Date().toISOString(), messages: [] }
+        const now = new Date().toISOString()
+        const c: Conversation = { id: crypto.randomUUID(), ownerId, title, createdAt: now, updatedAt: now, messages: [] }
         this.conversations.set(c.id, { ...c, organizationId: org })
         return c
       },
@@ -185,9 +206,86 @@ export class MemoryStore implements Store {
         const { organizationId: _, ...conversation } = c
         return conversation
       },
+      listConversations: async (ownerId, limit = 50) => {
+        const matching = [...this.conversations.values()]
+          .filter((c) => c.organizationId === org && c.ownerId === ownerId)
+          .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt))
+        const total = matching.length
+        const sliced = matching.slice(0, limit)
+        const conversations: ConversationSummary[] = sliced.map((c) => ({
+          id: c.id,
+          ownerId: c.ownerId,
+          title: c.title,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt ?? c.createdAt,
+          messageCount: c.messages.length,
+          lastMessagePreview: c.messages.at(-1)?.content.slice(0, 120),
+        }))
+        return { conversations, total }
+      },
+      updateConversation: async (id, ownerId, patch) => {
+        const c = this.conversations.get(id)
+        if (!c || c.organizationId !== org || c.ownerId !== ownerId) return undefined
+        const now = new Date().toISOString()
+        c.title = patch.title
+        c.updatedAt = now
+        const { organizationId: _, ...conversation } = c
+        return conversation
+      },
+      deleteConversation: async (id, ownerId) => {
+        const c = this.conversations.get(id)
+        if (!c || c.organizationId !== org || c.ownerId !== ownerId) return false
+        this.conversations.delete(id)
+        return true
+      },
+      searchConversations: async (ownerId, query) => {
+        const q = query.trim().toLowerCase()
+        if (!q) return []
+        const matching = [...this.conversations.values()]
+          .filter(
+            (c) =>
+              c.organizationId === org &&
+              c.ownerId === ownerId &&
+              (c.title.toLowerCase().includes(q) ||
+                c.messages.some((m) => m.content.toLowerCase().includes(q))),
+          )
+          .sort((a, b) => (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt))
+          .slice(0, 50)
+        return matching.map((c) => ({
+          id: c.id,
+          ownerId: c.ownerId,
+          title: c.title,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt ?? c.createdAt,
+          messageCount: c.messages.length,
+          lastMessagePreview: c.messages.at(-1)?.content.slice(0, 120),
+        }))
+      },
+      getUserPreferences: async (userId) => {
+        return this.userPreferences.get(`${org}|${userId}`) ?? {}
+      },
+      setUserPreference: async (userId, key, value) => {
+        const k = `${org}|${userId}`
+        const current = this.userPreferences.get(k) ?? {}
+        this.userPreferences.set(k, { ...current, [key]: value })
+      },
+      deleteUserPreference: async (userId, key) => {
+        const k = `${org}|${userId}`
+        const current = this.userPreferences.get(k)
+        if (current) {
+          delete current[key]
+          this.userPreferences.set(k, { ...current })
+        }
+      },
+      clearUserPreferences: async (userId) => {
+        this.userPreferences.delete(`${org}|${userId}`)
+      },
       addMessage: async (id, m) => {
         const c = this.conversations.get(id)
-        if (c?.organizationId === org) c.messages.push(m)
+        if (c?.organizationId === org) {
+          c.messages.push(m)
+          c.updatedAt = new Date().toISOString()
+        }
       },
       recordUser: async (u) => {
         this.users.set(`${org}|${u.id}`, { ...u, organizationId: org, lastSeenAt: new Date().toISOString() })
@@ -344,30 +442,127 @@ export class PostgresStore implements Store {
         ),
       createConversation: (ownerId, title) =>
         tx(async (c) => {
+          const now = new Date().toISOString()
           const q = await c.query(
-            'INSERT INTO conversations(organization_id,owner_id,title) VALUES($1,$2,$3) RETURNING id,owner_id AS "ownerId",title,created_at AS "createdAt"',
-            [org, ownerId, title],
+            'INSERT INTO conversations(organization_id,owner_id,title,created_at,updated_at) VALUES($1,$2,$3,$4,$4) RETURNING id,owner_id AS "ownerId",title,created_at AS "createdAt",updated_at AS "updatedAt"',
+            [org, ownerId, title, now],
           )
           return { ...q.rows[0], messages: [] }
         }),
       getConversation: (id, ownerId) =>
         tx(async (c) => {
           const conv = await c.query(
-            'SELECT id,owner_id AS "ownerId",title,created_at AS "createdAt" FROM conversations WHERE organization_id=$1 AND id=$2 AND owner_id=$3',
+            'SELECT id,owner_id AS "ownerId",title,created_at AS "createdAt",COALESCE(updated_at, created_at) AS "updatedAt" FROM conversations WHERE organization_id=$1 AND id=$2 AND owner_id=$3',
             [org, id, ownerId],
           )
           if (!conv.rows[0]) return undefined
           const m = await c.query(
-            'SELECT role,content,sources,created_at AS "createdAt" FROM messages WHERE organization_id=$1 AND conversation_id=$2 ORDER BY created_at',
+            'SELECT id,role,content,sources,created_at AS "createdAt" FROM messages WHERE organization_id=$1 AND conversation_id=$2 ORDER BY created_at',
             [org, id],
           )
           return { ...conv.rows[0], messages: m.rows }
+        }),
+      listConversations: (ownerId, limit = 50) =>
+        tx(async (c) => {
+          const countRes = await c.query(
+            'SELECT count(*)::int AS count FROM conversations WHERE organization_id=$1 AND owner_id=$2',
+            [org, ownerId],
+          )
+          const q = await c.query(
+            `SELECT c.id, c.owner_id AS "ownerId", c.title, c.created_at AS "createdAt",
+                    COALESCE(c.updated_at, c.created_at) AS "updatedAt",
+                    COUNT(m.id)::int AS "messageCount",
+                    (SELECT substring(m2.content from 1 for 120) FROM messages m2 WHERE m2.organization_id = c.organization_id AND m2.conversation_id = c.id ORDER BY m2.created_at DESC LIMIT 1) AS "lastMessagePreview"
+             FROM conversations c
+             LEFT JOIN messages m ON m.organization_id = c.organization_id AND m.conversation_id = c.id
+             WHERE c.organization_id = $1 AND c.owner_id = $2
+             GROUP BY c.id
+             ORDER BY COALESCE(c.updated_at, c.created_at) DESC
+             LIMIT $3`,
+            [org, ownerId, limit],
+          )
+          return { conversations: q.rows, total: countRes.rows[0]?.count ?? 0 }
+        }),
+      updateConversation: (id, ownerId, patch) =>
+        tx(async (c) => {
+          const q = await c.query(
+            'UPDATE conversations SET title=$3, updated_at=now() WHERE organization_id=$1 AND id=$2 AND owner_id=$4 RETURNING id,owner_id AS "ownerId",title,created_at AS "createdAt",updated_at AS "updatedAt"',
+            [org, id, patch.title, ownerId],
+          )
+          if (!q.rows[0]) return undefined
+          const m = await c.query(
+            'SELECT role,content,sources,created_at AS "createdAt" FROM messages WHERE organization_id=$1 AND conversation_id=$2 ORDER BY created_at',
+            [org, id],
+          )
+          return { ...q.rows[0], messages: m.rows }
+        }),
+      deleteConversation: (id, ownerId) =>
+        tx(async (c) => {
+          const q = await c.query(
+            'DELETE FROM conversations WHERE organization_id=$1 AND id=$2 AND owner_id=$3',
+            [org, id, ownerId],
+          )
+          return (q.rowCount ?? 0) > 0
+        }),
+      searchConversations: (ownerId, query) =>
+        tx(async (c) => {
+          const pattern = `%${query.trim()}%`
+          const q = await c.query(
+            `SELECT DISTINCT c.id, c.owner_id AS "ownerId", c.title, c.created_at AS "createdAt",
+                    COALESCE(c.updated_at, c.created_at) AS "updatedAt",
+                    (SELECT count(*)::int FROM messages m WHERE m.organization_id = c.organization_id AND m.conversation_id = c.id) AS "messageCount",
+                    (SELECT substring(m2.content from 1 for 120) FROM messages m2 WHERE m2.organization_id = c.organization_id AND m2.conversation_id = c.id ORDER BY m2.created_at DESC LIMIT 1) AS "lastMessagePreview"
+             FROM conversations c
+             LEFT JOIN messages m ON m.organization_id = c.organization_id AND m.conversation_id = c.id
+             WHERE c.organization_id = $1 AND c.owner_id = $2 AND (c.title ILIKE $3 OR m.content ILIKE $3)
+             ORDER BY COALESCE(c.updated_at, c.created_at) DESC
+             LIMIT 50`,
+            [org, ownerId, pattern],
+          )
+          return q.rows
+        }),
+      getUserPreferences: (userId) =>
+        tx(async (c) => {
+          const q = await c.query(
+            'SELECT key, value FROM user_memory_preferences WHERE organization_id=$1 AND user_id=$2',
+            [org, userId],
+          )
+          const prefs: Record<string, unknown> = {}
+          for (const row of q.rows) {
+            prefs[row.key] = row.value
+          }
+          return prefs
+        }),
+      setUserPreference: (userId, key, value) =>
+        tx(async (c) => {
+          await c.query(
+            'INSERT INTO user_memory_preferences(organization_id, user_id, key, value, updated_at) VALUES($1, $2, $3, $4, now()) ON CONFLICT (organization_id, user_id, key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()',
+            [org, userId, key, JSON.stringify(value)],
+          )
+        }),
+      deleteUserPreference: (userId, key) =>
+        tx(async (c) => {
+          await c.query(
+            'DELETE FROM user_memory_preferences WHERE organization_id=$1 AND user_id=$2 AND key=$3',
+            [org, userId, key],
+          )
+        }),
+      clearUserPreferences: (userId) =>
+        tx(async (c) => {
+          await c.query(
+            'DELETE FROM user_memory_preferences WHERE organization_id=$1 AND user_id=$2',
+            [org, userId],
+          )
         }),
       addMessage: (id, m) =>
         tx(async (c) => {
           await c.query(
             "INSERT INTO messages(organization_id,conversation_id,role,content,sources,created_at) VALUES($1,$2,$3,$4,$5,$6)",
             [org, id, m.role, m.content, JSON.stringify(m.sources ?? []), m.createdAt],
+          )
+          await c.query(
+            "UPDATE conversations SET updated_at = now() WHERE organization_id = $1 AND id = $2",
+            [org, id],
           )
         }),
       recordUser: (u) =>

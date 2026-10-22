@@ -179,6 +179,73 @@ describe("documents and BI", () => {
     expect(validation.body.ready).toBe(false)
     expect(validation.body.issues.map((issue: { field: string }) => issue.field)).toContain("supplier")
   })
+  it("does not offer approval for a complete extraction that fails validation", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%inconsistent\n%%EOF"), { filename: "inconsistent.pdf", contentType: "application/pdf" })
+    const org = (await request(app).get("/api/v1/me").set(admin)).body.organizationId
+    await store.forTenant(org).saveExtraction(upload.body.id, {
+      fields: {
+        supplier: "SUP-1", invoiceNumber: "F-1", invoiceDate: "2026-01-01", currency: "TND",
+        lines: [{ description: "Article", quantity: 1, unitPrice: "100.000", vatRate: 19, lineHt: "100.000", lineVat: "19.000" }],
+        totals: { ht: "999.000", vat: "19.000", stamp: "1.000", ttc: "1019.000" },
+      },
+      missingFields: [],
+      provider: "test",
+      confidence: null,
+    })
+    const validation = await request(app).get(`/api/v1/documents/${upload.body.id}/validation`).set(admin)
+    expect(validation.body.issues.map((issue: { code: string }) => issue.code)).toContain("HT_MISMATCH")
+    const detail = await request(app).get(`/api/v1/documents/${upload.body.id}`).set(admin)
+    expect(detail.body.capabilities.canApprove).toBe(false)
+    const approve = await request(app).post(`/api/v1/documents/${upload.body.id}/approve`).set(admin)
+    expect(approve.status).toBe(409)
+    expect(approve.body.error.code).toBe("VALIDATION_FAILED")
+  })
+  it("allows approval with OCR remarks for supplier and lines", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%remarks\n%%EOF"), { filename: "remarks.pdf", contentType: "application/pdf" })
+    const org = (await request(app).get("/api/v1/me").set(admin)).body.organizationId
+    await store.forTenant(org).saveExtraction(upload.body.id, {
+      fields: {
+        invoiceNumber: "F-REMARKS-1", invoiceDate: "2026-10-22", currency: "TND",
+        totals: { ht: "100.000", vat: "19.000", stamp: "1.000", ttc: "120.000" },
+      },
+      missingFields: ["supplier", "lines"],
+      provider: "test",
+      confidence: null,
+    })
+    const validation = await request(app).get(`/api/v1/documents/${upload.body.id}/validation`).set(admin)
+    expect(validation.body.ready).toBe(true)
+    expect(validation.body.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: "supplier", severity: "warning" }),
+      expect.objectContaining({ field: "lines", severity: "warning" }),
+    ]))
+    const detail = await request(app).get(`/api/v1/documents/${upload.body.id}`).set(admin)
+    expect(detail.body.capabilities.canApprove).toBe(true)
+    const approve = await request(app).post(`/api/v1/documents/${upload.body.id}/approve`).set(admin)
+    expect(approve.status).toBe(200)
+    expect(approve.body.remarks).toHaveLength(2)
+  })
+  it("does not let a warning-only discount block approval", async () => {
+    const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
+      .attach("file", Buffer.from("%PDF-1.4\n%warning-only\n%%EOF"), { filename: "warning-only.pdf", contentType: "application/pdf" })
+    const org = (await request(app).get("/api/v1/me").set(admin)).body.organizationId
+    await store.forTenant(org).saveExtraction(upload.body.id, {
+      fields: {
+        supplier: "SUP-1", invoiceNumber: "F-WARN-1", invoiceDate: "2026-10-22", currency: "TND",
+        lines: [{ description: "Article", quantity: 1, unitPrice: "100.000", discountPct: "40", vatRate: 19, lineHt: "60.000", lineVat: "11.400" }],
+        totals: { ht: "60.000", vat: "11.400", stamp: "1.000", ttc: "72.400" },
+      },
+      missingFields: [], provider: "test", confidence: null,
+    })
+    const validation = await request(app).get(`/api/v1/documents/${upload.body.id}/validation`).set(admin)
+    expect(validation.body.ready).toBe(true)
+    expect(validation.body.issues).toEqual([expect.objectContaining({ code: "UNUSUAL_DISCOUNT", severity: "warning" })])
+    expect((await request(app).get(`/api/v1/documents/${upload.body.id}`).set(admin)).body.capabilities.canApprove).toBe(true)
+    const approve = await request(app).post(`/api/v1/documents/${upload.body.id}/approve`).set(admin)
+    expect(approve.status).toBe(200)
+    expect(approve.body.remarks).toEqual([expect.objectContaining({ code: "UNUSUAL_DISCOUNT" })])
+  })
   it("requires a reason to reject and supports an audited reopen transition", async () => {
     const upload = await request(app).post("/api/v1/documents").set(admin).field("agency", "Tunis Centre")
       .attach("file", Buffer.from("%PDF-1.4\n%reject\n%%EOF"), { filename: "reject.pdf", contentType: "application/pdf" })

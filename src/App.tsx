@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -12,6 +13,12 @@ import {
   type ApiState,
   type BiData,
   type BiPeriod,
+  type CopilotQueryResult,
+  type CopilotSource,
+  type CopilotTable,
+  type ConversationDetail,
+  type ConversationSummary,
+  type ConversationTurn,
   type DashboardData,
   type DashboardPeriod,
   type FinancialRulesResponse,
@@ -21,6 +28,7 @@ import {
   type Tone,
 } from "./api"
 import SmartOcrModule from "./features/smart-ocr/SmartOcrModule"
+import Bi360Module from "./features/bi-360/Bi360Module"
 
 // Authenticated session from GET /me: user, organization and the data source really in use.
 // Every identity or connectivity label on screen comes from here, never from constants.
@@ -55,7 +63,7 @@ function environmentLabel(session: ApiState<Session>) {
 }
 
 type Module = "dashboard" | "sales" | "purchases" | "inventory" | "finance" | "ocr" | "bi" | "copilot" | "settings"
-type IconName = "grid" | "sales" | "cart" | "stock" | "finance" | "ocr" | "chart" | "spark" | "settings" | "bell" | "search" | "plus" | "upload" | "check" | "warning" | "arrow" | "filter" | "download" | "send" | "lock" | "file" | "info"
+type IconName = "grid" | "sales" | "cart" | "stock" | "finance" | "ocr" | "chart" | "spark" | "settings" | "bell" | "search" | "plus" | "upload" | "check" | "warning" | "arrow" | "filter" | "download" | "send" | "lock" | "file" | "info" | "trash" | "edit" | "copy"
 
 const iconPaths: Record<IconName, ReactNode> = {
   grid: (
@@ -169,6 +177,23 @@ const iconPaths: Record<IconName, ReactNode> = {
     <>
       <circle cx="12" cy="12" r="9" />
       <path d="M12 11v6m0-10v.1" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M10 11v6M14 11v6" />
+    </>
+  ),
+  edit: (
+    <>
+      <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </>
   ),
 }
@@ -337,9 +362,9 @@ function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brand-mark">AI</div>
+        <div className="brand-mark">NX</div>
         <div>
-          <strong>AI-NEGOCE</strong>
+          <strong>Nexora</strong>
           <span>Gestion commerciale</span>
         </div>
       </div>
@@ -1507,59 +1532,452 @@ function InvoiceDrilldown({ data }: { data: BiData | null }) {
   )
 }
 
-function CopilotModule() {
+function renderFormattedText(text: string): ReactNode {
+  if (!text) return null
+  const lines = text.split("\n")
+  return (
+    <div className="formatted-answer">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim()
+        if (!trimmed) return <div key={idx} className="answer-spacer" />
+        const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("* ")
+        const content = isBullet ? trimmed.slice(2) : trimmed
+
+        const parts = content.split(/(\*\*.*?\*\*)/g)
+        const rendered = parts.map((part, pIdx) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return <strong key={pIdx}>{part.slice(2, -2)}</strong>
+          }
+          return part
+        })
+
+        if (isBullet) {
+          return (
+            <div key={idx} className="answer-bullet">
+              <span className="bullet-dot">•</span>
+              <span>{rendered}</span>
+            </div>
+          )
+        }
+        return <p key={idx}>{rendered}</p>
+      })}
+    </div>
+  )
+}
+
+type CopilotTurn = {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  sources?: CopilotSource[]
+  table?: CopilotTable
+  status?: string
+  metadata?: Record<string, unknown>
+  followups?: string[]
+  createdAt?: string
+}
+
+function CopilotModule({
+  initialPrompt,
+  onClearInitialPrompt,
+}: {
+  initialPrompt?: string
+  onClearInitialPrompt?: () => void
+} = {}) {
   const session = useSession()
+  const userInitials = initials(session.data?.name || "Administrateur")
   const [mode, setMode] = useState<"chat" | "access">("chat")
-  const [messages, setMessages] = useState<string[]>([])
+  const [conversations, setConversations] = useState<ConversationSummary[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("ai_negoce_active_conv_id")
+    } catch {
+      return null
+    }
+  })
+  const [searchQuery, setSearchQuery] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState("")
+  const [turns, setTurns] = useState<CopilotTurn[]>([])
   const [loading, setLoading] = useState(false)
   const [input, setInput] = useState("")
-  const [answer, setAnswer] = useState<any>(null)
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setInput(initialPrompt)
+      onClearInitialPrompt?.()
+    }
+  }, [initialPrompt, onClearInitialPrompt])
   const [error, setError] = useState("")
-  const ask = async (question: string) => {
-    const normalizedQuestion = question.trim()
-    if (!normalizedQuestion || loading) return
-    setMessages((m) => [...m, normalizedQuestion])
-    setInput("")
-    setLoading(true)
-    setError("")
-    setAnswer(null)
+  const [streamMode, setStreamMode] = useState<boolean>(() => {
     try {
-      setAnswer(await api.ask(normalizedQuestion))
+      return localStorage.getItem("ai_negoce_copilot_stream") === "true"
+    } catch {
+      return false
+    }
+  })
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [streamingText, setStreamingText] = useState("")
+  const [streamingStatus, setStreamingStatus] = useState("")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await api.conversations(searchQuery || undefined)
+      setConversations(res.conversations || [])
+    } catch {
+      // ignore
+    }
+  }, [searchQuery])
+
+  useEffect(() => {
+    loadConversations()
+  }, [loadConversations])
+
+  useEffect(() => {
+    if (!activeConversationId) {
+      setTurns([])
+      return
+    }
+    let cancelled = false
+    api
+      .conversation(activeConversationId)
+      .then((detail) => {
+        if (cancelled) return
+        if (detail && Array.isArray(detail.messages)) {
+          setTurns(
+            detail.messages.map((m, i) => ({
+              id: m.id || `msg-${i}`,
+              role: m.role,
+              content: m.content,
+              sources: m.sources,
+              table: m.table,
+              status: "ok",
+              createdAt: m.createdAt,
+            })),
+          )
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActiveConversationId(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeConversationId])
+
+  useEffect(() => {
+    try {
+      if (activeConversationId) {
+        localStorage.setItem("ai_negoce_active_conv_id", activeConversationId)
+      } else {
+        localStorage.removeItem("ai_negoce_active_conv_id")
+      }
+    } catch {}
+  }, [activeConversationId])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [turns, streamingText, loading])
+
+  const grouped = useMemo(() => {
+    const todayStr = new Date().toDateString()
+    const weekAgo = new Date(Date.now() - 7 * 86400000)
+    const today: ConversationSummary[] = []
+    const week: ConversationSummary[] = []
+    const older: ConversationSummary[] = []
+
+    for (const c of conversations) {
+      const d = new Date(c.updatedAt || c.createdAt)
+      if (d.toDateString() === todayStr) {
+        today.push(c)
+      } else if (d > weekAgo) {
+        week.push(c)
+      } else {
+        older.push(c)
+      }
+    }
+    return { today, week, older }
+  }, [conversations])
+
+  const newConversation = () => {
+    setActiveConversationId(null)
+    setTurns([])
+    setError("")
+    setInput("")
+  }
+
+  const handleRename = async (id: string) => {
+    if (!editTitle.trim()) {
+      setEditingId(null)
+      return
+    }
+    try {
+      await api.updateConversation(id, editTitle.trim())
+      setEditingId(null)
+      loadConversations()
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur Copilot")
-    } finally {
-      setLoading(false)
+      setError(e instanceof Error ? e.message : "Erreur de renommage")
     }
   }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.deleteConversation(id)
+      if (activeConversationId === id) {
+        setActiveConversationId(null)
+        setTurns([])
+      }
+      loadConversations()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur de suppression")
+    }
+  }
+
+  const stopStreaming = () => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+    setIsStreaming(false)
+    setLoading(false)
+  }
+
+  const ask = async (question: string) => {
+    const normalized = question.trim()
+    if (!normalized || loading) return
+
+    setInput("")
+    setError("")
+
+    let queryToSend = normalized
+    if (/^(hi|yo)$/i.test(normalized)) {
+      queryToSend = "Bonjour"
+    } else if (/^(ok|cv)$/i.test(normalized)) {
+      queryToSend = "D'accord"
+    }
+
+    const userTurn: CopilotTurn = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: normalized,
+      createdAt: new Date().toISOString(),
+    }
+
+    if (queryToSend.length < 3) {
+      const asstTurn: CopilotTurn = {
+        id: `asst-${Date.now()}`,
+        role: "assistant",
+        content:
+          "Veuillez formuler une question d'au moins 3 caractères pour que je puisse interroger votre base ERP (ex. : *Bonjour*, *Quel est le CA ?*, *Marge brute*, *Clients impayés*).",
+        status: "ok",
+        createdAt: new Date().toISOString(),
+      }
+      setTurns((prev) => [...prev, userTurn, asstTurn])
+      return
+    }
+
+    setTurns((prev) => [...prev, userTurn])
+    setLoading(true)
+
+    if (streamMode) {
+      setIsStreaming(true)
+      setStreamingText("")
+      setStreamingStatus("Analyse des écritures de ventes et des coûts…")
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      try {
+        const result = await api.askStream(queryToSend, {
+          conversationId: activeConversationId || undefined,
+          signal: controller.signal,
+          callbacks: {
+            onInit: (data) => {
+              if (data.conversationId) {
+                setActiveConversationId(data.conversationId)
+                loadConversations()
+              }
+            },
+            onStatus: (data) => {
+              setStreamingStatus(data.message || "")
+            },
+            onDelta: (delta) => {
+              setStreamingText((prev) => prev + delta)
+            },
+          },
+        })
+
+        const asstTurn: CopilotTurn = {
+          id: `asst-${Date.now()}`,
+          role: "assistant",
+          content: result.answer,
+          sources: result.sources,
+          table: result.table,
+          status: result.status,
+          metadata: result.metadata,
+          followups: result.followups,
+          createdAt: new Date().toISOString(),
+        }
+        setTurns((prev) => [...prev, asstTurn])
+        if (result.conversationId && result.conversationId !== activeConversationId) {
+          setActiveConversationId(result.conversationId)
+        }
+        loadConversations()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erreur Copilot"
+        setError(msg)
+        const errTurn: CopilotTurn = {
+          id: `err-${Date.now()}`,
+          role: "assistant",
+          content: msg,
+          status: "error",
+          createdAt: new Date().toISOString(),
+        }
+        setTurns((prev) => [...prev, errTurn])
+      } finally {
+        setIsStreaming(false)
+        setStreamingText("")
+        setStreamingStatus("")
+        setLoading(false)
+        abortRef.current = null
+      }
+    } else {
+      try {
+        const result = await api.ask(queryToSend, activeConversationId || undefined)
+        const asstTurn: CopilotTurn = {
+          id: `asst-${Date.now()}`,
+          role: "assistant",
+          content: result.answer,
+          sources: result.sources,
+          table: result.table,
+          status: result.status,
+          metadata: result.metadata,
+          followups: result.followups,
+          createdAt: new Date().toISOString(),
+        }
+        setTurns((prev) => [...prev, asstTurn])
+        if (result.conversationId && result.conversationId !== activeConversationId) {
+          setActiveConversationId(result.conversationId)
+        }
+        loadConversations()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Erreur Copilot"
+        setError(msg)
+        const errTurn: CopilotTurn = {
+          id: `err-${Date.now()}`,
+          role: "assistant",
+          content: msg,
+          status: "error",
+          createdAt: new Date().toISOString(),
+        }
+        setTurns((prev) => [...prev, errTurn])
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
+
+  const renderConversationItem = (c: ConversationSummary) => {
+    if (editingId === c.id) {
+      return (
+        <div key={c.id} className="history-item-wrap active">
+          <input
+            className="history-edit-input"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleRename(c.id)
+              if (e.key === "Escape") setEditingId(null)
+            }}
+            onBlur={() => handleRename(c.id)}
+            autoFocus
+          />
+        </div>
+      )
+    }
+    return (
+      <div
+        key={c.id}
+        className={`history-item-wrap${activeConversationId === c.id ? " active" : ""}`}
+      >
+        <button
+          className="history-item-btn"
+          onClick={() => setActiveConversationId(c.id)}
+          title={c.title}
+        >
+          <Icon name="spark" size={14} />
+          <span>{c.title}</span>
+        </button>
+        <div className="history-actions">
+          <button
+            aria-label="Renommer la discussion"
+            onClick={(e) => {
+              e.stopPropagation()
+              setEditingId(c.id)
+              setEditTitle(c.title)
+            }}
+          >
+            <Icon name="edit" size={13} />
+          </button>
+          <button
+            className="delete"
+            aria-label="Supprimer la discussion"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDelete(c.id)
+            }}
+          >
+            <Icon name="trash" size={13} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const lastTurn = turns[turns.length - 1]
+  const lastRestricted = lastTurn?.status === "denied"
+
   return (
     <div className="copilot-shell">
       <aside className="chat-history">
-        <Button icon="plus" onClick={() => {
-          setMessages([])
-          setAnswer(null)
-          setError("")
-          setInput("")
-        }}>
+        <Button icon="plus" onClick={newConversation}>
           Nouvelle conversation
         </Button>
-        <div className="history-label">Aujourd’hui</div>
-        <button className="history-item active">
-          <Icon name="spark" size={16} />
-          <span>Analyse marge février</span>
-        </button>
-        <button className="history-item">
-          <Icon name="spark" size={16} />
-          <span>Créances clients à risque</span>
-        </button>
-        <div className="history-label">Cette semaine</div>
-        <button className="history-item">
-          <Icon name="spark" size={16} />
-          <span>État du stock dormant</span>
-        </button>
-        <button className="history-item">
-          <Icon name="spark" size={16} />
-          <span>Top fournisseurs 2025</span>
-        </button>
+        <div className="history-search">
+          <Icon name="search" size={13} />
+          <input
+            type="text"
+            placeholder="Filtrer les discussions…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Rechercher une discussion"
+          />
+        </div>
+        <div className="history-list">
+          {grouped.today.length > 0 && (
+            <>
+              <div className="history-label">Aujourd’hui</div>
+              {grouped.today.map(renderConversationItem)}
+            </>
+          )}
+          {grouped.week.length > 0 && (
+            <>
+              <div className="history-label">Cette semaine</div>
+              {grouped.week.map(renderConversationItem)}
+            </>
+          )}
+          {grouped.older.length > 0 && (
+            <>
+              <div className="history-label">Plus ancien</div>
+              {grouped.older.map(renderConversationItem)}
+            </>
+          )}
+          {conversations.length === 0 && (
+            <div className="history-empty">Aucune discussion enregistrée</div>
+          )}
+        </div>
         <div className="chat-note">
           <Icon name="lock" size={15} />
           <span>Les réponses respectent vos droits d’accès ERP.</span>
@@ -1573,35 +1991,234 @@ function CopilotModule() {
             </span>
             <small>Source : {session.data?.dataSource.label ?? "chargement…"}</small>
           </div>
-          <div className="segmented mini">
-            <button
-              className={mode === "chat" ? "selected" : ""}
-              onClick={() => setMode("chat")}
+          <div className="chat-top-actions">
+            <label
+              className="stream-toggle"
+              title="Activer le streaming SSE événementiel pour voir la réponse mot par mot"
             >
-              Assistant
-            </button>
-            <button
-              className={mode === "access" ? "selected" : ""}
-              onClick={() => setMode("access")}
-            >
-              Accès & confidentialité
-            </button>
+              <input
+                type="checkbox"
+                checked={streamMode}
+                onChange={(e) => {
+                  setStreamMode(e.target.checked)
+                  try {
+                    localStorage.setItem("ai_negoce_copilot_stream", String(e.target.checked))
+                  } catch {}
+                }}
+              />
+              <span className="toggle-label">Streaming SSE</span>
+            </label>
+            <div className="segmented mini">
+              <button
+                className={mode === "chat" ? "selected" : ""}
+                onClick={() => setMode("chat")}
+              >
+                Assistant
+              </button>
+              <button
+                className={mode === "access" ? "selected" : ""}
+                onClick={() => setMode("access")}
+              >
+                Accès & confidentialité
+              </button>
+            </div>
           </div>
         </div>
         {mode === "access" ? (
           <AccessState />
         ) : (
           <div className="conversation">
-            {messages.length === 0 ? (
+            {turns.length === 0 && !loading ? (
               <CopilotEmpty ask={ask} />
             ) : (
-              <ChatAnswer
-                question={messages[messages.length - 1]}
-                loading={loading}
-                answer={answer}
-                error={error}
-                ask={ask}
-              />
+              <div className="messages">
+                {turns.map((turn, tIdx) => {
+                  if (turn.role === "user") {
+                    return (
+                      <div className="user-message" key={turn.id || tIdx}>
+                        <div className="user-bubble">{turn.content}</div>
+                        <div className="avatar small">{userInitials}</div>
+                      </div>
+                    )
+                  }
+                  const restricted = turn.status === "denied"
+                  const unsupported = turn.status === "unsupported"
+                  const isErr = turn.status === "error"
+                  const table = turn.table
+                  const rows: any[] = table?.rows || (Array.isArray(turn.table) ? (turn.table as any) : [])
+                  const columns: string[] =
+                    table?.columns ||
+                    (rows.length && rows[0] && typeof rows[0] === "object"
+                      ? Object.keys(rows[0]).slice(0, 5)
+                      : [])
+
+                  return (
+                    <div className="assistant-message" key={turn.id || tIdx}>
+                      <div className="assistant-avatar">
+                        <Icon name={restricted ? "lock" : "spark"} size={16} />
+                      </div>
+                      <div
+                        className={`answer-card${restricted ? " restricted" : ""}${isErr ? " error" : ""}`}
+                      >
+                        {restricted ? (
+                          <>
+                            <Badge tone="warning">Accès restreint</Badge>
+                            <h2>Demande refusée côté serveur</h2>
+                            <p>{turn.content}</p>
+                          </>
+                        ) : (
+                          <>
+                            {unsupported && (
+                              <Badge tone="warning">Question non prise en charge</Badge>
+                            )}
+                            {renderFormattedText(turn.content)}
+                            {!isErr && columns.length > 0 && rows.length > 0 && (
+                              <div className="answer-table-wrap">
+                                <table className="answer-table">
+                                  <thead>
+                                    <tr>
+                                      {columns.map((col, cIdx) => (
+                                        <th key={cIdx}>{col}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {rows.slice(0, 15).map((row: any, rIdx: number) => {
+                                      const cells = Array.isArray(row)
+                                        ? row
+                                        : columns.map((col) => (row as any)[col])
+                                      return (
+                                        <tr key={rIdx}>
+                                          {cells.map((cell: any, cIdx: number) => (
+                                            <td key={cIdx}>
+                                              {cell != null ? String(cell) : "—"}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                            {!isErr && turn.sources && turn.sources.length > 0 && (
+                              <div className="sources">
+                                <div className="source-title">
+                                  <Icon name="file" size={15} /> Sources consultées{" "}
+                                  <Badge>{turn.sources.length} enregistrement(s)</Badge>
+                                </div>
+                                {turn.sources.slice(0, 6).map((src: any, sIdx: number) => {
+                                  const label =
+                                    typeof src === "object" && src ? src.label : String(src)
+                                  const dataset =
+                                    typeof src === "object" && src ? src.dataset : null
+                                  const agency =
+                                    typeof src === "object" && src ? src.agency : null
+                                  return (
+                                    <div className="source-row" key={sIdx}>
+                                      <span>{label}</span>
+                                      {dataset && (
+                                        <span className="source-pill dataset">{dataset}</span>
+                                      )}
+                                      {agency && (
+                                        <span className="source-pill agency">{agency}</span>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            {!isErr && turn.content && (
+                              <div className="answer-meta">
+                                <span>
+                                  {turn.metadata?.asOf
+                                    ? `Données arrêtées au ${turn.metadata.asOf}`
+                                    : "Réponse fondée sur les données ERP autorisées"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard?.writeText(turn.content)
+                                    setCopiedId(turn.id)
+                                    setTimeout(() => setCopiedId(null), 2000)
+                                  }}
+                                >
+                                  {copiedId === turn.id ? "Copié !" : "Copier"}
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {loading && isStreaming && (
+                  <div className="assistant-message streaming">
+                    <div className="assistant-avatar">
+                      <Icon name="spark" size={16} />
+                    </div>
+                    <div className="answer-card">
+                      <div className="streaming-status-bar">
+                        <span className="streaming-indicator" />
+                        <small>{streamingStatus || "Analyse en cours…"}</small>
+                        <button
+                          type="button"
+                          className="btn-stop"
+                          onClick={stopStreaming}
+                          aria-label="Arrêter la réponse"
+                        >
+                          Arrêter
+                        </button>
+                      </div>
+                      <div className="streaming-body">
+                        {renderFormattedText(streamingText || "…")}
+                        <span className="streaming-cursor" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {loading && !isStreaming && (
+                  <div className="assistant-message loading">
+                    <div className="assistant-avatar">
+                      <Icon name="spark" size={16} />
+                    </div>
+                    <div>
+                      <div className="thinking">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                      <small>Analyse des écritures de ventes et des coûts…</small>
+                    </div>
+                  </div>
+                )}
+
+                <div className="followups">
+                  <span>Approfondir</span>
+                  {((lastTurn?.followups && lastTurn.followups.length > 0)
+                    ? lastTurn.followups
+                    : lastRestricted
+                    ? [
+                        "Quelles données puis-je consulter ?",
+                        "Afficher mes droits d’accès",
+                      ]
+                    : [
+                        "Afficher les factures concernées",
+                        "Comparer les agences",
+                        "Comment améliorer la marge ?",
+                      ]
+                  ).map((q) => (
+                    <button onClick={() => ask(q)} key={q}>
+                      {q}
+                      <Icon name="arrow" size={13} />
+                    </button>
+                  ))}
+                </div>
+                <div ref={messagesEndRef} />
+              </div>
             )}
             <div className="composer-wrap">
               <div className="composer">
@@ -1629,8 +2246,7 @@ function CopilotModule() {
               </div>
               <div className="composer-foot">
                 <span>
-                  <Icon name="spark" size={13} /> Réponse générée à partir de
-                  vos données ERP
+                  <Icon name="spark" size={13} /> Réponse fondée sur vos données ERP
                 </span>
                 <span>Entrée pour envoyer · Maj+Entrée pour une ligne</span>
               </div>
@@ -1643,12 +2259,31 @@ function CopilotModule() {
 }
 
 function CopilotEmpty({ ask }: { ask: (q: string) => void }) {
-  const prompts = [
-    "Pourquoi notre marge a-t-elle baissé en février ?",
-    "Quels clients présentent un risque de paiement ?",
-    "Quels articles sont dormants depuis plus de 180 jours ?",
-    "Compare les performances des agences ce trimestre.",
+  const [langTab, setLangTab] = useState<"fr" | "tn" | "ar">("fr")
+
+  const frPrompts = [
+    { text: "Quelle est la marge brute ?", icon: "chart" as IconName },
+    { text: "Pourquoi notre marge a-t-elle baissé en février ?", icon: "sales" as IconName },
+    { text: "Quels clients présentent un risque de paiement ?", icon: "finance" as IconName },
+    { text: "Quels articles sont dormants depuis plus de 180 jours ?", icon: "stock" as IconName },
   ]
+
+  const tnPrompts = [
+    { text: "chnowa a7sen produit tbé3 fi Tunis ?", icon: "sales" as IconName },
+    { text: "3tini créances mta3 Société Commerciale du Sud", icon: "finance" as IconName },
+    { text: "chkoun akber fournisseur 3andna fi 2025 ?", icon: "cart" as IconName },
+    { text: "a3tini les articles eli ma tba3ouch men 6 chhour", icon: "stock" as IconName },
+  ]
+
+  const arPrompts = [
+    { text: "أعطيني ملخص المبيعات حسب الوكالة", icon: "grid" as IconName },
+    { text: "ما هي المنتجات الأكثر بطئاً في الحركة؟", icon: "stock" as IconName },
+    { text: "كم بلغ رقم المعاملات الإجمالي؟", icon: "chart" as IconName },
+    { text: "من هم العملاء الأكثر تأخراً في السداد؟", icon: "finance" as IconName },
+  ]
+
+  const activeList = langTab === "fr" ? frPrompts : langTab === "tn" ? tnPrompts : arPrompts
+
   return (
     <div className="copilot-empty">
       <div className="copilot-mark">
@@ -1659,141 +2294,47 @@ function CopilotEmpty({ ask }: { ask: (q: string) => void }) {
         Je peux explorer les ventes, achats, marges, stocks et créances
         accessibles dans votre ERP.
       </p>
+
+      <div className="copilot-lang-tabs" role="tablist" aria-label="Langue des suggestions">
+        <button
+          role="tab"
+          aria-selected={langTab === "fr"}
+          className={langTab === "fr" ? "active" : ""}
+          onClick={() => setLangTab("fr")}
+        >
+          Français
+        </button>
+        <button
+          role="tab"
+          aria-selected={langTab === "tn"}
+          className={langTab === "tn" ? "active" : ""}
+          onClick={() => setLangTab("tn")}
+        >
+          Tunisien (Derja)
+        </button>
+        <button
+          role="tab"
+          aria-selected={langTab === "ar"}
+          className={langTab === "ar" ? "active" : ""}
+          onClick={() => setLangTab("ar")}
+        >
+          العربية
+        </button>
+      </div>
+
       <div className="prompt-grid">
-        {prompts.map((p, i) => (
-          <button key={p} onClick={() => ask(p)}>
+        {activeList.map((p, i) => (
+          <button key={p.text} onClick={() => ask(p.text)}>
             <span className={`prompt-icon p${i + 1}`}>
-              <Icon
-                name={["chart", "sales", "stock", "grid"][i] as IconName}
-                size={18}
-              />
+              <Icon name={p.icon} size={18} />
             </span>
-            <span>{p}</span>
+            <span>{p.text}</span>
             <Icon name="arrow" size={15} />
           </button>
         ))}
       </div>
       <div className="sample-label">
-        Questions suggérées · Données de démonstration
-      </div>
-    </div>
-  )
-}
-
-function ChatAnswer({
-  question,
-  loading,
-  answer,
-  error,
-  ask,
-}: {
-  question: string
-  loading: boolean
-  answer: any
-  error: string
-  ask: (q: string) => void
-}) {
-  if (loading)
-    return (
-      <div className="messages">
-        <div className="user-message">
-          {question}
-          <div className="avatar small">SB</div>
-        </div>
-        <div className="assistant-message loading">
-          <div className="assistant-avatar">
-            <Icon name="spark" size={16} />
-          </div>
-          <div>
-            <div className="thinking">
-              <span />
-              <span />
-              <span />
-            </div>
-            <small>Analyse des écritures de ventes et des coûts…</small>
-          </div>
-        </div>
-      </div>
-    )
-  const restricted = answer?.status === "denied"
-  const unsupported = answer?.status === "unsupported"
-  const rows = Array.isArray(answer?.table) ? answer.table : []
-  const columns = rows.length && rows[0] && typeof rows[0] === "object"
-    ? Object.keys(rows[0]).slice(0, 5)
-    : []
-  return (
-    <div className="messages">
-      <div className="user-message">
-        {question}
-        <div className="avatar small">SB</div>
-      </div>
-      {restricted ? (
-        <div className="assistant-message">
-          <div className="assistant-avatar">
-            <Icon name="lock" size={16} />
-          </div>
-          <div className="answer-card restricted">
-            <Badge tone="warning">Accès restreint</Badge>
-            <h2>Demande refusée côté serveur</h2>
-            <p>{answer.answer}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="assistant-message">
-          <div className="assistant-avatar">
-            <Icon name="spark" size={16} />
-          </div>
-          <div className="answer-card">
-            {unsupported && <Badge tone="warning">Question non prise en charge</Badge>}
-            <p>{error || answer?.answer || "Aucune réponse disponible."}</p>
-            {!error && columns.length > 0 && (
-              <div className="answer-table-wrap">
-                <table className="answer-table">
-                  <thead><tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
-                  <tbody>
-                    {rows.slice(0, 10).map((row: Record<string, unknown>, index: number) => (
-                      <tr key={index}>{columns.map((column) => <td key={column}>{String(row[column] ?? "—")}</td>)}</tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {!error && answer?.sources?.length > 0 && <div className="sources">
-              <div className="source-title">
-                <Icon name="file" size={15} /> Sources consultées{" "}
-                <Badge>{answer?.sources?.length ?? 0} enregistrement(s)</Badge>
-              </div>
-              {answer.sources.slice(0, 4).map((source: string) => (
-                <div className="source-row" key={source}>
-                  <span>{source}</span>
-                </div>
-              ))}
-            </div>}
-            {!error && answer?.answer && <div className="answer-meta">
-              <span>{answer?.metadata?.asOf ? `Données arrêtées au ${answer.metadata.asOf}` : "Réponse fondée sur les données ERP autorisées"}</span>
-              <button type="button" onClick={() => navigator.clipboard?.writeText(answer.answer)}>Copier</button>
-            </div>}
-          </div>
-        </div>
-      )}
-      <div className="followups">
-        <span>Approfondir</span>
-        {(restricted
-          ? [
-              "Quelles données puis-je consulter ?",
-              "Afficher mes droits d’accès",
-            ]
-          : [
-              "Afficher les factures concernées",
-              "Comparer les agences",
-              "Comment améliorer la marge ?",
-            ]
-        ).map((q) => (
-          <button onClick={() => ask(q)} key={q}>
-            {q}
-            <Icon name="arrow" size={13} />
-          </button>
-        ))}
+        Questions suggérées en Français, Derja et Arabe · Données de démonstration
       </div>
     </div>
   )
@@ -1939,12 +2480,20 @@ type Modal =
   | { kind: "pay"; invoiceId: string }
   | { kind: "receive"; orderId: string; label: string }
 
-function ManagementPage({ module }: { module: ManagementModule }) {
+function ManagementPage({
+  module,
+  initialSearch = "",
+  initialTab = "",
+}: {
+  module: ManagementModule
+  initialSearch?: string
+  initialTab?: string
+}) {
   const meta = managementMeta[module]
-  const [tab, setTab] = useState("")
+  const [tab, setTab] = useState(initialTab)
   const [days, setDays] = useState("30")
-  const [search, setSearch] = useState("")
-  const [query, setQuery] = useState("")
+  const [search, setSearch] = useState(initialSearch)
+  const [query, setQuery] = useState(initialSearch)
   const [page, setPage] = useState(1)
   const [data, setData] = useState<PageData | null>(null)
   const [error, setError] = useState("")
@@ -1952,6 +2501,20 @@ function ManagementPage({ module }: { module: ManagementModule }) {
   const [reload, setReload] = useState(0)
   const [modal, setModal] = useState<Modal | null>(null)
   const [notice, setNotice] = useState("")
+
+  useEffect(() => {
+    setSearch(initialSearch)
+    setQuery(initialSearch)
+    setPage(1)
+  }, [initialSearch, module])
+
+  useEffect(() => {
+    if (initialTab) {
+      setTab(initialTab)
+      setPage(1)
+    }
+  }, [initialTab, module])
+
   // Debounce typing so each keystroke does not hit the API.
   useEffect(() => {
     const t = setTimeout(() => {
@@ -2741,7 +3304,25 @@ function SettingsPage() {
 
 export default function App() {
   const [module, setModule] = useState<Module>("dashboard")
+  const [managementSearch, setManagementSearch] = useState<string>("")
+  const [managementTab, setManagementTab] = useState<string>("")
   const [session, setSession] = useState<ApiState<Session>>({})
+  const [copilotInitialPrompt, setCopilotInitialPrompt] = useState<string>("")
+
+  const handleNavigate = useCallback(
+    (targetModule: string, options?: { search?: string; tab?: string }) => {
+      setManagementSearch(options?.search ?? "")
+      setManagementTab(options?.tab ?? "")
+      setModule(targetModule as any)
+    },
+    [],
+  )
+
+  const handleNavigateCopilot = useCallback((prompt: string) => {
+    setCopilotInitialPrompt(prompt)
+    setModule("copilot")
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     api
@@ -2759,17 +3340,35 @@ export default function App() {
       module === "inventory" ||
       module === "finance"
     )
-      return <ManagementPage module={module} />
-    if (module === "ocr") return <SmartOcrModule />
-    if (module === "bi") return <BIModule />
-    if (module === "copilot") return <CopilotModule />
+      return (
+        <ManagementPage
+          module={module}
+          initialSearch={managementSearch}
+          initialTab={managementTab}
+        />
+      )
+    if (module === "ocr") return <SmartOcrModule onNavigate={handleNavigate} />
+    if (module === "bi")
+      return (
+        <Bi360Module
+          onNavigateCopilot={handleNavigateCopilot}
+          userAgencies={session.data?.agencies}
+        />
+      )
+    if (module === "copilot")
+      return (
+        <CopilotModule
+          initialPrompt={copilotInitialPrompt}
+          onClearInitialPrompt={() => setCopilotInitialPrompt("")}
+        />
+      )
     if (module === "settings") return <SettingsPage />
-    return <Dashboard navigate={setModule} />
-  }, [module])
+    return <Dashboard navigate={(mod) => handleNavigate(mod)} />
+  }, [module, managementSearch, managementTab, handleNavigate, handleNavigateCopilot, copilotInitialPrompt, session.data?.agencies])
   return (
     <SessionContext.Provider value={session}>
       <div className="app-shell">
-        <Sidebar active={module} navigate={setModule} />
+        <Sidebar active={module} navigate={(mod) => handleNavigate(mod)} />
         <main className="main">
           <Topbar module={module} />
           {content}
