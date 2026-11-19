@@ -1,0 +1,6 @@
+paquet_id;etat;type_paquet;pieces;quantite;disponible;reservee;vendue;depot_id
+PAQ_001;Ouvert;Détaillé;960;34.560;1.116;18.000;15.444;DEP_01
+PAQ_002;Ouvert;Détaillé;4080;146.880;74.304;40.000;32.576;DEP_01
+PAQ_003;Ouvert;Détaillé;33000;303.600;0.018;220.000;83.582;DEP_01
+PAQ_004;Fermé;Détaillé;7056;338.688;96.960;0.000;241.728;DEP_01
+PAQ_005;Ouvert;Détaillé;1408;38.016;0.108;12.000;25.908;DEP_01

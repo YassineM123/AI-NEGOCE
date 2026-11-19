@@ -1,0 +1,51 @@
+menu;chemin_exact;role_metier;elements_visibles;statut;preuve_note
+Modules;Modules > Stock;Gestion des stocks;Option de menu;visible mais non vérifié;menu_modules.png
+Modules;Modules > Recouvrement;Gestion du recouvrement;Option de menu;visible mais non vérifié;menu_modules.png
+Modules;Modules > Dépense;Gestion des dépenses;Option de menu;visible mais non vérifié;menu_modules.png
+Modules;Modules > Approvisionnement;Gestion des approvisionnements;Option de menu;visible mais non vérifié;menu_modules.png
+Modules;Modules > Production;Gestion de production;Option grisée;inaccessible avec le compte actuel;menu_modules.png
+Modules;Modules > Importation;Import de données;Option de menu, fonction d'écriture non déclenchée;visible mais non vérifié;menu_modules.png
+Modules;Modules > Exportation;Export de données;Option de menu;visible mais non vérifié;menu_modules.png
+Dossiers;Dossiers > Connexion;Connexion dossier;Option de menu;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > Paramètres;Paramétrage du dossier;Sous-menu;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > Changement de dépôt;Changer le périmètre dépôt;Option de menu;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > Nouveau;Créer un dossier;Fonction d'écriture non déclenchée;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > Supprimer;Supprimer un dossier;Fonction destructive non déclenchée;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > Base commune;Accès à la base commune;Option de menu;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > Exercice apuré;Consulter/basculer un exercice apuré;Option de menu;visible mais non vérifié;menu_dossiers.png
+Dossiers;Dossiers > MAJ version;Mise à jour;Fonction de traitement non déclenchée;visible mais non vérifié;menu_dossiers.png
+Bases;Bases > Paramètres;Paramétrage de base;Sous-menu;visible mais non vérifié;menu_bases.png
+Bases;Bases > Tiers;Référentiels tiers;Sous-menu;visible mais non vérifié;menu_bases.png
+Bases;Bases > Nomenclature;Référentiels articles/nomenclature;Sous-menu;visible mais non vérifié;menu_bases.png
+Bases;Bases > Documents;Paramétrage documentaire;Sous-menu;visible mais non vérifié;menu_bases.png
+Bases;Bases > Banques;Référentiel bancaire;Option de menu;visible mais non vérifié;menu_bases.png
+Bases;Bases > Requêtes;Requêtes intégrées;Sous-menu;visible mais non vérifié;menu_bases.png
+Bases;Bases > Bases;Administration des bases;Option de menu;visible mais non vérifié;menu_bases.png
+Ventes;Ventes > DEVIS;Saisie/consultation devis;Option de menu;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > Bon de Commande;Saisie/consultation commandes;Option de menu;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > BON DE LIVRAISON;Saisie/consultation livraisons;Option de menu;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > BON DE RETOUR;Saisie/consultation retours;Option de menu;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > AVOIR FINANCIER;Saisie/consultation avoirs financiers;Option de menu;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > Annulation documents;Annulation de pièces;Sous-menu, fonction d'écriture non déclenchée;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > Préparation des factures/avoirs;Préparation de facturation;Option de traitement non déclenchée;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > Importation des documents;Import de pièces;Fonction d'écriture non déclenchée;visible mais non vérifié;menu_ventes.png
+Ventes;Ventes > Imputation des déclarations douanières aux factures;Rattachement douanier;Fonction d'écriture non déclenchée;visible mais non vérifié;menu_ventes.png
+Restitutions;Restitutions > Statistiques;Analyse statistique;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Extrait de compte;État de compte client;Option de menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Edition des factures;Édition factures;Option de menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Edition des avoirs;Édition avoirs;Option de menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Edition des factures électroniques;Édition e-factures;Option de menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Journal des ventes;Journal natif de ventes;Option de menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Relevés des ventes;États de ventes;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Listes;Listes opérationnelles;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Chiffre d'affaire client;CA par client;Option de menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Etats d'avancement;Suivi d'avancement;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Suivis;Suivis opérationnels;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Etats des articles;États articles;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Restitutions;Restitutions > Gestion des paquets;États colis/paquets;Sous-menu;visible mais non vérifié;menu_restitutions.png
+Intégrations;Intégrations > Comptes d'intégration comptable;Paramétrage des comptes;Option de menu;visible mais non vérifié;menu_integrations.png
+Intégrations;Intégrations > Intégration des factures à la comptabilité;Exporter des factures en fichier texte;Dates Du/Au, dossier comptable, séparateur, Création/Ajout, Non intégrées/Intégrées/Toutes, colonnes Famille/Série/Préfixe/Numéro/code client/Datefacture/nom client/Mtttc/Mtht/Devise/Adresse;vérifié;erp_journal_ventes2.png
+Intégrations;Intégrations > Intégration des factures en suspension des taxes à la déclaration;Intégration fiscale;Option de menu;visible mais non vérifié;menu_integrations.png
+Traitements;Traitements;Traitements batch;Aucun sous-menu rendu lors du contrôle;inaccessible avec le compte actuel;menu2_traitements.png
+Sécurité;Sécurité;Gestion des droits;Aucun sous-menu confirmé;inaccessible avec le compte actuel;contrôle visuel non concluant
+Contexte;Fenêtre principale;Périmètre actif;Dossier IAI, dépôt DEPOT RT MAHDIA, utilisateur SUPNEGOCE, poste SAFA, version AI V 2026,10;vérifié;erp_home.png

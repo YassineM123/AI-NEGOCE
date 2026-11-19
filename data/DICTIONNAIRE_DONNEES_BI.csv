@@ -1,0 +1,27 @@
+champ;definition;type;unite;grain;source;confidentialite;regle_ou_limite
+date_facture;Date de la facture;date;jour;document;doc_ent_facture.datefacture;non sensible;Fuseau et date comptable à confirmer
+document_id;Identifiant stable pseudonymisé du triplet série/préfixe/numéro;texte;;document;SHA2_256;confidentiel pseudonymisé;Ne permet pas de revenir au numéro sans table source
+serie;Code de série documentaire;texte;;document;doc_ent_facture.iddocserie;interne;Dictionnaire des types à confirmer
+prefixe;Préfixe/année de pièce;texte;;document;doc_ent_facture.prefixe;interne;
+client_id;Identifiant stable pseudonymisé du client;texte;;client;SHA2_256(client code);confidentiel pseudonymisé;Même client cohérent entre extractions
+article_id;Identifiant stable pseudonymisé de l'article;texte;;article;SHA2_256(ref_c);confidentiel pseudonymisé;Même article cohérent entre extractions
+famille_id;Identifiant de famille article;entier;;famille;ARTICLE.IdFamille;interne;Libellé volontairement absent
+sous_famille_id;Identifiant de sous-famille;entier;;sous-famille;ARTICLE.IdSsFamille;interne;Libellé volontairement absent
+montant_ht;Montant hors taxes de l'en-tête ou de l'agrégat;decimal(18,3);TND;document/agrégat;doc_ent_facture.mtht;agrégé;Inclut les pièces selon filtre séries/statuts
+montant_ttc;Montant toutes taxes comprises;decimal(18,3);TND;document/agrégat;doc_ent_facture.mtttc;agrégé;Inclut le timbre au grain en-tête
+timbre;Montant du timbre fiscal;decimal(18,3);TND;document;doc_ent_facture.mttimbre;agrégé;Explique l'écart TTC lignes/en-têtes d'octobre
+documents;Nombre de documents;entier;documents;agrégat;COUNT;agrégé;Clé distincte série/préfixe/numéro
+quantite;Quantité totale de lignes;decimal(18,3);unité article;article;view_detail_fact.qte;agrégé;Unités hétérogènes entre articles
+etat_comptable;Etat d'intégration/comptabilisation;texte;;document;doc_ent_facture.etatcompt;interne;Sens des codes à confirmer
+etat_statistique;Etat d'inclusion statistique;texte;;document;doc_ent_facture.etatstat;interne;Sens des codes à confirmer
+depot_id;Identifiant du dépôt;entier;;dépôt;site_param.id_site;interne;1 = dépôt audité
+stock_calcule;Stock physique calculé;decimal(18,3);unité article;article-dépôt;stk_art qteinit+qtee-qtes;agrégé;À rapprocher avec l'état stock
+reserve_sortie;Quantité réservée pour sorties/devis/commandes;decimal(18,3);unité article;article-dépôt;stk_art;agrégé;Composants exacts à confirmer
+disponible_calcule;Stock moins réserves de sortie;decimal(18,3);unité article;article-dépôt;calcul SQL;agrégé;Formule ERP à rapprocher
+valeur_pmp;Valeur du stock au PMP;decimal(18,3);TND;article-dépôt;stk_art.pmpa*stock;agrégé;PMP historique/actuel à confirmer
+ca_net;CA ventes moins retours dans la table statistique;decimal(18,3);TND;mois-dépôt;statistique.ca_vte-ca_ret;agrégé;Traitement de préparation à confirmer
+cout_net;Prix de revient ventes moins retours;decimal(18,3);TND;mois-dépôt;statistique.prix_revient-prix_revient_ret;agrégé;Méthode de coût à confirmer
+marge_brute;CA net moins coût net;decimal(18,3);TND;mois-dépôt;calcul SQL sur statistique;agrégé;À rapprocher avec Etat des marges
+type_encaissement;Nature de l'encaissement;texte;;mois;encentrecenc.typeenc;interne;Dictionnaire des codes requis
+solde;Montant restant à régler;decimal(18,3);TND;client-tranche;View_echeancefact.LERESTE;agrégé;Règle de signe à confirmer
+tranche_age;Ancienneté de la créance;texte;jours;client-tranche;DATEDIFF(dateech,date arrêté);agrégé;Arrêté de démonstration 20/10/2026

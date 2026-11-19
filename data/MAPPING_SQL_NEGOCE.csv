@@ -1,0 +1,13 @@
+objet_metier;objet_sql;type;grain;cle;champs_exploitables;relations;statut
+Base dossier;IAINEG;base;Dossier ERP ouvert;database_id=7;session SUPNEGOCE;Relation prouvée par sys.dm_exec_sessions;vérifié
+Société/dossier;dbo.dossier_param;table;1 ligne par dossier;id_dossier;raison_sociale, code, datedeb_exerc, datefin_exerc, version_bd;Référentiel de portée;vérifié
+Clients;dbo.client;table;1 ligne par client;code (PK);nom, idcategorie, idsecteur, mode_paie, idconv_paie, nature, date_cre;FK déclarées depuis adresses/cli_dombq/Client_Site et autres;vérifié
+Articles;dbo.ARTICLE;table;1 ligne par article;REF_C (PK);CODE, LIBELLE, UNITE_VTE, IdFamille, IdSsFamille, TVA, PrixRevient, nature, date_cre;FK déclarées depuis article_site/article_photo/article_description;vérifié
+Dépôts/utilisateurs;dbo.DepotUtilisateur;table;1 droit par dépôt et utilisateur;idsite + codeut (PK);acces;Lien dépôt à une table site à confirmer;vérifié
+Factures/avoirs;dbo.doc_ent_facture;table;1 en-tête de pièce;numero + iddocserie + prefixe (PK);datefacture, clicode, mtht, mttva, mtttc, etatcompt, etatstat, mtrem, date_echeance, date_reglement;Lien client par clicode déduit, type facture/avoir via série à confirmer;vérifié
+Lignes de document;dbo.doc_ligne;table;1 ligne article par pièce;lignenum + iddocserie + prefixe + document (PK);ref_c, intitule, unite, pu, remtaux, nbrpiece, mtht, mtttc, datedoc;Lien en-tête par série/préfixe/document déduit, lien ARTICLE.ref_c déduit;vérifié
+Détail quantité;dbo.doc_detail_lig;table;1 détail de quantité par ligne;iddetaillig + iddocserie + prefixe + document + numligne (PK);idligdoc, nbrpiece, qte;Lien doc_ligne déduit;vérifié
+Vue ventes détaillée;dbo.view_detail_fact;vue;1 ligne de facture/article;aucune clé déclarée;datefacture, iddocserie, prefixe, numero, clicode, Reference, qte, pu, LigMtHt, LigMtttc, mtht, mtttc;Vue de rapprochement, attention aux montants d'en-tête répétés;vérifié
+Règlements en-tête;dbo.encentrecenc;table;1 règlement;iddocserie + prefixe + document (PK);typeenc, tierspaie, tiersbene, montant, datedoc, etat, MontantDevise;Lien client par tiers à confirmer;vérifié
+Règlements détail;dbo.encdetrecenc;table;1 ligne d'affectation de règlement;iddocserie + prefixe + document + ligne (PK);naturedoc, numdoc, datedoc, montant, dateech, datevaleur, MontantDevise;Lien règlement et facture déduit;vérifié
+Vue échéances;dbo.View_JnlFactrepatie_ca_prep;vue;1 facture/échéance préparée;iddocserie + prefixe + numero (clé candidate);datefacture, clicode, mtht, mtttc, date_reglement, nature, prixrevient, margebrut, margenet;Relations internes de la vue non déclarées;visible mais non vérifié

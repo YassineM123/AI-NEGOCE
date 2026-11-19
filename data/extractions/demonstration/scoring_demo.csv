@@ -1,0 +1,7 @@
+client_id;segment;score;ca_2025;ca_2026;marge_pct;retard_jours;decision
+CLI_001;Stratégique;91;185000.000;224500.000;24.600;2;Fidéliser
+CLI_002;Développer;78;96000.000;132400.000;21.300;8;Augmenter le potentiel
+CLI_003;Surveiller;56;121000.000;109800.000;16.900;34;Sécuriser le paiement
+CLI_004;Risque;32;74500.000;61800.000;12.400;76;Limiter l'encours
+CLI_005;Nouveau;67;0.000;88300.000;19.800;5;Qualifier
+CLI_006;Stratégique;88;166200.000;194700.000;23.100;0;Fidéliser

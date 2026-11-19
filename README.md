@@ -1,39 +1,31 @@
-# AI-NEGOCE Intelligence Suite
+# Audit et centre BI AI-NÉGOCE
 
-Interface React conservée et reliée à une API Express sécurisée. La fondation V1 inclut OIDC/JWT, permissions serveur, périmètres agence, PostgreSQL, audit, conversations persistantes et adaptateurs OCR/ERP. Les intégrations externes restent désactivées tant qu’elles ne sont pas configurées et vérifiées.
+Ce dépôt regroupe le livrable d'audit AI-NÉGOCE, les extractions BI
+anonymisées, les preuves de contrôle et un prototype statique du centre BI.
 
-## Démarrage local
+## Structure
 
-Prérequis : Node.js 22, npm et Docker (PostgreSQL de développement).
+- `app/` : prototype web statique du centre BI.
+- `docs/` : audit, rapport, plans fonctionnels et plan de l'application BI.
+- `data/` : catalogues, dictionnaires, mappings et extractions anonymisées.
+- `evidence/audit/` : preuves retenues dans le rapport d'audit.
+- `evidence/exploration/` : captures de travail et de validation du prototype.
+- `tools/` : scripts PowerShell utilisés pour les captures et la maintenance.
 
-```bash
-npm install
-cp .env.example .env        # puis remplacer POSTGRES_PASSWORD et DATABASE_URL
-npm run db:dev:up
-npm run migrate
-npm run dev:api
-npm run dev
-```
+## Lancer le prototype
 
-Frontend : `http://localhost:8443` — API : `http://127.0.0.1:3001/api/v1`.
+Ouvrir `app/index.html` dans un navigateur moderne. Le prototype est autonome
+et ne nécessite ni installation de dépendances ni accès à la base de production.
 
-## Authentification
+## Documents de départ
 
-`AUTH_MODE` est obligatoire ; l’API refuse de démarrer sans lui.
+1. `docs/RAPPORT_AUDIT_BI_NEGOCE.md`
+2. `docs/PLAN_WEB_APP_BI.md`
+3. `docs/PLAN_DASHBOARDS_NEGOCE.md`
+4. `data/DICTIONNAIRE_DONNEES_BI.csv`
 
-- `oidc` : jetons du fournisseur d’identité (`OIDC_ISSUER`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL`). Seul mode autorisé en production et sur tout serveur partagé.
-- `local-dev` : identités de développement (`admin`, `manager-sfax`, `commercial-tunis`) pour un poste de travail. L’API écoute uniquement sur l’interface locale (`HOST` de bouclage obligatoire) et refuse toute requête distante ou relayée par un proxy. Le navigateur obtient un jeton de courte durée via `POST /api/v1/auth/dev-session` pour l’identité `VITE_DEV_IDENTITY` ; aucun jeton n’est intégré au bundle.
+## Confidentialité
 
-Voir `docs/smart-ocr/01a-authentication.md`.
-
-## Validation
-
-```bash
-npm run typecheck
-npm test
-npm run build
-npm run check:bundle
-npm audit
-```
-
-En production, les endpoints métier exigent un JWT OIDC vérifié et BI/Copilot renvoient `503` si l’adaptateur ERP réel n’est pas disponible. L’API ne remplit aucun champ OCR sans fournisseur configuré et ne prétend jamais avoir écrit dans l’ERP.
+Les jeux de démonstration et les aperçus publiés ici sont anonymisés. Aucun
+secret de connexion, fichier d'environnement ou export brut nominatif ne doit
+être ajouté au dépôt.

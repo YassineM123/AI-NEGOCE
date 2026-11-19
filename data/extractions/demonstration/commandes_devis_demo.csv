@@ -1,0 +1,9 @@
+mois;type;statut;documents;montant_ht;quantite;quantite_executee
+2026-01;Devis;Accepté;18;45200.000;310.000;310.000
+2026-01;Commande;Partiellement livrée;14;61350.000;420.000;286.000
+2026-02;Devis;En attente;22;58750.000;375.000;0.000
+2026-02;Commande;Livrée;19;74320.000;510.000;510.000
+2026-03;Devis;Refusé;9;21800.000;145.000;0.000
+2026-03;Commande;En préparation;17;68940.000;460.000;184.000
+2026-04;Devis;Accepté;26;81450.000;535.000;535.000
+2026-04;Commande;Partiellement livrée;21;90500.000;620.000;403.000

@@ -1,43 +1,8 @@
-node_modules/
-dist/
-coverage/
-
-# Secrets and local environment: only the documented template is versioned
 .env
 .env.*
 !.env.example
-*.pem
-*.key
-*.p12
-*.pfx
-
-# Local runtime data: ERP sandbox databases, Postgres dumps, uploaded documents
-var/
-*.db
-*.db-shm
-*.db-wal
-*.sqlite
-*.dump
-
-# Generated scratch output (includes realistic-looking test invoices without a [FICTIF] marker)
-tmp/
-output/
-
-# Python caches
-__pycache__/
-*.pyc
-
-# QA datasets: synthetic outputs are reproducible from the generator; real exports must never be committed
-datasets/synthetic/
-datasets/exports/
-reports/evidence/tmp/
-# Scratch evidence rewritten by every test run without QA_PHASE; named runs (initial/final/...) stay versioned
-reports/evidence/*_adhoc.json
-test-results/
-playwright-report/
-
-# Real invoice dataset provided by the owner: confidential, never versioned
-Dataset/
-
-# Locally installed agent plugins (third-party clones with their own .git)
-.agents/
+node_modules/
+dist/
+*.log
+Thumbs.db
+.DS_Store
