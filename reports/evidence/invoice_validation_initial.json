@@ -1,0 +1,137 @@
+{
+  "cases": 15,
+  "exactCases": 0,
+  "truePositives": 0,
+  "falseNegatives": 24,
+  "falsePositives": 0,
+  "detectionRate": 0,
+  "results": [
+    {
+      "id": "VALID_BASELINE",
+      "expected": [],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "DUPLICATE_INVOICE",
+      "expected": [
+        "DUPLICATE_INVOICE"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "MISSING_INVOICE_NUMBER",
+      "expected": [
+        "MISSING_INVOICE_NUMBER"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "MISSING_SUPPLIER",
+      "expected": [
+        "MISSING_SUPPLIER"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "INCORRECT_TOTAL",
+      "expected": [
+        "TOTAL_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "VAT_MISMATCH",
+      "expected": [
+        "TOTAL_MISMATCH",
+        "VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "LINE_VAT_WRONG_RATE",
+      "expected": [
+        "LINE_VAT_MISMATCH",
+        "VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "NEGATIVE_QUANTITY",
+      "expected": [
+        "HT_MISMATCH",
+        "NEGATIVE_QUANTITY",
+        "VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "UNUSUAL_DISCOUNT",
+      "expected": [
+        "HT_MISMATCH",
+        "UNUSUAL_DISCOUNT",
+        "VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "CURRENCY_INCONSISTENT",
+      "expected": [
+        "CURRENCY_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "UNKNOWN_VAT_RATE",
+      "expected": [
+        "UNKNOWN_VAT_RATE",
+        "VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "DUPLICATE_PRODUCT_LINE",
+      "expected": [
+        "DUPLICATE_LINE",
+        "HT_MISMATCH",
+        "VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "WRONG_PO_REFERENCE",
+      "expected": [
+        "UNKNOWN_PURCHASE_ORDER"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "LINE_ARITHMETIC_ERROR",
+      "expected": [
+        "HT_MISMATCH",
+        "LINE_TOTAL_MISMATCH",
+        "LINE_VAT_MISMATCH"
+      ],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    },
+    {
+      "id": "MULTIPLE_VAT_RATES_VALID",
+      "expected": [],
+      "actual": "NO VALIDATION MODULE",
+      "exact": false
+    }
+  ]
+}

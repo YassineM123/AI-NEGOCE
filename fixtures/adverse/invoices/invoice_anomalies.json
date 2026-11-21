@@ -1,0 +1,695 @@
+{
+  "registeredInvoices": [
+    {
+      "supplierId": "SUP-001",
+      "invoiceNumber": "F001-2026-0042"
+    }
+  ],
+  "knownPurchaseOrders": [
+    "PO-00001"
+  ],
+  "cases": [
+    {
+      "id": "VALID_BASELINE",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [],
+      "expectedBehaviour": "Accept: all checks pass."
+    },
+    {
+      "id": "DUPLICATE_INVOICE",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0042",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "DUPLICATE_INVOICE"
+      ],
+      "expectedBehaviour": "Reject: same supplier + invoice number already registered (F001-2026-0042)."
+    },
+    {
+      "id": "MISSING_INVOICE_NUMBER",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "MISSING_INVOICE_NUMBER"
+      ],
+      "expectedBehaviour": "Block approval until a number is entered."
+    },
+    {
+      "id": "MISSING_SUPPLIER",
+      "invoice": {
+        "supplierId": null,
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "MISSING_SUPPLIER"
+      ],
+      "expectedBehaviour": "Block approval until the supplier is resolved."
+    },
+    {
+      "id": "INCORRECT_TOTAL",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "999.999"
+        }
+      },
+      "expectedCodes": [
+        "TOTAL_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: TTC differs from HT + VAT + stamp."
+    },
+    {
+      "id": "VAT_MISMATCH",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "185.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "TOTAL_MISMATCH",
+        "VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: header VAT differs from sum of line VAT."
+    },
+    {
+      "id": "LINE_VAT_WRONG_RATE",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "51.800"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "LINE_VAT_MISMATCH",
+        "VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: line VAT inconsistent with its rate."
+    },
+    {
+      "id": "NEGATIVE_QUANTITY",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": -50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "-475.000",
+            "lineVat": "-33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "HT_MISMATCH",
+        "NEGATIVE_QUANTITY",
+        "VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Reject on a supplier invoice (a return must be a credit note)."
+    },
+    {
+      "id": "UNUSUAL_DISCOUNT",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 85,
+            "vatRate": 7,
+            "lineHt": "71.250",
+            "lineVat": "4.988"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "HT_MISMATCH",
+        "UNUSUAL_DISCOUNT",
+        "VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag for review: discount > 30 %."
+    },
+    {
+      "id": "CURRENCY_INCONSISTENT",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "EUR",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "CURRENCY_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: currency differs from the TND ledger."
+    },
+    {
+      "id": "UNKNOWN_VAT_RATE",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 21,
+            "lineHt": "740.000",
+            "lineVat": "155.400"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "UNKNOWN_VAT_RATE",
+        "VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: rate not in configured scenario set {0,7,13,19}."
+    },
+    {
+      "id": "DUPLICATE_PRODUCT_LINE",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          },
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "DUPLICATE_LINE",
+        "HT_MISMATCH",
+        "VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: the same product appears twice with identical values."
+    },
+    {
+      "id": "WRONG_PO_REFERENCE",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-99999",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "475.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "UNKNOWN_PURCHASE_ORDER"
+      ],
+      "expectedBehaviour": "Flag: purchase order does not exist."
+    },
+    {
+      "id": "LINE_ARITHMETIC_ERROR",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0041",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 50,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "500.000",
+            "lineVat": "33.250"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 4,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "740.000",
+            "lineVat": "140.600"
+          }
+        ],
+        "totals": {
+          "ht": "1215.000",
+          "vat": "173.850",
+          "stamp": "1.000",
+          "ttc": "1389.850"
+        }
+      },
+      "expectedCodes": [
+        "HT_MISMATCH",
+        "LINE_TOTAL_MISMATCH",
+        "LINE_VAT_MISMATCH"
+      ],
+      "expectedBehaviour": "Flag: quantity x unit price differs from line HT."
+    },
+    {
+      "id": "MULTIPLE_VAT_RATES_VALID",
+      "invoice": {
+        "supplierId": "SUP-001",
+        "supplierName": "STE Ravino SARL [FICTIF]",
+        "invoiceNumber": "F001-2026-0077",
+        "invoiceDate": "2026-03-12",
+        "purchaseOrderId": "PO-00001",
+        "currency": "TND",
+        "lines": [
+          {
+            "productId": "PRD-00005",
+            "description": "Ramette A4 Eco",
+            "quantity": 10,
+            "unitPrice": "9.500",
+            "discountPct": 0,
+            "vatRate": 7,
+            "lineHt": "95.000",
+            "lineVat": "6.650"
+          },
+          {
+            "productId": "PRD-00008",
+            "description": "Savon liquide",
+            "quantity": 6,
+            "unitPrice": "4.200",
+            "discountPct": 0,
+            "vatRate": 13,
+            "lineHt": "25.200",
+            "lineVat": "3.276"
+          },
+          {
+            "productId": "PRD-00007",
+            "description": "Toner Ravi Pro",
+            "quantity": 1,
+            "unitPrice": "185.000",
+            "discountPct": 0,
+            "vatRate": 19,
+            "lineHt": "185.000",
+            "lineVat": "35.150"
+          },
+          {
+            "productId": "PRD-00011",
+            "description": "Carton double",
+            "quantity": 30,
+            "unitPrice": "1.150",
+            "discountPct": 0,
+            "vatRate": 0,
+            "lineHt": "34.500",
+            "lineVat": "0.000"
+          }
+        ],
+        "totals": {
+          "ht": "339.700",
+          "vat": "45.076",
+          "stamp": "1.000",
+          "ttc": "385.776"
+        }
+      },
+      "expectedCodes": [],
+      "expectedBehaviour": "Accept: mixed VAT rates reconcile."
+    }
+  ]
+}

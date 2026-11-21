@@ -1,0 +1,659 @@
+{
+  "phase": "initial",
+  "executedAt": "2026-10-15T11:47:39.400Z",
+  "comparisons": 112,
+  "failedComparisons": 99,
+  "discrepancies": [
+    {
+      "scenario": "all",
+      "metric": "revenue",
+      "expected": "52752842.587",
+      "actual": 53904212.70200011,
+      "delta": 1151370.115
+    },
+    {
+      "scenario": "all",
+      "metric": "cost",
+      "expected": "42683233.134",
+      "actual": 43612845.50700015,
+      "delta": 929612.373
+    },
+    {
+      "scenario": "all",
+      "metric": "grossMargin",
+      "expected": "10069609.453",
+      "actual": 10291367.194999963,
+      "delta": 221757.742
+    },
+    {
+      "scenario": "all",
+      "metric": "receivables",
+      "expected": "15068624.752",
+      "actual": 15181433.42300002,
+      "delta": 112808.671
+    },
+    {
+      "scenario": "all",
+      "metric": "overdue",
+      "expected": "12932239.991",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "all",
+      "metric": "grossMarginPercent",
+      "expected": 19.0883,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "all",
+      "metric": "recordCount (documents)",
+      "expected": 9792,
+      "actual": 17127
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "revenue",
+      "expected": "6525899.888",
+      "actual": 6676834.889999991,
+      "delta": 150935.002
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "cost",
+      "expected": "5317550.096",
+      "actual": 5441822.643999992,
+      "delta": 124272.548
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "grossMargin",
+      "expected": "1208349.792",
+      "actual": 1235012.2459999993,
+      "delta": 26662.454
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "receivables",
+      "expected": "1916042.310",
+      "actual": 1955948.1779999984,
+      "delta": 39905.868
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "overdue",
+      "expected": "1516213.044",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "grossMarginPercent",
+      "expected": 18.5162,
+      "actual": 18.496971489435783
+    },
+    {
+      "scenario": "agency:Bizerte",
+      "metric": "recordCount (documents)",
+      "expected": 1164,
+      "actual": 2058
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "revenue",
+      "expected": "5313349.894",
+      "actual": 5414936.757000003,
+      "delta": 101586.863
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "cost",
+      "expected": "4328599.072",
+      "actual": 4411199.393000003,
+      "delta": 82600.321
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "grossMargin",
+      "expected": "984750.822",
+      "actual": 1003737.3640000001,
+      "delta": 18986.542
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "receivables",
+      "expected": "1556020.665",
+      "actual": 1598293.022999999,
+      "delta": 42272.358
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "overdue",
+      "expected": "1342460.010",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "grossMarginPercent",
+      "expected": 18.5335,
+      "actual": 18.53645590047654
+    },
+    {
+      "scenario": "agency:Nabeul",
+      "metric": "recordCount (documents)",
+      "expected": 995,
+      "actual": 1724
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "revenue",
+      "expected": "13189479.802",
+      "actual": 13486738.957000004,
+      "delta": 297259.155
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "cost",
+      "expected": "10652513.859",
+      "actual": 10889954.303999975,
+      "delta": 237440.445
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "grossMargin",
+      "expected": "2536965.943",
+      "actual": 2596784.653000029,
+      "delta": 59818.71
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "receivables",
+      "expected": "3776006.442",
+      "actual": 3753957.736999996,
+      "delta": -22048.705
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "overdue",
+      "expected": "3245973.169",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "grossMarginPercent",
+      "expected": 19.2348,
+      "actual": 19.25435541741707
+    },
+    {
+      "scenario": "agency:Sfax",
+      "metric": "recordCount (documents)",
+      "expected": 2456,
+      "actual": 4259
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "revenue",
+      "expected": "9300860.299",
+      "actual": 9478491.134999987,
+      "delta": 177630.836
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "cost",
+      "expected": "7493498.862",
+      "actual": 7636465.721000011,
+      "delta": 142966.859
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "grossMargin",
+      "expected": "1807361.437",
+      "actual": 1842025.4139999757,
+      "delta": 34663.977
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "receivables",
+      "expected": "2782087.619",
+      "actual": 2800031.8710000007,
+      "delta": 17944.252
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "overdue",
+      "expected": "2433825.964",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "grossMarginPercent",
+      "expected": 19.4322,
+      "actual": 19.433740959024256
+    },
+    {
+      "scenario": "agency:Sousse",
+      "metric": "recordCount (documents)",
+      "expected": 1739,
+      "actual": 3079
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "revenue",
+      "expected": "18423252.704",
+      "actual": 18847210.96300006,
+      "delta": 423958.259
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "cost",
+      "expected": "14891071.245",
+      "actual": 15233403.44499996,
+      "delta": 342332.2
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "grossMargin",
+      "expected": "3532181.459",
+      "actual": 3613807.5180001,
+      "delta": 81626.059
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "receivables",
+      "expected": "5038467.716",
+      "actual": 5073202.613999987,
+      "delta": 34734.898
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "overdue",
+      "expected": "4393767.804",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "grossMarginPercent",
+      "expected": 19.1724,
+      "actual": 19.17422967830388
+    },
+    {
+      "scenario": "agency:Tunis Centre",
+      "metric": "recordCount (documents)",
+      "expected": 3438,
+      "actual": 6007
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "revenue",
+      "expected": "35558802.454",
+      "actual": 53904212.70200011,
+      "delta": 18345410.248
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "cost",
+      "expected": "28775744.361",
+      "actual": 43612845.50700015,
+      "delta": 14837101.146
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "grossMargin",
+      "expected": "6783058.093",
+      "actual": 10291367.194999963,
+      "delta": 3508309.102
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "receivables",
+      "expected": "7031146.653",
+      "actual": 15181433.42300002,
+      "delta": 8150286.77
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "overdue",
+      "expected": "7031146.653",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "grossMarginPercent",
+      "expected": 19.0756,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "year:2025",
+      "metric": "recordCount (documents)",
+      "expected": 6533,
+      "actual": 17127
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "revenue",
+      "expected": "17194040.133",
+      "actual": 53904212.70200011,
+      "delta": 36710172.569
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "cost",
+      "expected": "13907488.773",
+      "actual": 43612845.50700015,
+      "delta": 29705356.734
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "grossMargin",
+      "expected": "3286551.360",
+      "actual": 10291367.194999963,
+      "delta": 7004815.835
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "receivables",
+      "expected": "8037478.099",
+      "actual": 15181433.42300002,
+      "delta": 7143955.324
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "overdue",
+      "expected": "5901093.338",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "grossMarginPercent",
+      "expected": 19.1145,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "h1:2026",
+      "metric": "recordCount (documents)",
+      "expected": 3259,
+      "actual": 17127
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "revenue",
+      "expected": "2817444.711",
+      "actual": 53904212.70200011,
+      "delta": 51086767.991
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "cost",
+      "expected": "2281431.461",
+      "actual": 43612845.50700015,
+      "delta": 41331414.046
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "grossMargin",
+      "expected": "536013.250",
+      "actual": 10291367.194999963,
+      "delta": 9755353.945
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "receivables",
+      "expected": "567780.820",
+      "actual": 15181433.42300002,
+      "delta": 14613652.603
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "overdue",
+      "expected": "567780.820",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "grossMarginPercent",
+      "expected": 19.0248,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "month:2025-02",
+      "metric": "recordCount (documents)",
+      "expected": 504,
+      "actual": 17127
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "revenue",
+      "expected": "107621.648",
+      "actual": 53904212.70200011,
+      "delta": 53796591.054
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "cost",
+      "expected": "85640.120",
+      "actual": 43612845.50700015,
+      "delta": 43527205.387
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "grossMargin",
+      "expected": "21981.528",
+      "actual": 10291367.194999963,
+      "delta": 10269385.667
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "receivables",
+      "expected": "35304.591",
+      "actual": 15181433.42300002,
+      "delta": 15146128.832
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "overdue",
+      "expected": "35304.591",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "grossMarginPercent",
+      "expected": 20.4248,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "day:2025-03-15",
+      "metric": "recordCount (documents)",
+      "expected": 17,
+      "actual": 17127
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "revenue",
+      "expected": "0.000",
+      "actual": 53904212.70200011,
+      "delta": 53904212.702
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "cost",
+      "expected": "0.000",
+      "actual": 43612845.50700015,
+      "delta": 43612845.507
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "grossMargin",
+      "expected": "0.000",
+      "actual": 10291367.194999963,
+      "delta": 10291367.195
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "receivables",
+      "expected": "0.000",
+      "actual": 15181433.42300002,
+      "delta": 15181433.423
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "overdue",
+      "expected": "0.000",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "grossMarginPercent",
+      "expected": null,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "empty:2024",
+      "metric": "recordCount (documents)",
+      "expected": 0,
+      "actual": 17127
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "revenue",
+      "expected": "2119252.817",
+      "actual": 13486738.957000004,
+      "delta": 11367486.14
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "cost",
+      "expected": "1708603.927",
+      "actual": 10889954.303999975,
+      "delta": 9181350.377
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "grossMargin",
+      "expected": "410648.890",
+      "actual": 2596784.653000029,
+      "delta": 2186135.763
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "receivables",
+      "expected": "460266.257",
+      "actual": 3753957.736999996,
+      "delta": 3293691.48
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "overdue",
+      "expected": "460266.257",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "grossMarginPercent",
+      "expected": 19.3771,
+      "actual": 19.25435541741707
+    },
+    {
+      "scenario": "Sfax:q4-2025",
+      "metric": "recordCount (documents)",
+      "expected": 412,
+      "actual": 4259
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "revenue",
+      "expected": "1060160.176",
+      "actual": 18847210.96300006,
+      "delta": 17787050.787
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "cost",
+      "expected": "857166.670",
+      "actual": 15233403.44499996,
+      "delta": 14376236.775
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "grossMargin",
+      "expected": "202993.506",
+      "actual": 3613807.5180001,
+      "delta": 3410814.012
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "receivables",
+      "expected": "567374.983",
+      "actual": 5073202.613999987,
+      "delta": 4505827.631
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "overdue",
+      "expected": "567374.983",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "grossMarginPercent",
+      "expected": 19.1474,
+      "actual": 19.17422967830388
+    },
+    {
+      "scenario": "Tunis Centre:2026-03",
+      "metric": "recordCount (documents)",
+      "expected": 190,
+      "actual": 6007
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "revenue",
+      "expected": "31612732.506",
+      "actual": 53904212.70200011,
+      "delta": 22291480.196
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "cost",
+      "expected": "25543585.104",
+      "actual": 43612845.50700015,
+      "delta": 18069260.403
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "grossMargin",
+      "expected": "6069147.402",
+      "actual": 10291367.194999963,
+      "delta": 4222219.793
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "receivables",
+      "expected": "8814474.158",
+      "actual": 15181433.42300002,
+      "delta": 6366959.265
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "overdue",
+      "expected": "7639740.973",
+      "actual": "NOT EXPOSED"
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "inventoryValue",
+      "expected": "57323037.859",
+      "actual": 104840673.38300082,
+      "delta": 47517635.524
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "grossMarginPercent",
+      "expected": 19.1984,
+      "actual": 19.091953446929953
+    },
+    {
+      "scenario": "scope:Tunis Centre+Sfax",
+      "metric": "recordCount (documents)",
+      "expected": 5894,
+      "actual": 17127
+    }
+  ]
+}

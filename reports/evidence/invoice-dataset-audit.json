@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-10-21T20:41:23.512Z",
+  "source": "Dataset",
+  "intendedUse": "OCR and extraction benchmark only; not a Tunisian production-accuracy claim",
+  "grain": {
+    "images": 8181,
+    "uniqueImageHashes": 5199,
+    "csvFiles": 3,
+    "labeledRows": 1414,
+    "distinctLabeledFileNames": 1413
+  },
+  "quality": {
+    "exactDuplicateImages": 2982,
+    "duplicateRate": 0.3645,
+    "duplicateGroups": 2978,
+    "validJsonLabels": 1414,
+    "labelJsonValidityRate": 1,
+    "labelsWithoutImage": 0,
+    "inconsistentItemTotals": 80,
+    "inconsistentTotalRate": 0.0566,
+    "parseErrorCount": 0
+  },
+  "risks": [
+    "The labeled set is a computer-generated US invoice template in English/USD and is not representative of Tunisian FR/AR invoices.",
+    "Exact duplicates must be grouped before train/test splitting to prevent leakage.",
+    "Rows with inconsistent totals must not be used as financial ground truth without correction.",
+    "No invoice-line to ERP-product labels are present, so product-matching accuracy cannot be trained or claimed from this dataset."
+  ],
+  "parseErrors": []
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "file": "fake_image.png",
+    "mimeType": "image/png",
+    "expectedStatus": 415,
+    "reason": "content does not match declared type"
+  },
+  {
+    "file": "pdf_declared_as_png.png",
+    "mimeType": "image/png",
+    "expectedStatus": 415,
+    "reason": "PDF bytes declared as PNG"
+  },
+  {
+    "file": "windows_exe.pdf",
+    "mimeType": "application/pdf",
+    "expectedStatus": 415,
+    "reason": "executable renamed .pdf"
+  },
+  {
+    "file": "vector.svg",
+    "mimeType": "image/svg+xml",
+    "expectedStatus": 415,
+    "reason": "SVG with script is not an allowed type"
+  },
+  {
+    "file": "empty.pdf",
+    "mimeType": "application/pdf",
+    "expectedStatus": 415,
+    "reason": "zero-byte file"
+  },
+  {
+    "file": "macro.docx",
+    "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "expectedStatus": 415,
+    "reason": "unsupported office format"
+  },
+  {
+    "file": "polyglot.pdf",
+    "mimeType": "application/pdf",
+    "expectedStatus": 201,
+    "reason": "PDF magic + embedded HTML: accepted by signature check (residual risk: no antivirus / deep parsing)"
+  }
+]

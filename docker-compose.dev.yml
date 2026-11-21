@@ -1,0 +1,24 @@
+# Local development database only. Production/staging uses docker-compose.yml.
+# Usage: set POSTGRES_PASSWORD in .env (never committed), then
+#   docker compose -f docker-compose.dev.yml up -d
+# The port is bound to 127.0.0.1 so the database is not reachable from the network.
+name: ai-negoce-dev
+services:
+  postgres:
+    # Same major version as docker-compose.yml by default; POSTGRES_IMAGE_TAG allows an
+    # already-pulled image when the registry is unreachable (record it if you deviate).
+    image: postgres:${POSTGRES_IMAGE_TAG:-17-alpine}
+    environment:
+      POSTGRES_DB: ai_negoce
+      POSTGRES_USER: ai_negoce
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_negoce -d ai_negoce"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  pg_dev_data:

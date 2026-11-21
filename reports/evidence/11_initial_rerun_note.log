@@ -1,0 +1,10 @@
+Initial-phase evidence provenance
+- Run 1 (vitest_initial_run1.json): executed on the unmodified repository before any fix.
+- During post-fix work, copilot_benchmark_initial.json was accidentally overwritten by a run with QA_PHASE=initial
+  on already-fixed code. That file was discarded.
+- The initial phase was re-executed in an isolated copy (scratchpad/baseline_run) where server/app.ts, services.ts,
+  data.ts, scopedAgency() in auth.ts and app.test.ts were restored to the original sources and
+  server/invoice-validation.ts removed. store.ts/config.ts kept additive-only changes unused by the original app.ts.
+- Verification: the re-run produced 133 failed / 96 passed, and all 229 per-test outcomes are identical to Run 1
+  (0 differing outcomes). All *_initial.json files in this folder come from the re-run.
+2026-10-15T12:48:02+01:00

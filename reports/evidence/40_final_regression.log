@@ -1,0 +1,15 @@
+2026-10-19T20:05:00+01:00 (re-run against the seeded ERP database; earlier 15 Oct run: 264 tests)
+--- typecheck
+0 errors
+--- vitest
+ Test Files  12 passed (12)
+      Tests  274 passed (274)
+--- playwright
+ 32 passed (32)   # desktop + mobile
+--- build
+✓ 17 modules transformed.
+✓ built in 454ms
+--- audit
+found 0 vulnerabilities
+found 0 vulnerabilities
+found 0 vulnerabilities

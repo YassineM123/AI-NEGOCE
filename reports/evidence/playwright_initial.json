@@ -1,0 +1,1624 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\playwright.config.ts",
+    "rootDir": "C:/Users/anoth/Desktop/AI-NEGOCE MVP Prototype Design/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "reports/evidence/playwright_initial.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/anoth/Desktop/AI-NEGOCE MVP Prototype Design/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "desktop",
+        "name": "desktop",
+        "testDir": "C:/Users/anoth/Desktop/AI-NEGOCE MVP Prototype Design/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/anoth/Desktop/AI-NEGOCE MVP Prototype Design/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "mobile",
+        "name": "mobile",
+        "testDir": "C:/Users/anoth/Desktop/AI-NEGOCE MVP Prototype Design/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "app.spec.ts",
+      "file": "app.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "dashboard loads without console errors or failed requests",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1821,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:53:38.257Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-586b98e2cc82a607847b",
+          "file": "app.spec.ts",
+          "line": 32,
+          "column": 1
+        },
+        {
+          "title": "sidebar navigation reaches every module",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 2171,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 23/02/2025\",\u001b[39m\n\u001b[31m+ ]\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 23/02/2025\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:35:25",
+                    "location": {
+                      "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                      "column": 25,
+                      "line": 35
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 33 |\u001b[39m test(\u001b[32m\"sidebar navigation reaches every module\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 34 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m label \u001b[36mof\u001b[39m [\u001b[32m\"Ventes\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Achats\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Stocks\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Finance\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Smart OCR\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"AI Copilot\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Paramètres\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Tableau de bord\"\u001b[39m]) \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m label)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 35 |\u001b[39m   expect(consoleErrors)\u001b[33m.\u001b[39mtoEqual([])\n \u001b[90m    |\u001b[39m                         \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 36 |\u001b[39m })\n \u001b[90m 37 |\u001b[39m\n \u001b[90m 38 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m\"BI 360\"\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 25,
+                        "line": 35
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 23/02/2025\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  33 | test(\"sidebar navigation reaches every module\", async ({ page }) => {\n  34 |   for (const label of [\"Ventes\", \"Achats\", \"Stocks\", \"Finance\", \"Smart OCR\", \"BI 360\", \"AI Copilot\", \"Paramètres\", \"Tableau de bord\"]) await go(page, label)\n> 35 |   expect(consoleErrors).toEqual([])\n     |                         ^\n  36 | })\n  37 |\n  38 | test.describe(\"BI 360\", () => {\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:35:25"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:53:40.486Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-sidebar-navigation-reaches-every-module-desktop\\test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-sidebar-navigation-reaches-every-module-desktop\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-sidebar-navigation-reaches-every-module-desktop\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                    "column": 25,
+                    "line": 35
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-1b98e2f9e6f7ccf6971a",
+          "file": "app.spec.ts",
+          "line": 40,
+          "column": 1
+        },
+        {
+          "title": "browser refresh keeps the application usable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1765,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:54:32.873Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-4c21384a3b73a9a29bec",
+          "file": "app.spec.ts",
+          "line": 174,
+          "column": 1
+        },
+        {
+          "title": "layout has no horizontal page scroll",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1148,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:54:34.898Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-40ef535782e6c0f72432",
+          "file": "app.spec.ts",
+          "line": 182,
+          "column": 1
+        },
+        {
+          "title": "accessibility basics",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "results": [
+                {
+                  "workerIndex": 6,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1390,
+                  "error": {
+                    "message": "Error: AI Copilot: buttons without accessible name\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m",
+                    "stack": "Error: AI Copilot: buttons without accessible name\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:146:66",
+                    "location": {
+                      "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                      "column": 66,
+                      "line": 146
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 144 |\u001b[39m       [\u001b[33m...\u001b[39mdocument\u001b[33m.\u001b[39mquerySelectorAll(\u001b[32m\"button\"\u001b[39m)]\u001b[33m.\u001b[39mfilter((b) \u001b[33m=>\u001b[39m \u001b[33m!\u001b[39m(b\u001b[33m.\u001b[39mtextContent\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mtrim() \u001b[33m||\u001b[39m b\u001b[33m.\u001b[39mgetAttribute(\u001b[32m\"aria-label\"\u001b[39m) \u001b[33m||\u001b[39m b\u001b[33m.\u001b[39mgetAttribute(\u001b[32m\"title\"\u001b[39m)))\u001b[33m.\u001b[39mlength\u001b[33m,\u001b[39m\n \u001b[90m 145 |\u001b[39m     )\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 146 |\u001b[39m     expect(unnamed\u001b[33m,\u001b[39m \u001b[32m`${label}: buttons without accessible name`\u001b[39m)\u001b[33m.\u001b[39mtoBe(\u001b[35m0\u001b[39m)\n \u001b[90m     |\u001b[39m                                                                  \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 147 |\u001b[39m     expect(\u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m\"h1\"\u001b[39m)\u001b[33m.\u001b[39mcount())\u001b[33m.\u001b[39mtoBeGreaterThan(\u001b[35m0\u001b[39m)\n \u001b[90m 148 |\u001b[39m   }\n \u001b[90m 149 |\u001b[39m })\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 66,
+                        "line": 146
+                      },
+                      "message": "Error: AI Copilot: buttons without accessible name\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m0\u001b[39m\nReceived: \u001b[31m1\u001b[39m\n\n  144 |       [...document.querySelectorAll(\"button\")].filter((b) => !(b.textContent?.trim() || b.getAttribute(\"aria-label\") || b.getAttribute(\"title\"))).length,\n  145 |     )\n> 146 |     expect(unnamed, `${label}: buttons without accessible name`).toBe(0)\n      |                                                                  ^\n  147 |     expect(await page.locator(\"h1\").count()).toBeGreaterThan(0)\n  148 |   }\n  149 | })\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:146:66"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:54:36.065Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-accessibility-basics-desktop\\test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-accessibility-basics-desktop\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-accessibility-basics-desktop\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                    "column": 66,
+                    "line": 146
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-7ed3e0bdf617327dcf1d",
+          "file": "app.spec.ts",
+          "line": 191,
+          "column": 1
+        },
+        {
+          "title": "dashboard loads without console errors or failed requests",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 7,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1627,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:54:38.618Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-f5ca99dbfabf9e77d530",
+          "file": "app.spec.ts",
+          "line": 32,
+          "column": 1
+        },
+        {
+          "title": "sidebar navigation reaches every module",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 7,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 2413,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 23/02/2025\",\u001b[39m\n\u001b[31m+ ]\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 23/02/2025\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:35:25",
+                    "location": {
+                      "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                      "column": 25,
+                      "line": 35
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 33 |\u001b[39m test(\u001b[32m\"sidebar navigation reaches every module\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 34 |\u001b[39m   \u001b[36mfor\u001b[39m (\u001b[36mconst\u001b[39m label \u001b[36mof\u001b[39m [\u001b[32m\"Ventes\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Achats\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Stocks\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Finance\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Smart OCR\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"AI Copilot\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Paramètres\"\u001b[39m\u001b[33m,\u001b[39m \u001b[32m\"Tableau de bord\"\u001b[39m]) \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m label)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 35 |\u001b[39m   expect(consoleErrors)\u001b[33m.\u001b[39mtoEqual([])\n \u001b[90m    |\u001b[39m                         \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 36 |\u001b[39m })\n \u001b[90m 37 |\u001b[39m\n \u001b[90m 38 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m\"BI 360\"\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 25,
+                        "line": 35
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n\u001b[32m- Expected  - 1\u001b[39m\n\u001b[31m+ Received  + 3\u001b[39m\n\n\u001b[32m- Array []\u001b[39m\n\u001b[31m+ Array [\u001b[39m\n\u001b[31m+   \"Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 23/02/2025\",\u001b[39m\n\u001b[31m+ ]\u001b[39m\n\n  33 | test(\"sidebar navigation reaches every module\", async ({ page }) => {\n  34 |   for (const label of [\"Ventes\", \"Achats\", \"Stocks\", \"Finance\", \"Smart OCR\", \"BI 360\", \"AI Copilot\", \"Paramètres\", \"Tableau de bord\"]) await go(page, label)\n> 35 |   expect(consoleErrors).toEqual([])\n     |                         ^\n  36 | })\n  37 |\n  38 | test.describe(\"BI 360\", () => {\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:35:25"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:54:40.472Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "screenshot",
+                      "contentType": "image/png",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-sidebar-navigation-reaches-every-module-mobile\\test-failed-1.png"
+                    },
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-sidebar-navigation-reaches-every-module-mobile\\error-context.md"
+                    },
+                    {
+                      "name": "trace",
+                      "contentType": "application/zip",
+                      "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-sidebar-navigation-reaches-every-module-mobile\\trace.zip"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                    "column": 25,
+                    "line": 35
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-a57fe10c2f83c4b14afa",
+          "file": "app.spec.ts",
+          "line": 40,
+          "column": 1
+        },
+        {
+          "title": "browser refresh keeps the application usable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1228,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:56:17.882Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-70b6f91d4b67cda9c8ce",
+          "file": "app.spec.ts",
+          "line": 174,
+          "column": 1
+        },
+        {
+          "title": "layout has no horizontal page scroll",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1274,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:56:19.130Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-b9ccaef46997ba3cd854",
+          "file": "app.spec.ts",
+          "line": 182,
+          "column": 1
+        },
+        {
+          "title": "accessibility basics",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "mobile",
+              "projectName": "mobile",
+              "results": [
+                {
+                  "workerIndex": 12,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1288,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-15T11:56:20.423Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "c31ff144dc4fee3acd0a-db3f1ff78909e237b159",
+          "file": "app.spec.ts",
+          "line": 191,
+          "column": 1
+        }
+      ],
+      "suites": [
+        {
+          "title": "BI 360",
+          "file": "app.spec.ts",
+          "line": 46,
+          "column": 6,
+          "specs": [
+            {
+              "title": "KPIs come from the API and the agency filter refetches",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1142,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:53:43.895Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-ba714e6a3e4d1b923d2d",
+              "file": "app.spec.ts",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "the period filter restricts the KPIs",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6936,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7m246\u001b[27m21.512\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7m619\u001b[27m21.512\"\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7m246\u001b[27m21.512\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7m619\u001b[27m21.512\"\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:52:5",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 5,
+                          "line": 52
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 50 |\u001b[39m     \u001b[36mawait\u001b[39m expect(statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoHaveText(\u001b[35m/Chargement/\u001b[39m)\n \u001b[90m 51 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m\"label\"\u001b[39m\u001b[33m,\u001b[39m { hasText\u001b[33m:\u001b[39m \u001b[32m\"Période\"\u001b[39m })\u001b[33m.\u001b[39mlocator(\u001b[32m\"select\"\u001b[39m)\u001b[33m.\u001b[39mselectOption({ label\u001b[33m:\u001b[39m \u001b[32m\"Février 2025\"\u001b[39m })\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 52 |\u001b[39m     \u001b[36mawait\u001b[39m expect\u001b[33m.\u001b[39mpoll(\u001b[36masync\u001b[39m () \u001b[33m=>\u001b[39m digits(\u001b[36mawait\u001b[39m statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m)\u001b[33m.\u001b[39mtextContent())\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\u001b[33m.\u001b[39mtoBe(\u001b[32m\"24621.512\"\u001b[39m)\n \u001b[90m    |\u001b[39m     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 53 |\u001b[39m   })\n \u001b[90m 54 |\u001b[39m   test(\u001b[32m\"no KPI card displays a hardcoded figure the API did not compute\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 55 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 5,
+                            "line": 52
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7m246\u001b[27m21.512\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7m619\u001b[27m21.512\"\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate\n\n  50 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n  51 |     await page.locator(\"label\", { hasText: \"Période\" }).locator(\"select\").selectOption({ label: \"Février 2025\" })\n> 52 |     await expect.poll(async () => digits(await statValue(page, \"Chiffre d’affaires HT\").textContent()), { timeout: 5000 }).toBe(\"24621.512\")\n     |     ^\n  53 |   })\n  54 |   test(\"no KPI card displays a hardcoded figure the API did not compute\", async ({ page }) => {\n  55 |     await go(page, \"BI 360\")\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:52:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:53:45.286Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-the-period-filter-restricts-the-KPIs-desktop\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-the-period-filter-restricts-the-KPIs-desktop\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-the-period-filter-restricts-the-KPIs-desktop\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 5,
+                        "line": 52
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-caa21b17c41f5f4f8f7c",
+              "file": "app.spec.ts",
+              "line": 60,
+              "column": 3
+            },
+            {
+              "title": "no KPI card displays a hardcoded figure the API did not compute",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 7266,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.stats-grid')\nExpected substring: not \u001b[32m\"54 120\"\u001b[39m\nReceived string: \u001b[31m\"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j\u001b[7m54 120\u001b[27m DT+9,1 %8,7 % du stock\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.stats-grid')\u001b[22m\n\u001b[2m    9 × locator resolved to <section class=\"stats-grid five\">…</section>\u001b[22m\n\u001b[2m      - unexpected value \"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j54 120 DT+9,1 %8,7 % du stock\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.stats-grid')\nExpected substring: not \u001b[32m\"54 120\"\u001b[39m\nReceived string: \u001b[31m\"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j\u001b[7m54 120\u001b[27m DT+9,1 %8,7 % du stock\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.stats-grid')\u001b[22m\n\u001b[2m    9 × locator resolved to <section class=\"stats-grid five\">…</section>\u001b[22m\n\u001b[2m      - unexpected value \"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j54 120 DT+9,1 %8,7 % du stock\"\u001b[22m\n\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:57:51",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 51,
+                          "line": 57
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 55 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\n \u001b[90m 56 |\u001b[39m     \u001b[36mawait\u001b[39m expect(statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoHaveText(\u001b[35m/Chargement/\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 57 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".stats-grid\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContainText(\u001b[32m\"54 120\"\u001b[39m)\n \u001b[90m    |\u001b[39m                                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 58 |\u001b[39m   })\n \u001b[90m 59 |\u001b[39m   test(\u001b[32m\"export produces a downloadable report\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 51,
+                            "line": 57
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.stats-grid')\nExpected substring: not \u001b[32m\"54 120\"\u001b[39m\nReceived string: \u001b[31m\"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j\u001b[7m54 120\u001b[27m DT+9,1 %8,7 % du stock\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.stats-grid')\u001b[22m\n\u001b[2m    9 × locator resolved to <section class=\"stats-grid five\">…</section>\u001b[22m\n\u001b[2m      - unexpected value \"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j54 120 DT+9,1 %8,7 % du stock\"\u001b[22m\n\n\n  55 |     await go(page, \"BI 360\")\n  56 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n> 57 |     await expect(page.locator(\".stats-grid\")).not.toContainText(\"54 120\")\n     |                                                   ^\n  58 |   })\n  59 |   test(\"export produces a downloadable report\", async ({ page }) => {\n  60 |     await go(page, \"BI 360\")\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:57:51"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:53:53.910Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-no-KPI-card-dis-1b7a8-ure-the-API-did-not-compute-desktop\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-no-KPI-card-dis-1b7a8-ure-the-API-did-not-compute-desktop\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-no-KPI-card-dis-1b7a8-ure-the-API-did-not-compute-desktop\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 51,
+                        "line": 57
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-561313916767de40957d",
+              "file": "app.spec.ts",
+              "line": 74,
+              "column": 3
+            },
+            {
+              "title": "export produces a downloadable report",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 7179,
+                      "error": {
+                        "message": "TimeoutError: page.waitForEvent: Timeout 5000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================",
+                        "stack": "TimeoutError: page.waitForEvent: Timeout 5000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:62:27",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 27,
+                          "line": 62
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\n \u001b[90m 61 |\u001b[39m     \u001b[36mawait\u001b[39m expect(statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoHaveText(\u001b[35m/Chargement/\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 62 |\u001b[39m     \u001b[36mconst\u001b[39m download \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mwaitForEvent(\u001b[32m\"download\"\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 63 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m\"Exporter le rapport\"\u001b[39m })\u001b[33m.\u001b[39mclick()\n \u001b[90m 64 |\u001b[39m     \u001b[36mconst\u001b[39m d \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m download\n \u001b[90m 65 |\u001b[39m     \u001b[36mconst\u001b[39m body \u001b[33m=\u001b[39m fs\u001b[33m.\u001b[39mreadFileSync(\u001b[36mawait\u001b[39m d\u001b[33m.\u001b[39mpath())\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 27,
+                            "line": 62
+                          },
+                          "message": "TimeoutError: page.waitForEvent: Timeout 5000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================\n\n  60 |     await go(page, \"BI 360\")\n  61 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n> 62 |     const download = page.waitForEvent(\"download\", { timeout: 5000 })\n     |                           ^\n  63 |     await page.getByRole(\"button\", { name: \"Exporter le rapport\" }).click()\n  64 |     const d = await download\n  65 |     const body = fs.readFileSync(await d.path())\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:62:27"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:02.791Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-export-produces-a-downloadable-report-desktop\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-export-produces-a-downloadable-report-desktop\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-export-produces-a-downloadable-report-desktop\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 27,
+                        "line": 62
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-c0cbed65a597334ca274",
+              "file": "app.spec.ts",
+              "line": 81,
+              "column": 3
+            },
+            {
+              "title": "KPIs come from the API and the agency filter refetches",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1633,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:44.301Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-fbd8f72da8b7b0138142",
+              "file": "app.spec.ts",
+              "line": 47,
+              "column": 3
+            },
+            {
+              "title": "the period filter restricts the KPIs",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5400,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7m246\u001b[27m21.512\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7m619\u001b[27m21.512\"\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7m246\u001b[27m21.512\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7m619\u001b[27m21.512\"\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:52:5",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 5,
+                          "line": 52
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 50 |\u001b[39m     \u001b[36mawait\u001b[39m expect(statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoHaveText(\u001b[35m/Chargement/\u001b[39m)\n \u001b[90m 51 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m\"label\"\u001b[39m\u001b[33m,\u001b[39m { hasText\u001b[33m:\u001b[39m \u001b[32m\"Période\"\u001b[39m })\u001b[33m.\u001b[39mlocator(\u001b[32m\"select\"\u001b[39m)\u001b[33m.\u001b[39mselectOption({ label\u001b[33m:\u001b[39m \u001b[32m\"Février 2025\"\u001b[39m })\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 52 |\u001b[39m     \u001b[36mawait\u001b[39m expect\u001b[33m.\u001b[39mpoll(\u001b[36masync\u001b[39m () \u001b[33m=>\u001b[39m digits(\u001b[36mawait\u001b[39m statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m)\u001b[33m.\u001b[39mtextContent())\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\u001b[33m.\u001b[39mtoBe(\u001b[32m\"24621.512\"\u001b[39m)\n \u001b[90m    |\u001b[39m     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 53 |\u001b[39m   })\n \u001b[90m 54 |\u001b[39m   test(\u001b[32m\"no KPI card displays a hardcoded figure the API did not compute\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 55 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 5,
+                            "line": 52
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7m246\u001b[27m21.512\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7m619\u001b[27m21.512\"\u001b[39m\n\nCall Log:\n- Timeout 5000ms exceeded while waiting on the predicate\n\n  50 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n  51 |     await page.locator(\"label\", { hasText: \"Période\" }).locator(\"select\").selectOption({ label: \"Février 2025\" })\n> 52 |     await expect.poll(async () => digits(await statValue(page, \"Chiffre d’affaires HT\").textContent()), { timeout: 5000 }).toBe(\"24621.512\")\n     |     ^\n  53 |   })\n  54 |   test(\"no KPI card displays a hardcoded figure the API did not compute\", async ({ page }) => {\n  55 |     await go(page, \"BI 360\")\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:52:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:46.196Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-the-period-filter-restricts-the-KPIs-mobile\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-the-period-filter-restricts-the-KPIs-mobile\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-the-period-filter-restricts-the-KPIs-mobile\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 5,
+                        "line": 52
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-35e361291d8a64fea0a2",
+              "file": "app.spec.ts",
+              "line": 60,
+              "column": 3
+            },
+            {
+              "title": "no KPI card displays a hardcoded figure the API did not compute",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6760,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.stats-grid')\nExpected substring: not \u001b[32m\"54 120\"\u001b[39m\nReceived string: \u001b[31m\"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j\u001b[7m54 120\u001b[27m DT+9,1 %8,7 % du stock\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.stats-grid')\u001b[22m\n\u001b[2m    9 × locator resolved to <section class=\"stats-grid five\">…</section>\u001b[22m\n\u001b[2m      - unexpected value \"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j54 120 DT+9,1 %8,7 % du stock\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.stats-grid')\nExpected substring: not \u001b[32m\"54 120\"\u001b[39m\nReceived string: \u001b[31m\"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j\u001b[7m54 120\u001b[27m DT+9,1 %8,7 % du stock\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.stats-grid')\u001b[22m\n\u001b[2m    9 × locator resolved to <section class=\"stats-grid five\">…</section>\u001b[22m\n\u001b[2m      - unexpected value \"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j54 120 DT+9,1 %8,7 % du stock\"\u001b[22m\n\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:57:51",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 51,
+                          "line": 57
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 55 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\n \u001b[90m 56 |\u001b[39m     \u001b[36mawait\u001b[39m expect(statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoHaveText(\u001b[35m/Chargement/\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 57 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".stats-grid\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContainText(\u001b[32m\"54 120\"\u001b[39m)\n \u001b[90m    |\u001b[39m                                                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 58 |\u001b[39m   })\n \u001b[90m 59 |\u001b[39m   test(\u001b[32m\"export produces a downloadable report\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 51,
+                            "line": 57
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.stats-grid')\nExpected substring: not \u001b[32m\"54 120\"\u001b[39m\nReceived string: \u001b[31m\"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j\u001b[7m54 120\u001b[27m DT+9,1 %8,7 % du stock\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.stats-grid')\u001b[22m\n\u001b[2m    9 × locator resolved to <section class=\"stats-grid five\">…</section>\u001b[22m\n\u001b[2m      - unexpected value \"Chiffre d’affaires HT61 921,512 TND0 %6 facture(s) testMarge brute17 491,512 TND0 pt28.2 % du CACréances31 785,714 TND0 %factures test non régléesValeur du stock24 210 TND0 %jeu local de testStock dormant > 180 j54 120 DT+9,1 %8,7 % du stock\"\u001b[22m\n\n\n  55 |     await go(page, \"BI 360\")\n  56 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n> 57 |     await expect(page.locator(\".stats-grid\")).not.toContainText(\"54 120\")\n     |                                                   ^\n  58 |   })\n  59 |   test(\"export produces a downloadable report\", async ({ page }) => {\n  60 |     await go(page, \"BI 360\")\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:57:51"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:53.066Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-no-KPI-card-dis-1b7a8-ure-the-API-did-not-compute-mobile\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-no-KPI-card-dis-1b7a8-ure-the-API-did-not-compute-mobile\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-no-KPI-card-dis-1b7a8-ure-the-API-did-not-compute-mobile\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 51,
+                        "line": 57
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-874d852510fb2a46a5a7",
+              "file": "app.spec.ts",
+              "line": 74,
+              "column": 3
+            },
+            {
+              "title": "export produces a downloadable report",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 10,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6433,
+                      "error": {
+                        "message": "TimeoutError: page.waitForEvent: Timeout 5000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================",
+                        "stack": "TimeoutError: page.waitForEvent: Timeout 5000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:62:27",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 27,
+                          "line": 62
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m go(page\u001b[33m,\u001b[39m \u001b[32m\"BI 360\"\u001b[39m)\n \u001b[90m 61 |\u001b[39m     \u001b[36mawait\u001b[39m expect(statValue(page\u001b[33m,\u001b[39m \u001b[32m\"Chiffre d’affaires HT\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoHaveText(\u001b[35m/Chargement/\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 62 |\u001b[39m     \u001b[36mconst\u001b[39m download \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mwaitForEvent(\u001b[32m\"download\"\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m5000\u001b[39m })\n \u001b[90m    |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 63 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m\"button\"\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m\"Exporter le rapport\"\u001b[39m })\u001b[33m.\u001b[39mclick()\n \u001b[90m 64 |\u001b[39m     \u001b[36mconst\u001b[39m d \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m download\n \u001b[90m 65 |\u001b[39m     \u001b[36mconst\u001b[39m body \u001b[33m=\u001b[39m fs\u001b[33m.\u001b[39mreadFileSync(\u001b[36mawait\u001b[39m d\u001b[33m.\u001b[39mpath())\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 27,
+                            "line": 62
+                          },
+                          "message": "TimeoutError: page.waitForEvent: Timeout 5000ms exceeded while waiting for event \"download\"\n=========================== logs ===========================\nwaiting for event \"download\"\n============================================================\n\n  60 |     await go(page, \"BI 360\")\n  61 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n> 62 |     const download = page.waitForEvent(\"download\", { timeout: 5000 })\n     |                           ^\n  63 |     await page.getByRole(\"button\", { name: \"Exporter le rapport\" }).click()\n  64 |     const d = await download\n  65 |     const body = fs.readFileSync(await d.path())\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:62:27"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 69,
+                            "line": 63
+                          },
+                          "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Exporter le rapport' })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"btn btn-secondary\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <h1>Vue exécutive</h1> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <h1>Vue exécutive</h1> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"breadcrumb\">Pilotage / BI 360</div> from <header class=\"topbar\">…</header> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <h1>Vue exécutive</h1> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <h1>Vue exécutive</h1> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"breadcrumb\">Pilotage / BI 360</div> from <header class=\"topbar\">…</header> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"breadcrumb\">Pilotage / BI 360</div> from <header class=\"topbar\">…</header> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <h1>Vue exécutive</h1> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\n\n  61 |     await expect(statValue(page, \"Chiffre d’affaires HT\")).not.toHaveText(/Chargement/)\n  62 |     const download = page.waitForEvent(\"download\", { timeout: 5000 })\n> 63 |     await page.getByRole(\"button\", { name: \"Exporter le rapport\" }).click()\n     |                                                                     ^\n  64 |     const d = await download\n  65 |     const body = fs.readFileSync(await d.path())\n  66 |     expect(body.toString(\"utf8\")).toContain(\"61921.512\")\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:63:69"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:55:01.549Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-export-produces-a-downloadable-report-mobile\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-export-produces-a-downloadable-report-mobile\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-BI-360-export-produces-a-downloadable-report-mobile\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 27,
+                        "line": 62
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-64a524291fb66ecc3c8f",
+              "file": "app.spec.ts",
+              "line": 81,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Smart OCR",
+          "file": "app.spec.ts",
+          "line": 97,
+          "column": 6,
+          "specs": [
+            {
+              "title": "upload a real invoice image: stored, fields left empty, no ERP success claimed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1064,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:11.444Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-acd3e04f96f388e09d82",
+              "file": "app.spec.ts",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "a duplicate upload is refused with a visible message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 904,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:12.751Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-0630200f371d574e97e3",
+              "file": "app.spec.ts",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "a forged image is refused with a visible message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 898,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:13.670Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-08a522c031552f99b19a",
+              "file": "app.spec.ts",
+              "line": 128,
+              "column": 3
+            },
+            {
+              "title": "upload a real invoice image: stored, fields left empty, no ERP success claimed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1347,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:55:09.749Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-391af010e44ccd53180e",
+              "file": "app.spec.ts",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "a duplicate upload is refused with a visible message",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30180,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "message": "Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, open 'C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\.playwright-artifacts-11\\traces\\c31ff144dc4fee3acd0a-2f5984cfb13cc79a179b-recording1.trace'"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 76,
+                            "line": 83
+                          },
+                          "message": "Error: locator.click: Test ended.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Importer un autre document' })\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"btn btn-secondary\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <nav class=\"side-nav\">…</nav> from <aside class=\"sidebar\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is not stable\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button class=\"nav-item active\">…</button> from <aside class=\"sidebar\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <strong>AI-NEGOCE</strong> from <aside class=\"sidebar\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m  9 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <section class=\"panel empty-state\">…</section> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <button class=\"nav-item active\">…</button> from <aside class=\"sidebar\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <strong>AI-NEGOCE</strong> from <aside class=\"sidebar\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <strong>AI-NEGOCE</strong> from <aside class=\"sidebar\">…</aside> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\u001b[2m    - waiting for\" http://localhost:5174/\" navigation to finish...\u001b[22m\n\u001b[2m    - navigated to \"http://localhost:5174/\"\u001b[22m\n\n\n  81 |     await page.locator('input[type=\"file\"]').setInputFiles(file)\n  82 |     await expect(page.getByText(\"Révision humaine requise\")).toBeVisible()\n> 83 |     await page.getByRole(\"button\", { name: \"Importer un autre document\" }).click()\n     |                                                                            ^\n  84 |     await page.locator('input[type=\"file\"]').setInputFiles(file)\n  85 |     await expect(page.locator(\".warning-box\")).toContainText(/déjà été importé/)\n  86 |   })\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:83:76"
+                        },
+                        {
+                          "message": "Error: ENOENT: no such file or directory, open 'C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\.playwright-artifacts-11\\00a3ddfc5eda57ab0ebf9ae830fd6275.zip'"
+                        },
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:55:11.393Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-Smart-OCR-a-duplicate--70f01-used-with-a-visible-message-mobile\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-Smart-OCR-a-duplicate--70f01-used-with-a-visible-message-mobile\\error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-2f5984cfb13cc79a179b",
+              "file": "app.spec.ts",
+              "line": 111,
+              "column": 3
+            },
+            {
+              "title": "a forged image is refused with a visible message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1207,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:56:12.916Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-db6dfaa71a9348973ef1",
+              "file": "app.spec.ts",
+              "line": 128,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "AI Copilot",
+          "file": "app.spec.ts",
+          "line": 140,
+          "column": 6,
+          "specs": [
+            {
+              "title": "grounded answer with sources, then a server-side refusal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1319,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:14.586Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-d088e91eee4d1bcc89a4",
+              "file": "app.spec.ts",
+              "line": 145,
+              "column": 3
+            },
+            {
+              "title": "answers never show figures the API did not return",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6658,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.answer-card')\nExpected substring: not \u001b[32m\"428 650\"\u001b[39m\nReceived string: \u001b[31m\"1 produit(s) sont au niveau ou sous le seuil de réapprovisionnement. Périmètre : toutes les agences ; période : toutes dates.Marge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février\u001b[7m428 650\u001b[27m DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 1 enregistrement(s)SIE-ERGO-PROGénéré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.answer-card')\u001b[22m\n\u001b[2m    9 × locator resolved to <div class=\"answer-card\">…</div>\u001b[22m\n\u001b[2m      - unexpected value \"1 produit(s) sont au niveau ou sous le seuil de réapprovisionnement. Périmètre : toutes les agences ; période : toutes dates.Marge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 1 enregistrement(s)SIE-ERGO-PROGénéré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.answer-card')\nExpected substring: not \u001b[32m\"428 650\"\u001b[39m\nReceived string: \u001b[31m\"1 produit(s) sont au niveau ou sous le seuil de réapprovisionnement. Périmètre : toutes les agences ; période : toutes dates.Marge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février\u001b[7m428 650\u001b[27m DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 1 enregistrement(s)SIE-ERGO-PROGénéré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.answer-card')\u001b[22m\n\u001b[2m    9 × locator resolved to <div class=\"answer-card\">…</div>\u001b[22m\n\u001b[2m      - unexpected value \"1 produit(s) sont au niveau ou sous le seuil de réapprovisionnement. Périmètre : toutes les agences ; période : toutes dates.Marge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 1 enregistrement(s)SIE-ERGO-PROGénéré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[22m\n\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:111:52",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 52,
+                          "line": 111
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 109 |\u001b[39m     \u001b[36mawait\u001b[39m ask(page\u001b[33m,\u001b[39m \u001b[32m\"Quels produits sont à réapprovisionner ?\"\u001b[39m)\n \u001b[90m 110 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".answer-card\"\u001b[39m))\u001b[33m.\u001b[39mtoContainText(\u001b[32m\"seuil de réapprovisionnement\"\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 111 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".answer-card\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContainText(\u001b[32m\"428 650\"\u001b[39m)\n \u001b[90m     |\u001b[39m                                                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 112 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".answer-card\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContainText(\u001b[32m\"24,4 %\"\u001b[39m)\n \u001b[90m 113 |\u001b[39m   })\n \u001b[90m 114 |\u001b[39m   test(\u001b[32m\"an API failure shows an error and no invented numbers\"\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 52,
+                            "line": 111
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.answer-card')\nExpected substring: not \u001b[32m\"428 650\"\u001b[39m\nReceived string: \u001b[31m\"1 produit(s) sont au niveau ou sous le seuil de réapprovisionnement. Périmètre : toutes les agences ; période : toutes dates.Marge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février\u001b[7m428 650\u001b[27m DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 1 enregistrement(s)SIE-ERGO-PROGénéré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.answer-card')\u001b[22m\n\u001b[2m    9 × locator resolved to <div class=\"answer-card\">…</div>\u001b[22m\n\u001b[2m      - unexpected value \"1 produit(s) sont au niveau ou sous le seuil de réapprovisionnement. Périmètre : toutes les agences ; période : toutes dates.Marge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 1 enregistrement(s)SIE-ERGO-PROGénéré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[22m\n\n\n  109 |     await ask(page, \"Quels produits sont à réapprovisionner ?\")\n  110 |     await expect(page.locator(\".answer-card\")).toContainText(\"seuil de réapprovisionnement\")\n> 111 |     await expect(page.locator(\".answer-card\")).not.toContainText(\"428 650\")\n      |                                                    ^\n  112 |     await expect(page.locator(\".answer-card\")).not.toContainText(\"24,4 %\")\n  113 |   })\n  114 |   test(\"an API failure shows an error and no invented numbers\", async ({ page }) => {\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:111:52"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:15.940Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-AI-Copilot-answers-nev-3c1a3-ures-the-API-did-not-return-desktop\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-AI-Copilot-answers-nev-3c1a3-ures-the-API-did-not-return-desktop\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-AI-Copilot-answers-nev-3c1a3-ures-the-API-did-not-return-desktop\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 52,
+                        "line": 111
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-712b1eec71594acf3734",
+              "file": "app.spec.ts",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "an API failure shows an error and no invented numbers",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "desktop",
+                  "projectName": "desktop",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 7296,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.answer-card')\nExpected substring: not \u001b[32m\"205 590\"\u001b[39m\nReceived string: \u001b[31m\"Failed to fetchMarge février 202524,4 %\u001b[7m205 590\u001b[27m DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 0 enregistrement(s)Généré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.answer-card')\u001b[22m\n\u001b[2m    9 × locator resolved to <div class=\"answer-card\">…</div>\u001b[22m\n\u001b[2m      - unexpected value \"Failed to fetchMarge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 0 enregistrement(s)Généré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.answer-card')\nExpected substring: not \u001b[32m\"205 590\"\u001b[39m\nReceived string: \u001b[31m\"Failed to fetchMarge février 202524,4 %\u001b[7m205 590\u001b[27m DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 0 enregistrement(s)Généré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.answer-card')\u001b[22m\n\u001b[2m    9 × locator resolved to <div class=\"answer-card\">…</div>\u001b[22m\n\u001b[2m      - unexpected value \"Failed to fetchMarge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 0 enregistrement(s)Généré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[22m\n\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:119:52",
+                        "location": {
+                          "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                          "column": 52,
+                          "line": 119
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 117 |\u001b[39m     \u001b[36mawait\u001b[39m ask(page\u001b[33m,\u001b[39m \u001b[32m\"Quelle est la marge brute ?\"\u001b[39m)\n \u001b[90m 118 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".answer-card\"\u001b[39m))\u001b[33m.\u001b[39mtoContainText(\u001b[35m/Failed to fetch|Erreur/\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 119 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m\".answer-card\"\u001b[39m))\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoContainText(\u001b[32m\"205 590\"\u001b[39m)\n \u001b[90m     |\u001b[39m                                                    \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 120 |\u001b[39m   })\n \u001b[90m 121 |\u001b[39m })\n \u001b[90m 122 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                            "column": 52,
+                            "line": 119
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).not.\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: locator('.answer-card')\nExpected substring: not \u001b[32m\"205 590\"\u001b[39m\nReceived string: \u001b[31m\"Failed to fetchMarge février 202524,4 %\u001b[7m205 590\u001b[27m DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 0 enregistrement(s)Généré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[39m\nTimeout: 5000ms\n\nCall log:\n\u001b[2m  - Expect \"not toContainText\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('.answer-card')\u001b[22m\n\u001b[2m    9 × locator resolved to <div class=\"answer-card\">…</div>\u001b[22m\n\u001b[2m      - unexpected value \"Failed to fetchMarge février 202524,4 %205 590 DTVariation vs janvier-1,8 pt-12 380 DT d’impact estiméCA février428 650 DT+8,4 % vs N-1Principaux facteursFacteurImpact estiméContributionHausse des coûts d’achat-8 420 DT48 %Remises commerciales-4 180 DT24 %Mix produits défavorable-2 260 DT13 % Sources consultées 0 enregistrement(s)Généré à 10:14 · Données arrêtées au 28/02/2025CopierUtile\"\u001b[22m\n\n\n  117 |     await ask(page, \"Quelle est la marge brute ?\")\n  118 |     await expect(page.locator(\".answer-card\")).toContainText(/Failed to fetch|Erreur/)\n> 119 |     await expect(page.locator(\".answer-card\")).not.toContainText(\"205 590\")\n      |                                                    ^\n  120 |   })\n  121 | })\n  122 |\n    at C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts:119:52"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:54:24.080Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-AI-Copilot-an-API-fail-720c4-ror-and-no-invented-numbers-desktop\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-AI-Copilot-an-API-fail-720c4-ror-and-no-invented-numbers-desktop\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\test-results\\app-AI-Copilot-an-API-fail-720c4-ror-and-no-invented-numbers-desktop\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\anoth\\Desktop\\AI-NEGOCE MVP Prototype Design\\tests\\e2e\\app.spec.ts",
+                        "column": 52,
+                        "line": 119
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-524175f851d588ffcb61",
+              "file": "app.spec.ts",
+              "line": 164,
+              "column": 3
+            },
+            {
+              "title": "grounded answer with sources, then a server-side refusal",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 975,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:56:14.419Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-68f2a7013c4173d500e6",
+              "file": "app.spec.ts",
+              "line": 145,
+              "column": 3
+            },
+            {
+              "title": "answers never show figures the API did not return",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1135,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:56:15.410Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-25df9955e077fc6c313a",
+              "file": "app.spec.ts",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "an API failure shows an error and no invented numbers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "mobile",
+                  "projectName": "mobile",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1304,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-15T11:56:16.559Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c31ff144dc4fee3acd0a-b6c5e4b3262eba0d0ed5",
+              "file": "app.spec.ts",
+              "line": 164,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-15T11:53:32.270Z",
+    "duration": 169966.634,
+    "expected": 18,
+    "skipped": 0,
+    "unexpected": 12,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,16 @@
+name: revenue-growth-agent
+on: [push, pull_request]
+
+jobs:
+  revenue-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts
+      - run: npm run build

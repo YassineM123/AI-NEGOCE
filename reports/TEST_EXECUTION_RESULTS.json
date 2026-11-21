@@ -1,0 +1,910 @@
+{
+  "generatedAt": "2026-10-15T12:56:56+00:00",
+  "environment": {
+    "os": "Windows 11 (10.0.26200)",
+    "node": "v24.14.0",
+    "python": "3.12.10",
+    "browser": "Google Chrome (system) via Playwright 1.56.1",
+    "database": "none available (no PostgreSQL; Docker engine stopped) - MemoryStore used",
+    "ocr": "disabled provider; no OCR engine installed",
+    "llm": "none in codebase",
+    "erp": "no real ERP; Unconfigured/Test adapters"
+  },
+  "commands": {
+    "vitest": "LOG_LEVEL=silent QA_PHASE=<initial|final> npx vitest run",
+    "e2e": "E2E_API_PORT=3201 E2E_WEB_PORT=5274 QA_PHASE=<phase> npx playwright test",
+    "dataQuality": "python tools/qa/data_quality.py datasets/synthetic/v1",
+    "mutation": "python tools/qa/mutation_check.py datasets/synthetic/v1",
+    "oracle": "python tools/qa/bi_oracle.py datasets/synthetic/v1 reports/evidence/bi_expected.json",
+    "perf": "npx tsx tools/qa/perf.ts",
+    "typecheck": "npx tsc --noEmit",
+    "build": "npx vite build",
+    "audit": "npm audit"
+  },
+  "provenance": "Initial-phase evidence provenance\n- Run 1 (vitest_initial_run1.json): executed on the unmodified repository before any fix.\n- During post-fix work, copilot_benchmark_initial.json was accidentally overwritten by a run with QA_PHASE=initial\n  on already-fixed code. That file was discarded.\n- The initial phase was re-executed in an isolated copy (scratchpad/baseline_run) where server/app.ts, services.ts,\n  data.ts, scopedAgency() in auth.ts and app.test.ts were restored to the original sources and\n  server/invoice-validation.ts removed. store.ts/config.ts kept additive-only changes unused by the original app.ts.\n- Verification: the re-run produced 133 failed / 96 passed, and all 229 per-test outcomes are identical to Run 1\n  (0 differing outcomes). All *_initial.json files in this folder come from the re-run.\n2026-10-15T12:48:02+01:00\n",
+  "initial": {
+    "vitest": {
+      "numTotalTests": 229,
+      "numPassedTests": 96,
+      "numFailedTests": 133,
+      "files": {
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/server/app.test.ts": {
+          "passed": 10,
+          "failed": 0,
+          "total": 10
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/server/config.test.ts": {
+          "passed": 2,
+          "failed": 0,
+          "total": 2
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/bi-anomalies.test.ts": {
+          "passed": 4,
+          "failed": 6,
+          "total": 10
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/bi-validation.test.ts": {
+          "passed": 3,
+          "failed": 14,
+          "total": 17
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/copilot-benchmark.test.ts": {
+          "passed": 28,
+          "failed": 80,
+          "total": 108
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/defects.test.ts": {
+          "passed": 0,
+          "failed": 17,
+          "total": 17
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/invoice-validation.test.ts": {
+          "passed": 0,
+          "failed": 15,
+          "total": 15
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/ocr-pipeline.test.ts": {
+          "passed": 28,
+          "failed": 0,
+          "total": 28
+        },
+        "75e1e0c1-fca4-49d1-b652-5643733484aa/scratchpad/baseline_run/tests/qa/security.test.ts": {
+          "passed": 21,
+          "failed": 1,
+          "total": 22
+        }
+      }
+    },
+    "e2e": {
+      "startTime": "2026-10-15T11:53:32.270Z",
+      "passed": 18,
+      "failed": 12,
+      "tests": [
+        {
+          "project": "desktop",
+          "title": "dashboard loads without console errors or failed requests",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "sidebar navigation reaches every module",
+          "status": "failed"
+        },
+        {
+          "project": "desktop",
+          "title": "browser refresh keeps the application usable",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "layout has no horizontal page scroll",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "accessibility basics",
+          "status": "failed"
+        },
+        {
+          "project": "mobile",
+          "title": "dashboard loads without console errors or failed requests",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "sidebar navigation reaches every module",
+          "status": "failed"
+        },
+        {
+          "project": "mobile",
+          "title": "browser refresh keeps the application usable",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "layout has no horizontal page scroll",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "accessibility basics",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "KPIs come from the API and the agency filter refetches",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "the period filter restricts the KPIs",
+          "status": "failed"
+        },
+        {
+          "project": "desktop",
+          "title": "no KPI card displays a hardcoded figure the API did not compute",
+          "status": "failed"
+        },
+        {
+          "project": "desktop",
+          "title": "export produces a downloadable report",
+          "status": "failed"
+        },
+        {
+          "project": "mobile",
+          "title": "KPIs come from the API and the agency filter refetches",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "the period filter restricts the KPIs",
+          "status": "failed"
+        },
+        {
+          "project": "mobile",
+          "title": "no KPI card displays a hardcoded figure the API did not compute",
+          "status": "failed"
+        },
+        {
+          "project": "mobile",
+          "title": "export produces a downloadable report",
+          "status": "failed"
+        },
+        {
+          "project": "desktop",
+          "title": "upload a real invoice image: stored, fields left empty, no ERP success claimed",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "a duplicate upload is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "a forged image is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "upload a real invoice image: stored, fields left empty, no ERP success claimed",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "a duplicate upload is refused with a visible message",
+          "status": "timedOut"
+        },
+        {
+          "project": "mobile",
+          "title": "a forged image is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "grounded answer with sources, then a server-side refusal",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "answers never show figures the API did not return",
+          "status": "failed"
+        },
+        {
+          "project": "desktop",
+          "title": "an API failure shows an error and no invented numbers",
+          "status": "failed"
+        },
+        {
+          "project": "mobile",
+          "title": "grounded answer with sources, then a server-side refusal",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "answers never show figures the API did not return",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "an API failure shows an error and no invented numbers",
+          "status": "passed"
+        }
+      ],
+      "note": "run 12:53-12:56 local; an external tool modified src/ at 12:54-12:55 during this run"
+    },
+    "copilotBenchmark": {
+      "total": 107,
+      "passed": 27,
+      "byCategory": {
+        "revenue": {
+          "total": 13,
+          "pass": 0
+        },
+        "margins": {
+          "total": 12,
+          "pass": 1
+        },
+        "customers": {
+          "total": 10,
+          "pass": 6
+        },
+        "inventory": {
+          "total": 10,
+          "pass": 6
+        },
+        "receivables": {
+          "total": 10,
+          "pass": 0
+        },
+        "agencies": {
+          "total": 8,
+          "pass": 5
+        },
+        "suppliers": {
+          "total": 6,
+          "pass": 0
+        },
+        "trends": {
+          "total": 8,
+          "pass": 0
+        },
+        "follow-up": {
+          "total": 8,
+          "pass": 1
+        },
+        "missing-data": {
+          "total": 8,
+          "pass": 1
+        },
+        "ambiguous": {
+          "total": 2,
+          "pass": 0
+        },
+        "access-control": {
+          "total": 7,
+          "pass": 3
+        },
+        "prompt-injection": {
+          "total": 5,
+          "pass": 4
+        }
+      },
+      "criteria": {
+        "http": {
+          "applicable": 107,
+          "pass": 107
+        },
+        "status": {
+          "applicable": 106,
+          "pass": 84
+        },
+        "tool": {
+          "applicable": 60,
+          "pass": 42
+        },
+        "numbers": {
+          "applicable": 60,
+          "pass": 6
+        },
+        "authorization": {
+          "applicable": 106,
+          "pass": 106
+        },
+        "sources": {
+          "applicable": 74,
+          "pass": 74
+        },
+        "scope": {
+          "applicable": 59,
+          "pass": 41
+        },
+        "names": {
+          "applicable": 20,
+          "pass": 14
+        },
+        "noFabrication": {
+          "applicable": 6,
+          "pass": 6
+        },
+        "noEcho": {
+          "applicable": 5,
+          "pass": 5
+        }
+      }
+    },
+    "biValidation": {
+      "comparisons": 112,
+      "failedComparisons": 99
+    },
+    "invoiceValidation": {
+      "cases": 15,
+      "exactCases": 0,
+      "detectionRate": 0
+    }
+  },
+  "final": {
+    "vitest": {
+      "numTotalTests": 265,
+      "numPassedTests": 265,
+      "numFailedTests": 0,
+      "files": {
+        "server/app.test.ts": {
+          "passed": 10,
+          "failed": 0,
+          "total": 10
+        },
+        "server/config.test.ts": {
+          "passed": 2,
+          "failed": 0,
+          "total": 2
+        },
+        "tests/qa/bi-anomalies.test.ts": {
+          "passed": 10,
+          "failed": 0,
+          "total": 10
+        },
+        "tests/qa/bi-validation.test.ts": {
+          "passed": 17,
+          "failed": 0,
+          "total": 17
+        },
+        "tests/qa/copilot-benchmark.test.ts": {
+          "passed": 108,
+          "failed": 0,
+          "total": 108
+        },
+        "tests/qa/copilot-holdout.test.ts": {
+          "passed": 35,
+          "failed": 0,
+          "total": 35
+        },
+        "tests/qa/defects.test.ts": {
+          "passed": 18,
+          "failed": 0,
+          "total": 18
+        },
+        "tests/qa/invoice-validation.test.ts": {
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "tests/qa/ocr-pipeline.test.ts": {
+          "passed": 28,
+          "failed": 0,
+          "total": 28
+        },
+        "tests/qa/security.test.ts": {
+          "passed": 22,
+          "failed": 0,
+          "total": 22
+        }
+      }
+    },
+    "e2e": {
+      "startTime": "2026-10-15T12:55:54.026Z",
+      "passed": 30,
+      "failed": 0,
+      "tests": [
+        {
+          "project": "desktop",
+          "title": "dashboard loads without console errors or failed requests",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "sidebar navigation reaches every module",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "browser refresh keeps the application usable",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "layout has no horizontal page scroll",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "accessibility basics",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "dashboard loads without console errors or failed requests",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "sidebar navigation reaches every module",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "browser refresh keeps the application usable",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "layout has no horizontal page scroll",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "accessibility basics",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "KPIs come from the API and the agency filter refetches",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "the period filter restricts the KPIs",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "no KPI card displays a hardcoded figure the API did not compute",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "export produces a downloadable report",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "KPIs come from the API and the agency filter refetches",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "the period filter restricts the KPIs",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "no KPI card displays a hardcoded figure the API did not compute",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "export produces a downloadable report",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "upload a real invoice image: stored, fields left empty, no ERP success claimed",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "a duplicate upload is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "a forged image is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "upload a real invoice image: stored, fields left empty, no ERP success claimed",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "a duplicate upload is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "a forged image is refused with a visible message",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "grounded answer with sources, then a server-side refusal",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "answers never show figures the API did not return",
+          "status": "passed"
+        },
+        {
+          "project": "desktop",
+          "title": "an API failure shows an error and no invented numbers",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "grounded answer with sources, then a server-side refusal",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "answers never show figures the API did not return",
+          "status": "passed"
+        },
+        {
+          "project": "mobile",
+          "title": "an API failure shows an error and no invented numbers",
+          "status": "passed"
+        }
+      ]
+    },
+    "copilotBenchmark": {
+      "total": 107,
+      "passed": 107,
+      "byCategory": {
+        "revenue": {
+          "total": 13,
+          "pass": 13
+        },
+        "margins": {
+          "total": 12,
+          "pass": 12
+        },
+        "customers": {
+          "total": 10,
+          "pass": 10
+        },
+        "inventory": {
+          "total": 10,
+          "pass": 10
+        },
+        "receivables": {
+          "total": 10,
+          "pass": 10
+        },
+        "agencies": {
+          "total": 8,
+          "pass": 8
+        },
+        "suppliers": {
+          "total": 6,
+          "pass": 6
+        },
+        "trends": {
+          "total": 8,
+          "pass": 8
+        },
+        "follow-up": {
+          "total": 8,
+          "pass": 8
+        },
+        "missing-data": {
+          "total": 8,
+          "pass": 8
+        },
+        "ambiguous": {
+          "total": 2,
+          "pass": 2
+        },
+        "access-control": {
+          "total": 7,
+          "pass": 7
+        },
+        "prompt-injection": {
+          "total": 5,
+          "pass": 5
+        }
+      },
+      "criteria": {
+        "http": {
+          "applicable": 107,
+          "pass": 107
+        },
+        "status": {
+          "applicable": 106,
+          "pass": 106
+        },
+        "tool": {
+          "applicable": 60,
+          "pass": 60
+        },
+        "numbers": {
+          "applicable": 60,
+          "pass": 60
+        },
+        "authorization": {
+          "applicable": 106,
+          "pass": 106
+        },
+        "sources": {
+          "applicable": 72,
+          "pass": 72
+        },
+        "scope": {
+          "applicable": 59,
+          "pass": 59
+        },
+        "names": {
+          "applicable": 20,
+          "pass": 20
+        },
+        "noFabrication": {
+          "applicable": 27,
+          "pass": 27
+        },
+        "noEcho": {
+          "applicable": 5,
+          "pass": 5
+        }
+      }
+    },
+    "biValidation": {
+      "comparisons": 112,
+      "failedComparisons": 0
+    },
+    "invoiceValidation": {
+      "cases": 15,
+      "exactCases": 15,
+      "detectionRate": 1,
+      "falsePositives": 0
+    },
+    "ocrPipeline": {
+      "uploadLatencyMs": {
+        "n": 16,
+        "p50": 17.7,
+        "p95": 101.8,
+        "max": 101.8
+      },
+      "ocrAccuracy": "NOT MEASURED - no OCR engine"
+    }
+  },
+  "copilotHeldOut": {
+    "v1": {
+      "firstRun": "13/20",
+      "afterFixes_notHeldOut": "20/20"
+    },
+    "v2": {
+      "trueHeldOut": "11/15 (12/15 automated; V14 downgraded on manual review)",
+      "now": "15/15 after an external non-QA edit targeting these cases"
+    }
+  },
+  "dataQuality": {
+    "checks": 87,
+    "recordEvaluations": 698834,
+    "failingChecks": 0,
+    "mutationDetection": "13/13"
+  },
+  "performance": {
+    "executedAt": "2026-10-15T12:47:12.304Z",
+    "host": {
+      "cpus": 12,
+      "cpu": "AMD Ryzen 5 7535HS with Radeon Graphics        ",
+      "totalMemGb": 23,
+      "node": "v24.14.0",
+      "platform": "win32"
+    },
+    "dataset": {
+      "salesLines": 17127,
+      "receivables": 9492,
+      "inventoryRows": 7909,
+      "loadMs": 204
+    },
+    "memoryMb": {
+      "rssBefore": 96,
+      "rssAfterDatasetLoad": 123.9,
+      "heapAfterLoad": 43.3,
+      "rssEnd": 305.4,
+      "heapEnd": 40.8
+    },
+    "notes": [
+      "Single Node process, in-memory store, client and server on the same machine (client overhead included).",
+      "OCR disabled: upload latency excludes OCR processing. Copilot is the deterministic router; no LLM latency."
+    ],
+    "results": [
+      {
+        "scenario": "GET /bi/overview (company, 17k lines)",
+        "concurrency": 1,
+        "requests": 40,
+        "p50Ms": 6.6,
+        "p95Ms": 15.7,
+        "p99Ms": 97.3,
+        "maxMs": 97.3,
+        "errorRate": 0,
+        "throughputRps": 100.2
+      },
+      {
+        "scenario": "GET /bi/overview (company, 17k lines)",
+        "concurrency": 4,
+        "requests": 120,
+        "p50Ms": 23.1,
+        "p95Ms": 32.3,
+        "p99Ms": 33.3,
+        "maxMs": 33.4,
+        "errorRate": 0,
+        "throughputRps": 171.4
+      },
+      {
+        "scenario": "GET /bi/overview (company, 17k lines)",
+        "concurrency": 16,
+        "requests": 240,
+        "p50Ms": 83.3,
+        "p95Ms": 109.5,
+        "p99Ms": 129.3,
+        "maxMs": 130.5,
+        "errorRate": 0,
+        "throughputRps": 187.3
+      },
+      {
+        "scenario": "GET /bi/overview (agency + period filter)",
+        "concurrency": 1,
+        "requests": 40,
+        "p50Ms": 3,
+        "p95Ms": 6,
+        "p99Ms": 8.2,
+        "maxMs": 8.2,
+        "errorRate": 0,
+        "throughputRps": 289.3
+      },
+      {
+        "scenario": "GET /bi/overview (agency + period filter)",
+        "concurrency": 4,
+        "requests": 120,
+        "p50Ms": 11.8,
+        "p95Ms": 19.2,
+        "p99Ms": 24.5,
+        "maxMs": 24.9,
+        "errorRate": 0,
+        "throughputRps": 329.7
+      },
+      {
+        "scenario": "GET /bi/overview (agency + period filter)",
+        "concurrency": 16,
+        "requests": 240,
+        "p50Ms": 40.5,
+        "p95Ms": 56.3,
+        "p99Ms": 57.9,
+        "maxMs": 58.1,
+        "errorRate": 0,
+        "throughputRps": 386.7
+      },
+      {
+        "scenario": "POST /copilot/query (agency comparison)",
+        "concurrency": 1,
+        "requests": 40,
+        "p50Ms": 17.9,
+        "p95Ms": 27.2,
+        "p99Ms": 50.6,
+        "maxMs": 50.6,
+        "errorRate": 0,
+        "throughputRps": 52
+      },
+      {
+        "scenario": "POST /copilot/query (agency comparison)",
+        "concurrency": 4,
+        "requests": 120,
+        "p50Ms": 69,
+        "p95Ms": 82.5,
+        "p99Ms": 86.5,
+        "maxMs": 87.6,
+        "errorRate": 0,
+        "throughputRps": 57.1
+      },
+      {
+        "scenario": "POST /copilot/query (agency comparison)",
+        "concurrency": 16,
+        "requests": 240,
+        "p50Ms": 264.9,
+        "p95Ms": 294.9,
+        "p99Ms": 363.8,
+        "maxMs": 369.9,
+        "errorRate": 0,
+        "throughputRps": 61.6
+      },
+      {
+        "scenario": "POST /copilot/query (top customers)",
+        "concurrency": 1,
+        "requests": 40,
+        "p50Ms": 14.6,
+        "p95Ms": 28.7,
+        "p99Ms": 32.8,
+        "maxMs": 32.8,
+        "errorRate": 0,
+        "throughputRps": 63.3
+      },
+      {
+        "scenario": "POST /copilot/query (top customers)",
+        "concurrency": 4,
+        "requests": 120,
+        "p50Ms": 50.8,
+        "p95Ms": 73.8,
+        "p99Ms": 75.9,
+        "maxMs": 76.8,
+        "errorRate": 0,
+        "throughputRps": 75.8
+      },
+      {
+        "scenario": "POST /copilot/query (top customers)",
+        "concurrency": 16,
+        "requests": 240,
+        "p50Ms": 186.6,
+        "p95Ms": 196.8,
+        "p99Ms": 334.8,
+        "maxMs": 335.8,
+        "errorRate": 0,
+        "throughputRps": 85.1
+      },
+      {
+        "scenario": "POST /documents (40 KB PDF upload, OCR disabled)",
+        "concurrency": 1,
+        "requests": 40,
+        "p50Ms": 4.3,
+        "p95Ms": 7.1,
+        "p99Ms": 14.6,
+        "maxMs": 14.6,
+        "errorRate": 0,
+        "throughputRps": 198.1
+      },
+      {
+        "scenario": "POST /documents (40 KB PDF upload, OCR disabled)",
+        "concurrency": 4,
+        "requests": 120,
+        "p50Ms": 12.8,
+        "p95Ms": 23.6,
+        "p99Ms": 28.3,
+        "maxMs": 33.5,
+        "errorRate": 0,
+        "throughputRps": 280.5
+      },
+      {
+        "scenario": "POST /documents (40 KB PDF upload, OCR disabled)",
+        "concurrency": 16,
+        "requests": 240,
+        "p50Ms": 40.7,
+        "p95Ms": 52.9,
+        "p99Ms": 54.9,
+        "maxMs": 55.3,
+        "errorRate": 0,
+        "throughputRps": 376.3
+      }
+    ]
+  },
+  "bugs": {
+    "total": 31,
+    "bySeverityStatus": {
+      "CRITICAL/FIXED": 1,
+      "HIGH/FIXED": 8,
+      "MEDIUM/FIXED": 11,
+      "LOW/FIXED": 8,
+      "MEDIUM/OPEN": 2,
+      "HIGH/OPEN": 1
+    }
+  },
+  "blocked": [
+    "Real ERP export and ERP write (no contract/credentials)",
+    "OCR accuracy (no engine)",
+    "LLM evaluation (no provider)",
+    "PostgreSQL store, migrations, backup/restore (no database)",
+    "Login and session-expiry E2E journeys (no frontend auth flow)",
+    "Real identity provider (tested with a local JWKS issuer only)"
+  ]
+}

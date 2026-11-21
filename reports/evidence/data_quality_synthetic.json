@@ -1,0 +1,872 @@
+[
+  {
+    "check": "agencies: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "agencies",
+    "tested": 5,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "customers: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "customers",
+    "tested": 500,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "inventory: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "inventory",
+    "tested": 7909,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "product_categories: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "product_categories",
+    "tested": 12,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "products: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "products",
+    "tested": 2000,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_order_lines: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "purchase_order_lines",
+    "tested": 3779,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_orders: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "purchase_orders",
+    "tested": 1500,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "receivables: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "receivables",
+    "tested": 9492,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "representatives: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "representatives",
+    "tested": 25,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "roles: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "roles",
+    "tested": 4,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "stock_movements",
+    "tested": 30000,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoice_lines: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "supplier_invoice_lines",
+    "tested": 7037,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "suppliers: unique primary key",
+    "category": "duplicate_primary_key",
+    "table": "suppliers",
+    "tested": 100,
+    "failed": 0,
+    "expected": "every key appears once",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "representatives.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "representatives",
+    "tested": 25,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "customers.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "customers",
+    "tested": 500,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "customers.representative_id -> representatives",
+    "category": "broken_foreign_key",
+    "table": "customers",
+    "tested": 500,
+    "failed": 0,
+    "expected": "representative_id references an existing representatives",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "products.category_id -> product_categories",
+    "category": "broken_foreign_key",
+    "table": "products",
+    "tested": 2000,
+    "failed": 0,
+    "expected": "category_id references an existing product_categories",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "products.supplier_id -> suppliers",
+    "category": "broken_foreign_key",
+    "table": "products",
+    "tested": 2000,
+    "failed": 0,
+    "expected": "supplier_id references an existing suppliers",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_orders.supplier_id -> suppliers",
+    "category": "broken_foreign_key",
+    "table": "purchase_orders",
+    "tested": 1500,
+    "failed": 0,
+    "expected": "supplier_id references an existing suppliers",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_orders.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "purchase_orders",
+    "tested": 1500,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_order_lines.purchase_order_id -> purchase_orders",
+    "category": "broken_foreign_key",
+    "table": "purchase_order_lines",
+    "tested": 3779,
+    "failed": 0,
+    "expected": "purchase_order_id references an existing purchase_orders",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_order_lines.product_id -> products",
+    "category": "broken_foreign_key",
+    "table": "purchase_order_lines",
+    "tested": 3779,
+    "failed": 0,
+    "expected": "product_id references an existing products",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices.supplier_id -> suppliers",
+    "category": "broken_foreign_key",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "supplier_id references an existing suppliers",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices.purchase_order_id -> purchase_orders",
+    "category": "broken_foreign_key",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "purchase_order_id references an existing purchase_orders",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoice_lines.supplier_invoice_id -> supplier_invoices",
+    "category": "broken_foreign_key",
+    "table": "supplier_invoice_lines",
+    "tested": 7037,
+    "failed": 0,
+    "expected": "supplier_invoice_id references an existing supplier_invoices",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoice_lines.product_id -> products",
+    "category": "broken_foreign_key",
+    "table": "supplier_invoice_lines",
+    "tested": 7037,
+    "failed": 0,
+    "expected": "product_id references an existing products",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices.customer_id -> customers",
+    "category": "broken_foreign_key",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "customer_id references an existing customers",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices.representative_id -> representatives",
+    "category": "broken_foreign_key",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "representative_id references an existing representatives",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices.original_invoice_id -> sales_invoices",
+    "category": "broken_foreign_key",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "original_invoice_id references an existing sales_invoices",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines.sales_invoice_id -> sales_invoices",
+    "category": "broken_foreign_key",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "sales_invoice_id references an existing sales_invoices",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines.product_id -> products",
+    "category": "broken_foreign_key",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "product_id references an existing products",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments.sales_invoice_id -> sales_invoices",
+    "category": "broken_foreign_key",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "sales_invoice_id references an existing sales_invoices",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments.customer_id -> customers",
+    "category": "broken_foreign_key",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "customer_id references an existing customers",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "receivables.sales_invoice_id -> sales_invoices",
+    "category": "broken_foreign_key",
+    "table": "receivables",
+    "tested": 9492,
+    "failed": 0,
+    "expected": "sales_invoice_id references an existing sales_invoices",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements.product_id -> products",
+    "category": "broken_foreign_key",
+    "table": "stock_movements",
+    "tested": 30000,
+    "failed": 0,
+    "expected": "product_id references an existing products",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "stock_movements",
+    "tested": 30000,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "inventory.product_id -> products",
+    "category": "broken_foreign_key",
+    "table": "inventory",
+    "tested": 7909,
+    "failed": 0,
+    "expected": "product_id references an existing products",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "inventory.agency_id -> agencies",
+    "category": "broken_foreign_key",
+    "table": "inventory",
+    "tested": 7909,
+    "failed": 0,
+    "expected": "agency_id references an existing agencies",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: required fields present",
+    "category": "missing_value",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "non-empty number, customer_id, agency_id, invoice_date, total_ht",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: required fields present",
+    "category": "missing_value",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "non-empty supplier_invoice_number, supplier_id, invoice_date",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "products: required fields present",
+    "category": "missing_value",
+    "table": "products",
+    "tested": 2000,
+    "failed": 0,
+    "expected": "non-empty name, unit_cost, list_price",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "customers: required fields present",
+    "category": "missing_value",
+    "table": "customers",
+    "tested": 500,
+    "failed": 0,
+    "expected": "non-empty name, agency_id",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments: required fields present",
+    "category": "missing_value",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "non-empty amount, payment_date",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: monetary values are non-negative 3-decimal numbers",
+    "category": "invalid_numeric",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "decimal >= 0 with <= 3 decimals",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: monetary values are non-negative 3-decimal numbers",
+    "category": "invalid_numeric",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "decimal >= 0 with <= 3 decimals",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: monetary values are non-negative 3-decimal numbers",
+    "category": "invalid_numeric",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "decimal >= 0 with <= 3 decimals",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments: monetary values are non-negative 3-decimal numbers",
+    "category": "invalid_numeric",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "decimal >= 0 with <= 3 decimals",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "products: monetary values are non-negative 3-decimal numbers",
+    "category": "invalid_numeric",
+    "table": "products",
+    "tested": 2000,
+    "failed": 0,
+    "expected": "decimal >= 0 with <= 3 decimals",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments: amount strictly positive",
+    "category": "invalid_numeric",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "> 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: integer positive quantity",
+    "category": "invalid_type",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "integer > 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: VAT rate in scenario set {0,7,13,19}",
+    "category": "invalid_numeric",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "vat_rate in {0,7,13,19}",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoice_lines: integer positive quantity",
+    "category": "invalid_type",
+    "table": "supplier_invoice_lines",
+    "tested": 7037,
+    "failed": 0,
+    "expected": "integer > 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoice_lines: VAT rate in scenario set {0,7,13,19}",
+    "category": "invalid_numeric",
+    "table": "supplier_invoice_lines",
+    "tested": 7037,
+    "failed": 0,
+    "expected": "vat_rate in {0,7,13,19}",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_order_lines: integer positive quantity",
+    "category": "invalid_type",
+    "table": "purchase_order_lines",
+    "tested": 3779,
+    "failed": 0,
+    "expected": "integer > 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements: quantity is a non-zero integer",
+    "category": "invalid_type",
+    "table": "stock_movements",
+    "tested": 30000,
+    "failed": 0,
+    "expected": "integer != 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: date within dataset period, due >= issue",
+    "category": "invalid_date",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "2025-01-01 <= date <= 2026-06-30; due_date >= invoice_date",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: due >= issue",
+    "category": "invalid_date",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "due_date >= invoice_date",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments: paid on/after invoice date and not after as-of",
+    "category": "invalid_date",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "invoice_date <= payment_date <= as-of",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: invoice on/after purchase order date",
+    "category": "invalid_date",
+    "table": "supplier_invoices",
+    "tested": 1677,
+    "failed": 0,
+    "expected": "invoice_date >= order_date",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: line HT = qty x price x (1 - discount)",
+    "category": "financial_reconciliation",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "exact to the millime (half-up)",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: line VAT = HT x rate",
+    "category": "financial_reconciliation",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "exact to the millime",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoice_lines: line cost = qty x unit cost",
+    "category": "financial_reconciliation",
+    "table": "sales_invoice_lines",
+    "tested": 17127,
+    "failed": 0,
+    "expected": "exact",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: header totals = sum of lines (+ stamp)",
+    "category": "invoice_totals",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "HT, VAT, cost reconcile; TTC = HT + VAT + stamp",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: every document has >= 1 line (orphan header)",
+    "category": "orphaned_record",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": ">= 1 line",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: header totals = sum of lines",
+    "category": "invoice_totals",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "HT/VAT reconcile; TTC = HT + VAT",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: (supplier, number) unique — duplicate invoice detection",
+    "category": "duplicate_invoice",
+    "table": "supplier_invoices",
+    "tested": 3000,
+    "failed": 0,
+    "expected": "unique per supplier",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: document number unique",
+    "category": "duplicate_invoice",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "unique",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "supplier_invoices: same supplier as its purchase order",
+    "category": "referential_integrity",
+    "table": "supplier_invoices",
+    "tested": 1677,
+    "failed": 0,
+    "expected": "supplier matches PO",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "purchase_orders: invoiced quantity <= ordered quantity",
+    "category": "referential_integrity",
+    "table": "purchase_orders",
+    "tested": 1500,
+    "failed": 0,
+    "expected": "never over-invoiced",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "credit notes: reference a posted invoice of the same customer; returned qty <= sold qty",
+    "category": "referential_integrity",
+    "table": "sales_invoices",
+    "tested": 300,
+    "failed": 0,
+    "expected": "valid original invoice",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "payments: linked to a posted (non-cancelled) invoice of the same customer",
+    "category": "referential_integrity",
+    "table": "payments",
+    "tested": 8392,
+    "failed": 0,
+    "expected": "posted invoice, same customer",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: payments + credits never exceed TTC",
+    "category": "payment_balance",
+    "table": "sales_invoices",
+    "tested": 9700,
+    "failed": 0,
+    "expected": "no over-payment",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "receivables: outstanding = TTC - credits - payments",
+    "category": "payment_balance",
+    "table": "receivables",
+    "tested": 9492,
+    "failed": 0,
+    "expected": "exact reconciliation",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "receivables: status consistent with balance",
+    "category": "payment_balance",
+    "table": "receivables",
+    "tested": 9492,
+    "failed": 0,
+    "expected": "settled <=> outstanding = 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "receivables: one row per posted invoice",
+    "category": "orphaned_record",
+    "table": "sales_invoices",
+    "tested": 9492,
+    "failed": 0,
+    "expected": "receivable exists",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "inventory: current = opening + sum(movements)",
+    "category": "inventory_movements",
+    "table": "inventory",
+    "tested": 7909,
+    "failed": 0,
+    "expected": "exact",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements: running balance never negative",
+    "category": "inventory_movements",
+    "table": "stock_movements",
+    "tested": 30000,
+    "failed": 0,
+    "expected": "balance >= 0 at every movement",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements: every posted invoice line has a matching sale movement; cancelled invoices move no stock",
+    "category": "inventory_movements",
+    "table": "sales_invoice_lines",
+    "tested": 16733,
+    "failed": 0,
+    "expected": "1:1 quantity match",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "stock_movements: transfers net to zero",
+    "category": "inventory_movements",
+    "table": "stock_movements",
+    "tested": 2400,
+    "failed": 0,
+    "expected": "out + in = 0",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "sales_invoices: customer and representative belong to the invoice agency",
+    "category": "cross_agency_integrity",
+    "table": "sales_invoices",
+    "tested": 10000,
+    "failed": 0,
+    "expected": "same agency",
+    "actual": "as expected",
+    "example": null
+  },
+  {
+    "check": "customers: representative belongs to customer agency",
+    "category": "cross_agency_integrity",
+    "table": "customers",
+    "tested": 500,
+    "failed": 0,
+    "expected": "same agency",
+    "actual": "as expected",
+    "example": null
+  }
+]

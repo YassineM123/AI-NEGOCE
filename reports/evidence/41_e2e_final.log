@@ -1,0 +1,39 @@
+[2m[WebServer] [22m[33m(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+[2m[WebServer] [22m  - `__dirname` (vite.config.ts:31:27). Use `import.meta.dirname` instead
+[2m[WebServer] [22m  - JSON import "./.figma/make/site.json" without import attributes (vite.config.ts:6:31). Add `with { type: 'json' }`
+[2m[WebServer] [22mSet `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.[39m
+
+Running 30 tests using 1 worker
+
+  ok  1 [desktop] › tests\e2e\app.spec.ts:33:1 › dashboard loads without console errors or failed requests (2.0s)
+  ok  2 [desktop] › tests\e2e\app.spec.ts:41:1 › sidebar navigation reaches every module (3.4s)
+  ok  3 [desktop] › tests\e2e\app.spec.ts:48:3 › BI 360 › KPIs come from the API and the agency filter refetches (1.2s)
+  ok  4 [desktop] › tests\e2e\app.spec.ts:61:3 › BI 360 › the period filter restricts the KPIs (1.3s)
+  ok  5 [desktop] › tests\e2e\app.spec.ts:83:3 › BI 360 › no KPI card displays a hardcoded figure the API did not compute (1.2s)
+  ok  6 [desktop] › tests\e2e\app.spec.ts:90:3 › BI 360 › export produces a downloadable report (1.6s)
+  ok  7 [desktop] › tests\e2e\app.spec.ts:107:3 › Smart OCR › upload a real invoice image: stored, fields left empty, no ERP success claimed (1.1s)
+  ok  8 [desktop] › tests\e2e\app.spec.ts:120:3 › Smart OCR › a duplicate upload is refused with a visible message (1.2s)
+  ok  9 [desktop] › tests\e2e\app.spec.ts:137:3 › Smart OCR › a forged image is refused with a visible message (1.3s)
+  ok 10 [desktop] › tests\e2e\app.spec.ts:154:3 › AI Copilot › grounded answer with sources, then a server-side refusal (1.7s)
+  ok 11 [desktop] › tests\e2e\app.spec.ts:164:3 › AI Copilot › answers never show figures the API did not return (2.4s)
+  ok 12 [desktop] › tests\e2e\app.spec.ts:173:3 › AI Copilot › an API failure shows an error and no invented numbers (2.4s)
+  ok 13 [desktop] › tests\e2e\app.spec.ts:183:1 › browser refresh keeps the application usable (2.2s)
+  ok 14 [desktop] › tests\e2e\app.spec.ts:191:1 › layout has no horizontal page scroll (1.9s)
+  ok 15 [desktop] › tests\e2e\app.spec.ts:211:1 › accessibility basics (1.3s)
+  ok 16 [mobile] › tests\e2e\app.spec.ts:33:1 › dashboard loads without console errors or failed requests (2.1s)
+  ok 17 [mobile] › tests\e2e\app.spec.ts:41:1 › sidebar navigation reaches every module (2.3s)
+  ok 18 [mobile] › tests\e2e\app.spec.ts:48:3 › BI 360 › KPIs come from the API and the agency filter refetches (1.4s)
+  ok 19 [mobile] › tests\e2e\app.spec.ts:61:3 › BI 360 › the period filter restricts the KPIs (1.4s)
+  ok 20 [mobile] › tests\e2e\app.spec.ts:83:3 › BI 360 › no KPI card displays a hardcoded figure the API did not compute (1.2s)
+  ok 21 [mobile] › tests\e2e\app.spec.ts:90:3 › BI 360 › export produces a downloadable report (1.7s)
+  ok 22 [mobile] › tests\e2e\app.spec.ts:107:3 › Smart OCR › upload a real invoice image: stored, fields left empty, no ERP success claimed (1.7s)
+  ok 23 [mobile] › tests\e2e\app.spec.ts:120:3 › Smart OCR › a duplicate upload is refused with a visible message (1.3s)
+  ok 24 [mobile] › tests\e2e\app.spec.ts:137:3 › Smart OCR › a forged image is refused with a visible message (1.1s)
+  ok 25 [mobile] › tests\e2e\app.spec.ts:154:3 › AI Copilot › grounded answer with sources, then a server-side refusal (1.3s)
+  ok 26 [mobile] › tests\e2e\app.spec.ts:164:3 › AI Copilot › answers never show figures the API did not return (1.5s)
+  ok 27 [mobile] › tests\e2e\app.spec.ts:173:3 › AI Copilot › an API failure shows an error and no invented numbers (1.2s)
+  ok 28 [mobile] › tests\e2e\app.spec.ts:183:1 › browser refresh keeps the application usable (1.7s)
+  ok 29 [mobile] › tests\e2e\app.spec.ts:191:1 › layout has no horizontal page scroll (1.8s)
+  ok 30 [mobile] › tests\e2e\app.spec.ts:211:1 › accessibility basics (1.7s)
+
+  30 passed (1.0m)
