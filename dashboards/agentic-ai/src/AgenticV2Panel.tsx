@@ -16,7 +16,7 @@ async function getJson<T>(token:string,path:string,method="GET"):Promise<T>{
   if(!response.ok)throw Error(body.error?.message||body.error?.code||"API inaccessible ("+response.status+")")
   return body as T
 }
-export default function AgenticV2Panel({token,agency,role}:{token:string;agency:string;role:string}){
+export default function AgenticV2Panel({token,agency,role,from,to}:{token:string;agency:string;role:string;from?:string;to?:string}){
   const [forecast,setForecast]=useState<Forecast|null>(null)
   const [signals,setSignals]=useState<Signal[]>([])
   const [actions,setActions]=useState<Action[]>([])
@@ -25,6 +25,8 @@ export default function AgenticV2Panel({token,agency,role}:{token:string;agency:
   const reload=useCallback(async()=>{
     const query=new URLSearchParams()
     if(agency!=="all")query.set("agency",agency)
+    if(from)query.set("from",from)
+    if(to)query.set("to",to)
     const result=await Promise.allSettled([
       getJson<Forecast>(token,"/predictions"+(query.size?"?"+query:"")),
       getJson<{signals:Signal[]}>(token,"/signals"),
@@ -33,7 +35,7 @@ export default function AgenticV2Panel({token,agency,role}:{token:string;agency:
     setForecast(result[0].status==="fulfilled"?result[0].value:null)
     setSignals(result[1].status==="fulfilled"?result[1].value.signals:[])
     setActions(result[2].status==="fulfilled"?result[2].value.actions:[])
-  },[token,agency])
+  },[token,agency,from,to])
   useEffect(()=>{
     void reload()
     const interval=setInterval(()=>{if(!document.hidden)void reload()},30000)
@@ -74,7 +76,7 @@ export default function AgenticV2Panel({token,agency,role}:{token:string;agency:
         <div className="aw-inline"><h3>Alertes proactives</h3>
           {role==="admin"&&<button className="aw-secondary" disabled={busy}
             onClick={()=>{void act(()=>getJson(token,"/signals/scan","POST"))}}>Analyser les sources</button>}</div>
-        <p className="aw-sub">Alertes métier dédupliquées · notifications dans l'application.</p>
+        <p className="aw-sub">Surveillance à la date de source (indépendante du filtre période) · in-app.</p>
         {visibleSignals.slice(0,6).map(s=><div className="aw-notification" key={s.id}>
           <div><strong>{s.title}</strong><p>{s.explanation}</p><small>{s.agency} · arrêté {s.asOf} · {s.severity}</small></div>
           {!s.acknowledgedAt&&<button className="aw-secondary" disabled={busy} onClick={()=>{

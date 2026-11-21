@@ -121,7 +121,7 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
         <label>Agent responsable<select value={agent} onChange={e=>setAgent(e.target.value as AgentDomain)}>
           {AGENTS.map(x=><option key={x.key} value={x.key}>{x.label}</option>)}</select></label>
         <label>Agence<select value={targetAgency} onChange={e=>setTargetAgency(e.target.value)}>
-          {agency!=="all"?<option value={agency}>{agency}</option>:["Sfax","Tunis Centre","Sousse","Bizerte","Nabeul"].map(a=><option key={a}>{a}</option>)}
+          {agency!=="all"?<option value={agency}>{agency}</option>:["Sfax","Tunis Centre","Sousse","Bizerte","Nabeul","Non ventilée (extraction)"].map(a=><option key={a}>{a}</option>)}
         </select></label>
         <label>Titre<input required minLength={5} maxLength={160} value={title}
           onChange={e=>setTitle(e.target.value)} placeholder="Relancer les clients stratégiques"/></label>
@@ -267,8 +267,8 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
 }
 
 
-export function AdvancedOverview({token,agency,role,onNavigate}:{
-  token:string;agency:string;role?:string;onNavigate:(page:"missions"|"decisions"|"notifications")=>void
+export function AdvancedOverview({token,agency,role,from,to,onNavigate}:{
+  token:string;agency:string;role?:string;from?:string;to?:string;onNavigate:(page:"missions"|"decisions"|"notifications")=>void
 }){
   const [missions,setMissions]=useState<Mission[]>([])
   const [approvals,setApprovals]=useState<Approval[]>([])
@@ -320,6 +320,6 @@ export function AdvancedOverview({token,agency,role,onNavigate}:{
         <button className="aw-primary" onClick={()=>onNavigate("decisions")}>Ouvrir les approbations</button>
       </section>
     </div>
-    <AgenticV2Panel token={token} agency={agency} role={role||"unknown"}/>
+    <AgenticV2Panel token={token} agency={agency} role={role||"unknown"} from={from} to={to}/>
   </div>
 }
