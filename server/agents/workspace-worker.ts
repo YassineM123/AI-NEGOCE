@@ -33,7 +33,10 @@ async function cycle() {
   if(running || stopping)return
   running=true
   try {
-    const q=await adminPool.query("SELECT id FROM organizations WHERE status='active' ORDER BY id LIMIT 10000")
+    // Work only for organizations with an Agentic workspace; otherwise the
+    // JSONB upsert in scanDue/pruneChat would create thousands of empty rows.
+    const q=await adminPool.query(
+      "SELECT o.id FROM organizations o JOIN agentic_workspaces aw ON aw.organization_id=o.id WHERE o.status='active' ORDER BY o.id LIMIT 10000")
     let emitted=0
     for(const row of q.rows as {id:string}[]) {
       try { emitted+=await workspace.scanDue(row.id) }
@@ -53,7 +56,11 @@ async function cycle() {
       lastRetentionDay=today
       if(removed)console.log("[agentic-worker] expired chat records pruned:",removed)
     }
-    if(demoData && (q.rows as {id:string}[]).some(x=>x.id===sandboxOrg)){
+    if(demoData){
+      const authorized=await adminPool.query(
+        "SELECT 1 FROM organizations WHERE id=$1 AND status='active' LIMIT 1",[sandboxOrg])
+      if(!authorized.rowCount)return
+
       try{
         const result=await workspace.scanSignals(sandboxOrg,demoData)
         if(result.created) console.log("[agentic-worker] proactive demo alerts:",result.created)
