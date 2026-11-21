@@ -95,6 +95,18 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
   })
   const base="/api/v1/agentic/workspace"
 
+  app.get(base+"/status",allAgents,(req,res)=>{
+    res.setHeader("Cache-Control","no-store")
+    return res.json({
+      persistence:deps.store.forTenant(org(req)).transaction?"postgres":"memory",
+      llmConfigured:Boolean(deps.llm && deps.llm.isConfigured() && deps.llm.name!=="mock"),
+      llmProvider:deps.llm?.name==="mock"?"unconfigured":deps.llm?.name??"unconfigured",
+      notifications:"in_app_worker",
+      erpWriteBack:false,
+      warning:"Les rappels d'échéance nécessitent le processus agentic:worker et DATABASE_URL.",
+    })
+  })
+
   app.get(base+"/missions",allAgents,async(req,res)=>{
     res.setHeader("Cache-Control","no-store")
     return res.json({missions:await workspace.listMissions(org(req),actor(req))})
