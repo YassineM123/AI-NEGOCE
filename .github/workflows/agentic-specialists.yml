@@ -36,4 +36,4 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
-      - run: npx vitest run server/agents/workspace.pg.test.ts
+      - run: npx vitest run server/agents/workspace.pg.test.ts server/analytics-database.pg.test.ts
