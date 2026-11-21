@@ -20,6 +20,9 @@ type Mission={
   createdBy:string;status:"draft"|"in_progress"|"awaiting_approval"|"reviewed"|"cancelled";
   dueAt:string|null;version:number;createdAt:string;updatedAt:string;
   steps?:Array<{key:string;label:string;status:"completed"|"active"|"pending"|"blocked"}>;
+  execution?:{status:"running"|"partial"|"completed";attempts:number;updatedAt:string;
+    steps:Array<{id:string;agent:string;tool:string;status:string;findings:number;
+      warnings:string[];errorCode:string|null}>};
   lastRun:null|{asOf:string;source:string;summary:string;findings:number;evidence:string[];
     trace?:{version:string;durationMs:number;toolsInvoked:number;modelCalls:number;
       steps:Array<{id:string;agent:string;tool:string;status:string;findings:number;explanation:string}>};
@@ -136,6 +139,13 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
                   <b>{s.tool} · {s.status}</b><small>{s.agent} · {s.findings} résultat(s) · {s.explanation}</small>
                 </div>)}
               </details>}</div>}
+            {m.execution&&<details className="aw-brief" open={m.execution.status==="partial"}>
+              <summary>Exécution persistante · {m.execution.status} · tentative {m.execution.attempts}</summary>
+              {m.execution.steps.map(s=><div className="aw-brief-item" key={s.id}>
+                <b>{s.tool} · {s.status}</b><p>{s.findings} constat(s)</p>
+                {s.errorCode&&<small>Erreur : {s.errorCode} · reprise manuelle possible</small>}
+              </div>)}
+            </details>}
             {m.steps&&<ol className="aw-steps" aria-label={"Étapes de "+m.title}>
               {m.steps.map(s=><li className={"aw-step aw-step-"+s.status} key={s.key}>
                 <span>{s.label}</span><b>{s.status==="completed"?"Terminée":s.status==="active"?"En cours":s.status==="blocked"?"Bloquée":"À faire"}</b>
@@ -156,7 +166,7 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
             <footer><small>Version {m.version} · {m.dueAt?"Échéance : "+when(m.dueAt):"Sans échéance"}</small>
               <button className="aw-secondary" disabled={busy} onClick={()=>{void preview(m)}}>Voir plan & données</button>
               {["draft","in_progress"].includes(m.status)&&
-                <button className="aw-primary" disabled={busy} onClick={()=>{void run(m)}}>Lancer l'analyse read-only</button>}</footer>
+                <button className="aw-primary" disabled={busy} onClick={()=>{void run(m)}}>{m.execution?.status==="partial"?"Reprendre les étapes restantes":"Lancer l'analyse read-only"}</button>}</footer>
           </article>
         )}</div>}
     </section>

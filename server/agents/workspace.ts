@@ -46,11 +46,29 @@ function step(m:WorkspaceMission,key:MissionStepKey,status:WorkspaceStep["status
   }
 }
 
+export type MissionToolFact={
+  title:string;explanation:string;actionType:string;evidence:string[];score?:number
+}
+export type MissionExecutionStep={
+  id:string;agent:Exclude<AgentKey,"director">;tool:string
+  status:"pending"|"completed"|"no_data"|"failed"
+  findings:number;facts:MissionToolFact[];warnings:string[]
+  attemptedAt:string|null;completedAt:string|null;errorCode:string|null
+}
+export type MissionExecution={
+  id:string;status:"running"|"partial"|"completed"
+  sourceFingerprint:string;source:string;asOf:string
+  startedAt:string;updatedAt:string;completedAt:string|null
+  leaseUntil:string|null;attempts:number;maxToolCalls:4
+  steps:MissionExecutionStep[]
+}
+
 export type WorkspaceMission = {
   id: string; agency: string; agent: AgentKey; objective: string; title: string
   createdBy: string; status: MissionStatus; dueAt: string | null
   version: number; createdAt: string; updatedAt: string
   steps?: WorkspaceStep[]
+  execution?: MissionExecution
   lastRun: null | { asOf: string; source: string; summary: string; findings: number; evidence: string[];
     trace?: ExecutionTrace;
     prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null} }
@@ -193,16 +211,116 @@ export class AgenticWorkspace {
       return m
     })
   }
+  /**
+   * A durable four-tool checkpointed runner. The lease prevents two workers
+   * from executing the same mission concurrently; after expiry the exact same
+   * dataset fingerprint is required to resume its unfinished steps.
+   */
+  beginExecution(org:string,actor:Actor,id:string,expectedVersion:number,input:{
+    source:string;asOf:string;sourceFingerprint:string;
+    tools:Array<{id:string;agent:Exclude<AgentKey,"director">;tool:string}>
+  },at=now()) {
+    return this.visit(org,true,(w)=>{
+      const mission=w.missions.find(m=>m.id===id&&visibleMission(m,actor))
+      if(!mission)throw new WorkspaceMissing()
+      if(mission.version!==expectedVersion ||
+          !["draft","in_progress"].includes(mission.status))
+        throw new WorkspaceConflict("Version de mission modifiée ou déjà terminée")
+      if(input.tools.length<1||input.tools.length>4 ||
+          new Set(input.tools.map(t=>t.id)).size!==input.tools.length)
+        throw new WorkspaceConflict("Plan d'outils invalide ou hors budget")
+      const previous=mission.execution
+      if(previous){
+        if(previous.status==="completed")throw new WorkspaceConflict("Mission déjà terminée")
+        if(previous.sourceFingerprint!==input.sourceFingerprint ||
+           previous.asOf!==input.asOf || previous.source!==input.source)
+          throw new WorkspaceConflict("Source modifiée : créer un nouveau dossier pour éviter de réutiliser des preuves obsolètes")
+        if(previous.status==="running"&&previous.leaseUntil&&previous.leaseUntil>at)
+          throw new WorkspaceConflict("Analyse déjà en cours")
+        if(previous.steps.length!==input.tools.length ||
+           previous.steps.some((step,index)=>step.agent!==input.tools[index].agent||
+             step.id!==input.tools[index].id||step.tool!==input.tools[index].tool))
+          throw new WorkspaceConflict("Plan modifié depuis la dernière exécution")
+        previous.status="running"
+        previous.leaseUntil=new Date(Date.parse(at)+120000).toISOString()
+        previous.updatedAt=at;previous.attempts++
+        mission.status="in_progress";mission.updatedAt=at
+        return {mission,execution:previous,resumed:true}
+      }
+      const execution:MissionExecution={
+        id:uuid(),status:"running",sourceFingerprint:input.sourceFingerprint,
+        source:input.source,asOf:input.asOf,startedAt:at,updatedAt:at,
+        completedAt:null,leaseUntil:new Date(Date.parse(at)+120000).toISOString(),
+        attempts:1,maxToolCalls:4,
+        steps:input.tools.map(t=>({id:t.id,agent:t.agent,tool:t.tool,
+          status:"pending",findings:0,facts:[],warnings:[],
+          attemptedAt:null,completedAt:null,errorCode:null})),
+      }
+      mission.execution=execution;mission.status="in_progress";mission.updatedAt=at
+      return {mission,execution,resumed:false}
+    })
+  }
+  checkpointExecution(org:string,actor:Actor,id:string,executionId:string,
+    stepId:string,output:{
+      status:"completed"|"no_data"|"failed";findings:number
+      facts?:MissionToolFact[];warnings?:string[];errorCode?:string
+    },at=now()) {
+    return this.visit(org,true,(w)=>{
+      const mission=w.missions.find(m=>m.id===id&&visibleMission(m,actor))
+      if(!mission)throw new WorkspaceMissing()
+      const execution=mission.execution
+      if(!execution||execution.id!==executionId||execution.status!=="running")
+        throw new WorkspaceConflict("Session d'exécution expirée ou différente")
+      const step=execution.steps.find(s=>s.id===stepId)
+      if(!step||!["pending","failed"].includes(step.status))
+        throw new WorkspaceConflict("Étape inconnue ou déjà terminée")
+      step.status=output.status
+      step.findings=Math.max(0,output.findings)
+      step.facts=(output.facts??[]).slice(0,10).map(f=>({
+        title:f.title.slice(0,150),explanation:f.explanation.slice(0,850),
+        actionType:f.actionType.slice(0,100),evidence:f.evidence.slice(0,15),
+        ...(typeof f.score==="number"?{score:f.score}:{}),
+      }))
+      step.warnings=(output.warnings??[]).slice(0,8).map(w=>w.slice(0,250))
+      step.errorCode=output.errorCode??null;step.attemptedAt=at
+      step.completedAt=output.status==="failed"?null:at
+      execution.updatedAt=at
+      return {step,execution}
+    })
+  }
+  pauseExecution(org:string,actor:Actor,id:string,executionId:string,at=now()){
+    return this.visit(org,true,(w)=>{
+      const mission=w.missions.find(m=>m.id===id&&visibleMission(m,actor))
+      if(!mission)throw new WorkspaceMissing()
+      if(!mission.execution||mission.execution.id!==executionId||
+        mission.execution.status!=="running")throw new WorkspaceConflict()
+      mission.execution.status="partial";mission.execution.leaseUntil=null
+      mission.execution.updatedAt=at;mission.status="in_progress";mission.updatedAt=at
+      note(w,"mission.partial:"+id+":"+mission.execution.attempts,mission.agency,
+        "user",mission.createdBy,"mission","Analyse partielle",
+        "Au moins une étape a échoué. Reprenez la mission : seules les étapes incomplètes seront relancées.",id)
+      return mission
+    })
+  }
+
   submitRun(org: string, actor: Actor, id: string, expectedVersion:number, report: {
     asOf: string; source: string; summary: string; findings: number
     evidence: string[]; actionType?: string; trace?: ExecutionTrace
     prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null}
-  }) {
+  }, executionId?:string) {
     return this.visit(org,true,(w)=>{
       const mission=w.missions.find((m)=>m.id===id && visibleMission(m,actor))
       if (!mission) throw new WorkspaceMissing()
       if (mission.version!==expectedVersion || !["draft","in_progress"].includes(mission.status))
         throw new WorkspaceConflict("Mission modifiée ou déjà soumise")
+      if(executionId){
+        const execution=mission.execution
+        if(!execution||execution.id!==executionId||execution.status!=="running"||
+          execution.steps.some(s=>s.status!=="completed"&&s.status!=="no_data"))
+          throw new WorkspaceConflict("Des étapes n'ont pas été exécutées ou la session a expiré")
+        execution.status="completed";execution.completedAt=now()
+        execution.updatedAt=execution.completedAt;execution.leaseUntil=null
+      }
       mission.version++; mission.updatedAt=now()
       mission.lastRun={asOf:report.asOf,source:report.source,summary:report.summary,
         findings:report.findings,evidence:report.evidence.slice(0,25),

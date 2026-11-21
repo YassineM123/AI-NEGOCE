@@ -1,4 +1,5 @@
 import type express from "express"
+import crypto from "node:crypto"
 import { z } from "zod"
 import { requireRoles, scopedAgencies, type AgencyScope } from "../auth.js"
 import type { Store } from "../store.js"
@@ -25,6 +26,19 @@ const agentSchema=z.enum(AGENT_KEYS)
 const agencySchema=z.string().trim().min(1).max(80)
 const allAgents = requireRoles("admin","manager","commercial","accountant")
 const MAX_MESSAGE = 1500
+
+/** Fingerprint only permitted agency rows; changed source requires a new mission. */
+function scopedFingerprint(dataset:Dataset,scope:AgencyScope){
+  const allowed=(agency:string)=>scope==="*"||scope.includes(agency)
+  const hash=crypto.createHash("sha256")
+  hash.update(JSON.stringify({source:dataset.metadata.source,asOf:dataset.metadata.asOf,
+    lastUpdated:dataset.metadata.lastUpdated,scope}))
+  for(const r of dataset.sales)if(allowed(r.agency))hash.update(JSON.stringify(r))
+  for(const r of dataset.receivables)if(allowed(r.agency))hash.update(JSON.stringify(r))
+  for(const r of dataset.inventory)if(allowed(r.agency))hash.update(JSON.stringify(r))
+  return hash.digest("hex")
+}
+
 
 function agentAllowed(role:string,agent:AgentKey) {
   if(["admin","manager"].includes(role))return true
@@ -181,32 +195,83 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         return res.status(403).json({error:{code:"FORBIDDEN"}})
       const s=scope(req,mission.agency)
       if(!s)return fail(res)
-      const startedAt=new Date().toISOString()
-      const report=extractReport(mission.agent,s,deps.dataset(),mission.objective)
-      const finishedAt=new Date().toISOString()
-      const trace=buildExecutionTrace({objective:mission.objective,scope:s,startedAt,finishedAt,
-        runs:report.runs as DomainRun[],findings:report.findings,warnings:report.warnings})
-      const prediction=evaluateAgenticForecast(deps.dataset(),{agencies:s})
+      const dataset=deps.dataset()
+      const plan=previewMissionPlan({
+        agent:mission.agent,objective:mission.objective,scope:s,dataset,
+      })
+      const session=await workspace.beginExecution(
+        org(req),actor(req),mission.id,parsed.data.expectedVersion,{
+          source:dataset.metadata.source,asOf:dataset.metadata.asOf,
+          sourceFingerprint:scopedFingerprint(dataset,s),
+          tools:plan.tools.map(t=>({id:t.id,agent:t.agent,tool:t.tool})),
+        })
+      const initial=session.execution
+      // Each tool is explicitly allowlisted by previewMissionPlan. Persist output
+      // after every tool, so a timeout or a process restart cannot erase success.
+      for(const task of initial.steps){
+        if(task.status==="completed"||task.status==="no_data")continue
+        const preflight=plan.tools.find(t=>t.id===task.id)
+        if(preflight?.status==="blocked_data"){
+          await workspace.checkpointExecution(org(req),actor(req),mission.id,initial.id,
+            task.id,{status:"no_data",findings:0,
+              warnings:["Données requises indisponibles : aucune valeur inventée."]})
+          continue
+        }
+        try{
+          const report=extractReport(task.agent,s,dataset,mission.objective)
+          await workspace.checkpointExecution(org(req),actor(req),mission.id,initial.id,
+            task.id,{
+              status:report.facts.length||report.findings?"completed":"no_data",
+              findings:report.findings,facts:report.facts,warnings:report.warnings,
+            })
+        }catch(error){
+          req.log.warn({agent:task.agent,reason:"tool_failed"},"Agentic tool failure")
+          await workspace.checkpointExecution(org(req),actor(req),mission.id,initial.id,
+            task.id,{status:"failed",findings:0,errorCode:"TOOL_EXECUTION_FAILED",
+              warnings:["Moteur métier indisponible. Reprise manuelle possible."]})
+        }
+      }
+      const checkpoint=await workspace.getMission(org(req),actor(req),mission.id)
+      const execution=checkpoint.execution!
+      if(execution.steps.some(t=>t.status==="failed"||t.status==="pending")){
+        const paused=await workspace.pauseExecution(org(req),actor(req),mission.id,execution.id)
+        await audit(req,"mission.partial",mission.id,{
+          agency:mission.agency,attempts:execution.attempts,
+          completedTools:execution.steps.filter(t=>t.status==="completed").length,
+          failedTools:execution.steps.filter(t=>t.status==="failed").length,erpWrites:0,
+        })
+        return res.json({mission:paused,approval:null,partial:true,
+          executionMode:"durable_read_only",erpWrites:0})
+      }
+      const findings=execution.steps.reduce((n,t)=>n+t.findings,0)
+      const facts=execution.steps.flatMap(t=>t.facts)
+      const runs:DomainRun[]=execution.steps.map(t=>({
+        agent:t.agent,tool:t.tool,findings:t.findings,
+        status:t.status==="no_data"?"no_data":"ok",
+      }))
+      const trace=buildExecutionTrace({objective:mission.objective,scope:s,
+        startedAt:execution.startedAt,finishedAt:new Date().toISOString(),
+        runs,findings,warnings:execution.steps.flatMap(t=>t.warnings)})
+      const prediction=evaluateAgenticForecast(dataset,{agencies:s})
       const result=await workspace.submitRun(org(req),actor(req),mission.id,parsed.data.expectedVersion,{
-        asOf:report.asOf,source:report.source,
+        asOf:dataset.metadata.asOf,source:dataset.metadata.source,
         prediction:{
           status:prediction.status,modelVersion:prediction.model.version,
           month:prediction.predictions[0]?.month??null,
-          revenueTnd:prediction.predictions[0]?.revenueTnd??null,
-          wape:prediction.backtest.wape,
+          revenueTnd:prediction.predictions[0]?.revenueTnd??null,wape:prediction.backtest.wape,
         },
-        summary:"Analyse read-only : "+report.findings+" constat(s) pour "+mission.title,
-        trace,
-        findings:report.findings,
-        evidence:report.facts.flatMap((x)=>x.evidence).slice(0,25),
-        actionType:report.actionType,
-      })
+        summary:"Analyse "+(execution.steps.some(t=>t.status==="no_data")?"partielle":"terminée")+
+          " : "+findings+" constat(s) pour "+mission.title,
+        trace,findings,evidence:facts.flatMap(f=>f.evidence).slice(0,25),
+        actionType:facts[0]?.actionType,
+      },execution.id)
       await audit(req,"mission.investigated",mission.id,{
-        agency:mission.agency,agent:mission.agent,findings:report.findings,
-        approvalId:result.approval?.id,erpWrites:0,toolCalls:trace.toolsInvoked,
+        agency:mission.agency,agent:mission.agent,findings,
+        approvalId:result.approval?.id,erpWrites:0,
+        toolCalls:execution.steps.length,attempts:execution.attempts,
         durationMs:trace.durationMs,modelCalls:0,
       })
-      return res.json({...result,executionMode:"read_only",erpWrites:0})
+      return res.json({...result,executionMode:"durable_read_only",erpWrites:0})
     }catch(error){return apiError(res,error)}
   })
   app.get(base+"/approvals",requireRoles("admin","manager"),async(req,res)=>{
