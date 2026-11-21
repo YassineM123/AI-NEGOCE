@@ -54,7 +54,7 @@ describe("Phase 2 pseudonymized IAINEG database demo", () => {
     } as NodeJS.ProcessEnv)
     const app = createApp(deps)
     const session = await request(app).post("/api/v1/auth/dev-session").send({ identity: "admin" })
-    expect(session.status).toBe(200)
+    expect(session.status).toBe(201)
     const headers = { Authorization: "Bearer " + session.body.token }
 
     const qa = await request(app).get("/api/v1/demo/database/quality").set(headers)
