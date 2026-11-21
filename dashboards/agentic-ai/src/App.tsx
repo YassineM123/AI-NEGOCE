@@ -556,8 +556,10 @@ export default function App() {
   }
   function agentPage() {
     const a = byAgent(selectedAgent)
-    const revenueResult = selectedAgent === "revenue" ? revenue : null
-    const specialist = selectedAgent === "revenue" ? null : specialistReports[selectedAgent]
+    const reportMatches=(period?:{from:string|null;to:string|null})=>period?.from===sharedFilters.from&&period?.to===sharedFilters.to
+    const revenueResult = selectedAgent === "revenue" && reportMatches(revenue?.snapshot.period) ? revenue : null
+    const specialist = selectedAgent === "revenue" ? null :
+      reportMatches(specialistReports[selectedAgent]?.snapshot.period)?specialistReports[selectedAgent]:null
     const specialistError = selectedAgent === "revenue" ? null : specialistErrors[selectedAgent]
     const opportunities = revenueResult?.opportunities ?? []
     const findings = specialist?.findings ?? []
@@ -605,7 +607,20 @@ export default function App() {
               ? <p className="source-note"><Icon name="database" size={15}/> Source : {source} · arrêté au {asOf} · période : {sharedFilters.from} → {sharedFilters.to} · lecture seule</p>
               : <div className="no-connection"><Icon name="alert" size={18}/> {specialistError ?? "Connectez le sandbox pour interroger ce spécialiste."}</div>}
           </Card>
-          <Card title="Évolution & analyse"><MiniChart /></Card>
+          <Card title="Évolution du CA HT — données BI synchronisées">
+            {sharedOverview?.insights.months.length?
+              <div className="table-scroll" data-agentic-period-chart={sharedOverview.snapshotId}>
+                <table><thead><tr><th>Mois</th><th>CA HT · TND</th><th>Période complète</th></tr></thead>
+                  <tbody>{sharedOverview.insights.months.map(m=><tr key={m.month}>
+                    <td>{m.month}</td><td>{m.revenue.toLocaleString("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3})}</td>
+                    <td>{m.closed?"Oui":"Partielle"}</td>
+                  </tr>)}</tbody>
+                </table>
+                <p className="source-note">Snapshot : {sharedOverview.snapshotId} · source : {sharedOverview.snapshot.source}</p>
+              </div>:
+              token?<Empty icon="database" title="Aucune vente sur la période" text="Aucune courbe de démonstration n'est substituée aux données filtrées."/>:
+              <MiniChart/>}
+          </Card>
           <Card title={selectedAgent === "revenue" ? "Opportunités calculées" : "Recommandations vérifiables"}
             action={<Pill tone="gray">{selectedAgent === "revenue" ? opportunities.length : findings.length} éléments</Pill>}>
             {selectedAgent === "revenue" && opportunities.length > 0
@@ -799,7 +814,7 @@ export default function App() {
       <div className="sidebar-bottom"><div className="sidebar-rule" /><b>Plateformes</b><div className="sidebar-system"><i className="system-dot amber"/>ERP LAI <span>à connecter</span></div><div className="sidebar-system"><i className="system-dot amber"/>Data Analyse <span>à connecter</span></div><div className="sidebar-system"><i className="system-dot amber"/>Data Science <span>à connecter</span></div></div>
     </aside>
     <div className="workspace">
-      <header className="topbar"><div className="header-filter"><label>Entreprise : <b>AI-NÉGOCE Distribution</b><Icon name="down" size={15}/></label><label>Agence : <select aria-label="Agence" value={agency} onChange={(e) => setAgency(e.target.value)}><option value="all">Toutes les agences</option>{["Tunis Centre", "Sfax", "Sousse", "Bizerte", "Nabeul", "Non ventilée (extraction)"].map((a) => <option key={a} value={a}>{a}</option>)}</select></label><label>Période : <select aria-label="Période" value={period} onChange={(e) => setPeriod(e.target.value)}><option>T4 2026</option><option>T3 2026</option><option>2026</option></select></label></div><div className="topbar-right"><button aria-label="Notifications" className="bell-button" onClick={() => token ? navigate("notifications") : setNotificationOpen((p) => !p)}><Icon name="bell" size={21}/>{!token && unread > 0 && <i/>}</button><div className="user-avatar">AD</div><div className="user-info"><b>Administrateur</b><span>Environnement démo</span></div><Icon name="down" size={15}/></div></header>
+      <header className="topbar"><div className="header-filter"><label>Entreprise : <b>AI-NÉGOCE Distribution</b><Icon name="down" size={15}/></label><label>Agence : <select aria-label="Agence" value={agency} onChange={(e) => {setAgency(e.target.value);setRevenue(null);setSpecialistReports({});setDirectorReport(null);setSharedOverview(null)}}><option value="all">Toutes les agences</option>{["Tunis Centre", "Sfax", "Sousse", "Bizerte", "Nabeul", "Non ventilée (extraction)"].map((a) => <option key={a} value={a}>{a}</option>)}</select></label><label>Période : <select aria-label="Période" value={period} onChange={(e) => {setPeriod(e.target.value);setRevenue(null);setSpecialistReports({});setDirectorReport(null);setSharedOverview(null)}}><option>T4 2026</option><option>T3 2026</option><option>2026</option></select></label></div><div className="topbar-right"><button aria-label="Notifications" className="bell-button" onClick={() => token ? navigate("notifications") : setNotificationOpen((p) => !p)}><Icon name="bell" size={21}/>{!token && unread > 0 && <i/>}</button><div className="user-avatar">AD</div><div className="user-info"><b>Administrateur</b><span>Environnement démo</span></div><Icon name="down" size={15}/></div></header>
       <main className="main-content">
         {page !== "agent" && <div className="page-heading"><div><div className="breadcrumb">AI-NÉGOCE / AGENTIC INTELLIGENCE</div><h1>{title}</h1><p>{subtitle}</p></div><div className="heading-actions"><Action light icon="refresh" onClick={() => { if (token) { setRefreshSeq((n) => n + 1); setToast("Actualisation de la session et des rapports en cours."); } else setToast("Connectez la session centrale pour actualiser."); }}>Rafraîchir</Action>{(page === "overview" || page === "missions" || page === "director") && <Action icon="play" onClick={() => token ? navigate("missions") : setMissionModal(true)}>Lancer une mission</Action>}</div></div>}
         <div className="demo-banner"><Icon name="alert" size={17}/><span><strong>{token ? "Session sandbox connectée." : "Mode démonstration."}</strong> {token ? "Missions, approbations et notifications serveur actives. Le chat LLM exige une clé modèle réelle. Aucun write-back ERP." : "Les missions et décisions affichées sont illustratives tant que le backend n'est pas connecté."}</span><SmallLink onClick={() => navigate("connections")}>Connexions</SmallLink></div>
