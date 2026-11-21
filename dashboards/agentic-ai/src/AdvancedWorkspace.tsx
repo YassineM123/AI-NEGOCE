@@ -132,14 +132,15 @@ export function AdvancedMissions({token,agency,from,to}:{token:string;agency:str
     }catch(e){setError(e instanceof Error?e.message:"Analyse indisponible")}
     finally{setBusy(false)}
   }
+  const filteredMissions=missions.filter(m=>(agency==="all"||m.agency===agency)&&m.from===from&&m.to===to)
   return <div className="aw-grid">
     <section className="aw-panel">
       <header className="aw-heading"><div><h3>Centre des missions</h3><p>Enregistrement côté serveur · source et preuves conservées · aucune écriture ERP</p></div>
         <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
       {error&&<Notice>{error}</Notice>}
       <p className="aw-sub">Période active : {from} → {to}. Les dossiers créés avec d'autres périodes restent archivés et n'apparaissent pas ici.</p>
-      {!missions.length?<Empty>Aucune mission enregistrée dans cette organisation.</Empty>:
-        <div className="aw-list">{missions.filter(m=>(agency==="all"||m.agency===agency)&&m.from===from&&m.to===to).map(m=>
+      {!filteredMissions.length?<Empty>Aucune mission pour l'agence et la période sélectionnées. Les autres dossiers restent archivés.</Empty>:
+        <div className="aw-list">{filteredMissions.map(m=>
           <article key={m.id} className="aw-mission">
             <div className="aw-inline"><div><strong>{m.title}</strong><small>{label(m.agent)} · {m.agency} · {m.from??"Toutes dates"} → {m.to??"Toutes dates"} · {when(m.createdAt)}</small></div>
               <span className={"aw-status aw-status-"+m.status}>{status(m.status)}</span>
@@ -228,12 +229,13 @@ export function AdvancedApprovals({token,agency,userId,from,to}:{token:string;ag
     }catch(e){setError(e instanceof Error?e.message:"Validation refusée")}
     finally{setBusy("")}
   }
+  const visibleApprovals=approvals.filter(a=>(agency==="all"||a.agency===agency)&&a.from===from&&a.to===to)
   return <section className="aw-panel">
     <header className="aw-heading"><div><h3>Décisions & approbations persistantes</h3><p>Double contrôle humain · historique des versions · aucune écriture ERP</p></div>
       <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
     {error&&<Notice>{error}</Notice>}
-    {!approvals.length?<Empty>Aucune demande d'approbation dans les agences autorisées.</Empty>:
-      <div className="aw-approval-grid">{approvals.filter(a=>(agency==="all"||a.agency===agency)&&a.from===from&&a.to===to).map(a=>
+    {!visibleApprovals.length?<Empty>Aucune approbation pour l'agence et la période sélectionnées.</Empty>:
+      <div className="aw-approval-grid">{visibleApprovals.map(a=>
         <article className="aw-mission" key={a.id}>
           <div className="aw-inline"><strong>{a.summary}</strong><span className={"aw-status aw-status-"+a.status}>{a.status}</span></div>
           <p>{label(a.agent)} · {a.agency} · période {a.from??"début"} → {a.to??"fin"} · {when(a.createdAt)}</p>
