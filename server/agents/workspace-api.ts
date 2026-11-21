@@ -209,7 +209,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         code:"AGENT_LLM_UNCONFIGURED",
         message:"Configurez un fournisseur LLM réel (GEMINI_API_KEY) sur le serveur pour les conversations agentiques.",
       }})
-    const previous=await workspace.getTurn(org(req),actor(req),parsed.data.turnId)
+    const previous=await workspace.getTurn(org(req),actor(req),agent.data,parsed.data.agency,parsed.data.turnId)
     if(previous)return res.json({message:previous,reused:true})
     const history=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency)
     const report=extractReport(agent.data,s,deps.dataset())
@@ -245,7 +245,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       return res.json({message:saved,mode:"llm_grounded",erpWrites:0})
     }catch(error){
       if(error instanceof WorkspaceForbidden)return apiError(res,error)
-      req.log.warn({error}, "agent LLM call failed")
+      req.log.warn({reason:"provider_unavailable"}, "agent LLM call failed")
       return res.status(502).json({error:{
         code:"AGENT_LLM_UNAVAILABLE",message:"Modèle conversationnel temporairement indisponible",
       }})
