@@ -19,13 +19,14 @@ global.AINegoceGovernedDataScience=function(x,page,h){
    html(x.bi.data.filters.from||"début")+' → '+html(x.bi.data.filters.to||"fin")+
    ' · référence '+html(ds.referenceDate)+
    '. Lecture seule ; toutes les prévisions et probabilités restent expérimentales.</section>';
- const portfolio=ds.portfolio,forecast=ds.forecast,inventory=ds.inventory,cash=ds.cash,scenarios=ds.scenarios;
+ const portfolio=ds.portfolio,forecast=ds.forecast,inventory=ds.inventory,cash=ds.cash,scenarios=ds.scenarios,sku=ds.skuDemand;
  const metrics=fKpis([
   {icon:"wallet",label:"CA HT observé",value:tnd(x.bi.data.revenue),note:"Même somme que BI · TND"},
   {icon:"users",label:"Clients distincts",value:n(portfolio.customers),note:"Dans le périmètre"},
   {icon:"shield",label:"Inactivité constatée (90 j)",value:n(portfolio.inactive90),note:"Pas probabilité de churn"},
   {icon:"trend",label:"Prévision CA (pilote)",value:forecast.predictions.length?tnd(forecast.predictions[0].revenueTnd):"N/D",
    note:forecast.status==="backtested_pilot"?"Backtest admissible · non certifié":"Historique ou backtest insuffisant"},
+  {icon:"database",label:"SKU prévus (pilote)",value:n(sku?.backtested??0),note:"4 mois de backtest · non certifié"},
   {icon:"database",label:"Modèles certifiés",value:"0",note:"Lecture seule · démo"},
  ]);
  const months=ds.trend.months;
@@ -58,6 +59,22 @@ global.AINegoceGovernedDataScience=function(x,page,h){
       forecast.predictions):
     warn("Aucune prévision diffusée : historique ou backtest insuffisant. Aucun résultat fabriqué."))+
   warn("Modèle expérimental : ni validation LAI ni droit d'action automatique."),
+  {icon:"trend"});
+ const skuPanel=fCard("Prévision demande · SKU × agence",
+  !sku?warn("Aucun calcul de demande SKU disponible dans ce snapshot."):
+  '<p>Quantités connues : '+fmt(sku.quantityCoverage.withQuantity)+' / '+
+  fmt(sku.quantityCoverage.salesRows)+' ligne(s) de ventes. '+
+  'Séries évaluées : '+fmt(sku.evaluated)+' · backtests admissibles : '+fmt(sku.backtested)+'.</p>'+
+  (sku.results.length?table([
+    {label:"Article",key:"product"},{label:"Agence",key:"agency"},
+    {label:"Mois",format:r=>fmt(r.historyMonths)},
+    {label:"Modèle",format:r=>html(r.model||"N/D")},
+    {label:"WAPE",format:r=>r.backtest.wape==null?"N/D":fmt(r.backtest.wape*100)+" %"},
+    {label:"Baseline",format:r=>r.backtest.baselineWape==null?"N/D":fmt(r.backtest.baselineWape*100)+" %"},
+    {label:"Quantité prévue",format:r=>r.forecast?fmt(r.forecast.quantity)+" ("+html(r.forecast.month)+")":"N/D"},
+    {label:"Statut",format:r=>html(r.status)}
+   ],sku.results):warn("Pas de série SKU exploitable : quantités ou historique insuffisants."))+
+  warn("Pilote chronologique, sans certification. Les ventes observées ne mesurent pas les ventes perdues en rupture."),
   {icon:"trend"});
  const seg=fCard("Récence des clients · constat, pas churn ML",
   table([{label:"Segment",key:"label"},{label:"Clients",key:"count"}],[
@@ -95,6 +112,8 @@ global.AINegoceGovernedDataScience=function(x,page,h){
     {label:"Créances documentaires",state:cash.status==="not_available"?"Non disponibles":"Présentes, non rapprochées"},
     {label:"Stocks par référence",state:inventory.status==="not_available"?"Non disponibles":"Snapshot disponible"},
     {label:"Prévision CA",state:forecast.status},
+    {label:"Quantité connue des ventes",state:sku?fmt(sku.quantityCoverage.withQuantity)+" / "+fmt(sku.quantityCoverage.salesRows):"N/D"},
+    {label:"Prévisions SKU backtestées",state:sku?fmt(sku.backtested):"N/D"},
     {label:"Modèle homologué production",state:"Aucun"},
   ])+warn(ds.warnings.join(" ")),{icon:"database"});
  const availability=(message)=>fCard("Capacité en attente de données ou de validation",
@@ -105,12 +124,12 @@ global.AINegoceGovernedDataScience=function(x,page,h){
  if(page==="home")body+=grid(history,clients,seg,scenariosTable,sourcePanel);
  else if(page==="clients")body+=grid(clients,seg);
  else if(page==="churn")body+=grid(seg,clients);
- else if(page==="forecast")body+=grid(history,forecastInfo)+trendTable;
- else if(page==="inventory")body+=grid(inventoryPanel,sourcePanel);
+ else if(page==="forecast")body+=grid(history,forecastInfo,skuPanel)+trendTable;
+ else if(page==="inventory")body+=grid(inventoryPanel,skuPanel,sourcePanel);
  else if(page==="cash")body+=grid(cashPanel,sourcePanel);
  else if(page==="optim")body+=grid(scenariosTable,forecastInfo);
  else if(page==="quality"||page==="data")body+=grid(sourcePanel,history);
- else if(page==="models")body+=grid(forecastInfo,sourcePanel);
+ else if(page==="models")body+=grid(forecastInfo,skuPanel,sourcePanel);
  else if(page==="affinity")body+=availability("Affinité et recommandations croisées : liens article–panier et catalogue vérifié nécessaires.");
  else if(page==="suppliers")body+=availability("Performance fournisseurs : commandes, dates promises et livraisons réelles manquantes.");
  else if(page==="production")body+=availability("Planification production : nomenclatures, capacités et besoins matières indisponibles.");
