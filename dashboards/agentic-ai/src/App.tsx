@@ -6,7 +6,10 @@ import {
   type AgentKey, type Alert, type Audit, type Decision,
   type DecisionState, type Mission, type MissionState, type Priority,
 } from "./data"
-import { createLocalDemoSession, fetchRevenueGrowth, type RevenueResult } from "./api"
+import {
+  createLocalDemoSession, fetchRevenueGrowth, fetchSpecialistReport, fetchDirectorReport,
+  type RevenueResult, type SpecialistReport, type SpecialistAgent, type DirectorReport,
+} from "./api"
 
 type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "connections" | "audit" | "settings"
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string }
@@ -106,6 +109,12 @@ export default function App() {
   })
   const [token, setToken] = useState<string | null>(null)
   const [revenue, setRevenue] = useState<RevenueResult | null>(null)
+  const [specialistReports, setSpecialistReports] = useState<Partial<Record<SpecialistAgent, SpecialistReport>>>({})
+  const [specialistErrors, setSpecialistErrors] = useState<Partial<Record<SpecialistAgent, string>>>({})
+  const [directorReport, setDirectorReport] = useState<DirectorReport | null>(null)
+  const [directorObjective, setDirectorObjective] = useState("Analyser la croissance, les créances, les stocks et la stratégie")
+  const [directorBusy, setDirectorBusy] = useState(false)
+  const [directorError, setDirectorError] = useState("")
   const [backendStatus, setBackendStatus] = useState<"disconnected" | "loading" | "connected" | "error">("disconnected")
   const [apiError, setApiError] = useState("")
   const [toast, setToast] = useState("")
@@ -130,6 +139,25 @@ export default function App() {
       setBackendStatus("error")
       setApiError(err instanceof Error ? err.message : "Erreur API")
     })
+    return () => controller.abort()
+  }, [token, agency])
+  useEffect(() => {
+    setSpecialistReports({})
+    setSpecialistErrors({})
+    setDirectorReport(null)
+    if (!token) return
+    const controller = new AbortController()
+    for (const agent of ["finance", "supply", "strategy"] as const) {
+      fetchSpecialistReport(token, agent, agency, controller.signal)
+        .then((report) => {
+          if (!controller.signal.aborted)
+            setSpecialistReports((prev) => ({...prev, [agent]:report}))
+        })
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted)
+            setSpecialistErrors((prev) => ({...prev, [agent]:error instanceof Error ? error.message : "Erreur API"}))
+        })
+    }
     return () => controller.abort()
   }, [token, agency])
 
@@ -179,8 +207,34 @@ export default function App() {
   const disconnectSandbox = () => {
     setToken(null)
     setRevenue(null)
+    setSpecialistReports({})
+    setSpecialistErrors({})
+    setDirectorReport(null)
     setBackendStatus("disconnected")
     setApiError("")
+  }
+  const runDirector = async () => {
+    if (!token) {
+      setToast("Connectez le sandbox local avant de lancer une analyse Director.")
+      return
+    }
+    if (directorObjective.trim().length < 5) {
+      setToast("Décrivez une mission de 5 caractères minimum.")
+      return
+    }
+    setDirectorBusy(true)
+    setDirectorError("")
+    try {
+      const report = await fetchDirectorReport(token, directorObjective.trim(), agency)
+      setDirectorReport(report)
+      track("AI Director", "Investigation read-only terminée", "director")
+      setToast("Investigation Director terminée : aucun changement ERP.")
+    } catch (error) {
+      setDirectorReport(null)
+      setDirectorError(error instanceof Error ? error.message : "Erreur d'analyse")
+    } finally {
+      setDirectorBusy(false)
+    }
   }
   const addMission = () => {
     const title = newTitle.trim()
@@ -219,6 +273,15 @@ export default function App() {
       answer = top.length
         ? "Analyse déterministe sur " + revenue.snapshot.source + " (au " + revenue.snapshot.asOf + "). " + revenue.analysis.opportunitiesFound + " opportunité(s) identifiée(s). Priorités : " + top.map((op) => op.customerName + " [" + op.state + ", score " + op.priorityScore + "/100]").join("; ") + ". Le score est une heuristique, pas une probabilité. Consulter les preuves avant toute action."
         : "Aucune opportunité calculée sur le périmètre choisi. Source : " + revenue.snapshot.source + "."
+    } else if (selectedAgent !== "revenue" && specialistReports[selectedAgent]) {
+      const report = specialistReports[selectedAgent]
+      const top = report.findings.slice(0, 3)
+      answer = "Voici le dernier rapport déterministe disponible sur " + report.snapshot.source +
+        " (au " + report.snapshot.asOf + "). " + report.findings.length +
+        " élément(s) à examiner. " + (top.length ?
+          top.map((f) => f.title + " : " + f.explanation).join("; ") :
+          "Aucune alerte vérifiée dans la source actuelle.") +
+        " Ce message résume le rapport disponible et ne constitue pas une réponse générative à votre question. Aucune action ERP n'est lancée."
     }
     const updated: ChatMessage[] = [{ role: "user", content: message, time: moment }, { role: "assistant", content: answer, time: moment }]
     setChats((prev) => ({ ...prev, [selectedAgent]: [...prev[selectedAgent], ...updated] }))
@@ -236,12 +299,12 @@ export default function App() {
         <Stat icon="check" label="Approbations en attente" value={pendingDecisions.length} detail="Validation humaine requise" />
         <Stat icon="target" label="Opportunités identifiées" value={revenue ? revenue.analysis.opportunitiesFound : "—"} detail={revenue ? "Source API sandbox" : "Source non connectée"} />
         <Stat icon="coins" label="Impact estimé (CA)" value={sampleImpact} detail="Calcul ERP à connecter" />
-        <Stat icon="shield" label="Agents développés" value="1 / 4" detail="Revenue Growth MVP" />
+        <Stat icon="shield" label="Agents développés" value="4 / 4" detail="Moteurs déterministes en sandbox" />
       </div>
       <div className="overview-main">
         <div className="stack">
-          <Card title="AI Director — Orchestrateur" action={<Pill tone="amber">Intégration prévue</Pill>}>
-            <p className="card-sub">Coordination et supervision des quatre spécialistes. Orchestration simulée pour la présentation.</p>
+          <Card title="AI Director — Orchestrateur" action={<Pill tone="blue">MVP read-only</Pill>}>
+            <p className="card-sub">Moteur de délégation déterministe et suivi supervisé, sans actions automatiques ERP.</p>
             {orchestrator()}
           </Card>
           <Card title="Mission active" action={<SmallLink onClick={() => missionDetail(activeMission)}>Voir la mission</SmallLink>}>
@@ -315,10 +378,10 @@ export default function App() {
   function agentsPage() {
     return <>
       <div className="stats-row stats-four">
-        <Stat icon="layers" label="Agents développés" value="1 / 4" detail="Revenue Growth disponible" />
+        <Stat icon="layers" label="Agents développés" value="4 / 4" detail="Quatre moteurs métier read-only" />
         <Stat icon="bell" label="Alertes ouvertes" value={unread} detail="Notifications illustratives" tone="amber" />
         <Stat icon="document" label="Décisions à revoir" value={pendingDecisions.length} />
-        <Stat icon="layers" label="Escalades vers AI Director" value="—" detail="Orchestration à développer" />
+        <Stat icon="layers" label="Escalades vers AI Director" value={directorReport?.summary.agentsInvoked ?? "—"} detail="Dernière investigation Director" />
       </div>
       <div className="agents-layout">
         <div className="agent-grid">
@@ -382,10 +445,10 @@ export default function App() {
   function directorPage() {
     return <>
       <div className="stats-row stats-four">
-        <Stat icon="layers" label="Agents coordonnables" value="4" detail="1 moteur MVP intégré" />
+        <Stat icon="layers" label="Agents coordonnables" value="4" detail="4 moteurs déterministes read-only" />
         <Stat icon="calendar" label="Missions enregistrées" value={missions.length} />
         <Stat icon="shield" label="Décisions en revue" value={pendingDecisions.length} />
-        <Stat icon="alert" label="Blocages d'intégration" value="3" tone="amber" detail="BI, DS, Director" />
+        <Stat icon="alert" label="Blocages d'intégration" value="3" tone="amber" detail="BI, DS, ERP réel" />
       </div>
       <div className="director-grid">
         <div className="stack">
