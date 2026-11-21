@@ -106,7 +106,8 @@ describe("analytics platform API", () => {
         computeBiOverview({ agencies: ["Sfax"], ...period }, defaultDataset()).receivables,
       )
       expect(response.body.dataScience.modelServingVerified).toBe(false)
-      expect(response.body.dataScience.analysis.scenarios.basisRevenueTnd).toBe(response.body.bi.data.revenue)
+      expect(response.body.dataScience.analysis.scenarios.basisRevenueTnd)
+        .toBe(response.body.bi.data.recordCount>0 ? response.body.bi.data.revenue : null)
       expect(response.body.dataScience.analysis.trend.months).toEqual(response.body.insights.months)
       expect(response.body.agentic.availableAgents).toHaveLength(4)
       snapshots.push(response.body.snapshotId)
