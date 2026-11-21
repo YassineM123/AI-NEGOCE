@@ -185,7 +185,7 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveAttribute("data-platform-snapshot", "snap-Sfax-2026-10-01")
   await bi.getByRole("button",{name:"Sources & statut"}).click()
   await expect(bi.getByText("Provenance du snapshot API partagé")).toBeVisible()
-  await bi.getByRole("button",{name:"Fermer",exact:false}).first().click()
+  await bi.locator("#closeDrawer").click()
   const biExport=page.waitForEvent("download")
   await bi.getByRole("button",{name:"Exporter rapport & preuves"}).click()
   expect((await biExport).suggestedFilename()).toBe("ai-negoce-bi-snap-Sfax-2026-10-01.json")
