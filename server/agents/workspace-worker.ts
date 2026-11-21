@@ -1,6 +1,8 @@
 import { Pool } from "pg"
 import { PostgresStore } from "../store.js"
 import { AgenticWorkspace } from "./workspace.js"
+import { loadExtractedDemo } from "../demo-database.js"
+import { defaultDataset } from "../services.js"
 
 // Durable in-app due reminders: run as a separate single-purpose process.
 // It never executes ERP actions or sends external messages.
@@ -17,6 +19,13 @@ const adminPool=new Pool({
   ssl:process.env.NODE_ENV==="production"?{rejectUnauthorized:true}:undefined,
 })
 const workspace=new AgenticWorkspace(store)
+// Explicit demo opt-in. Real ERP proactive monitoring requires a tenant-specific
+// validated connector; never broadcast one global synthetic dataset to clients.
+const proactiveDemo=process.env.AGENTIC_PROACTIVE_DEMO==="1" && process.env.NODE_ENV!=="production"
+const sandboxOrg=process.env.ERP_SANDBOX_ORGANIZATION||"demo-fictive"
+const demoData=proactiveDemo
+  ? (process.env.DEMO_DATA_SOURCE==="extractions"?loadExtractedDemo().dataset:defaultDataset())
+  : null
 let running=false
 let stopping=false
 async function cycle() {
@@ -30,6 +39,12 @@ async function cycle() {
       catch(error) { console.error("[agentic-worker] tenant job failed",row.id,error) }
     }
     if(emitted)console.log("[agentic-worker] in-app due notifications created:",emitted)
+    if(demoData && (q.rows as {id:string}[]).some(x=>x.id===sandboxOrg)){
+      try{
+        const result=await workspace.scanSignals(sandboxOrg,demoData)
+        if(result.created) console.log("[agentic-worker] proactive demo alerts:",result.created)
+      }catch(error){ console.error("[agentic-worker] demo proactive scan failed",error) }
+    }
   }catch(error){console.error("[agentic-worker] cycle failed",error)}
   finally{running=false}
 }

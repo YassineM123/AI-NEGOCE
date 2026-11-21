@@ -5,6 +5,8 @@ import type { Store } from "../store.js"
 import type { Dataset } from "../services.js"
 import type { LlmProvider } from "../llm/types.js"
 import { analyzeRevenueGrowth } from "./revenue-growth.js"
+import { evaluateAgenticForecast } from "./predictive.js"
+import { requirePermission } from "../permissions.js"
 import { analyzeFinancialStrategy } from "./financial-strategy.js"
 import { analyzeSupplyChain } from "./supply-chain.js"
 import { analyzeBusinessStrategy } from "./business-strategy.js"
@@ -102,6 +104,9 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       llmConfigured:Boolean(deps.llm && deps.llm.isConfigured() && deps.llm.name!=="mock"),
       llmProvider:deps.llm?.name==="mock"?"unconfigured":deps.llm?.name??"unconfigured",
       notifications:"in_app_worker",
+      predictionService:"ridge_trend_backtested_pilot",
+      proactiveSignals:"deterministic_read_only",
+      approvedActions:"manual_handoff_only",
       erpWriteBack:false,
       warning:"Les rappels d'échéance nécessitent le processus agentic:worker et DATABASE_URL.",
     })
@@ -141,8 +146,15 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       const s=scope(req,mission.agency)
       if(!s)return fail(res)
       const report=extractReport(mission.agent,s,deps.dataset(),mission.objective)
+      const prediction=evaluateAgenticForecast(deps.dataset(),{agencies:s})
       const result=await workspace.submitRun(org(req),actor(req),mission.id,parsed.data.expectedVersion,{
         asOf:report.asOf,source:report.source,
+        prediction:{
+          status:prediction.status,modelVersion:prediction.model.version,
+          month:prediction.predictions[0]?.month??null,
+          revenueTnd:prediction.predictions[0]?.revenueTnd??null,
+          wape:prediction.backtest.wape,
+        },
         summary:"Analyse read-only : "+report.findings+" constat(s) pour "+mission.title,
         findings:report.findings,
         evidence:report.facts.flatMap((x)=>x.evidence).slice(0,25),
@@ -182,6 +194,63 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       return res.json({approval,erpWriteExecuted:false})
     }catch(error){return apiError(res,error)}
   })
+
+  // Restricted, measured inference gateway. A pilot forecast is NOT a green light
+  // for sending messages, posting financial entries or changing ERP records.
+  app.get(base+"/predictions",allAgents,requirePermission("analytics.ds.read"),deps.requireErpData,(req,res)=>{
+    const parsed=z.object({
+      agency:agencySchema.default("all"),
+      from:z.iso.date().optional(),to:z.iso.date().optional(),
+    }).refine(x=>!x.from||!x.to||x.from<=x.to).safeParse(req.query)
+    if(!parsed.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    const allowed=scope(req,parsed.data.agency)
+    if(!allowed)return fail(res)
+    const forecast=evaluateAgenticForecast(deps.dataset(),{
+      agencies:allowed,from:parsed.data.from,to:parsed.data.to,
+    })
+    res.setHeader("Cache-Control","no-store")
+    return res.json(forecast)
+  })
+  app.get(base+"/signals",requireRoles("admin","manager"),async(req,res)=>{
+    res.setHeader("Cache-Control","no-store")
+    return res.json({signals:await workspace.listSignals(org(req),actor(req))})
+  })
+  app.post(base+"/signals/scan",requireRoles("admin"),deps.requireErpData,async(req,res)=>{
+    const result=await workspace.scanSignals(org(req),deps.dataset())
+    await audit(req,"proactive.signals.scanned",org(req),{created:result.created,source:deps.dataset().metadata.source})
+    return res.json(result)
+  })
+  app.post(base+"/signals/:id/acknowledge",requireRoles("admin","manager"),async(req,res)=>{
+    const id=uuid.safeParse(req.params.id)
+    if(!id.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    try{
+      const signal=await workspace.acknowledgeSignal(org(req),actor(req),id.data)
+      await audit(req,"proactive.signal.acknowledged",id.data,{agency:signal.agency})
+      return res.json({signal})
+    }catch(error){return apiError(res,error)}
+  })
+  app.get(base+"/actions",allAgents,async(req,res)=>{
+    res.setHeader("Cache-Control","no-store")
+    return res.json({actions:await workspace.listActions(org(req),actor(req))})
+  })
+  app.get(base+"/actions/:id/export",allAgents,async(req,res)=>{
+    const id=uuid.safeParse(req.params.id)
+    if(!id.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    try{
+      const action=await workspace.getApprovedAction(org(req),actor(req),id.data)
+      await audit(req,"approved_action.exported",id.data,{
+        agency:action.agency,approvalId:action.approvalId,erpWrites:0,
+      })
+      res.setHeader("Cache-Control","no-store")
+      res.setHeader("Content-Disposition",'attachment; filename="agentic-approved-action.json"')
+      return res.json({
+        schemaVersion:1,kind:"approved_action_packet",action,
+        approvalRequired:false,erpWriteExecuted:false,
+        instructions:"Dossier à examiner et transmettre manuellement. Aucun connecteur ERP d'écriture n'est actif.",
+      })
+    }catch(error){return apiError(res,error)}
+  })
+
   app.get(base+"/notifications",allAgents,async(req,res)=>{
     res.setHeader("Cache-Control","no-store")
     const notifications=await workspace.listNotifications(org(req),actor(req))

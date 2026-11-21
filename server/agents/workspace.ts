@@ -1,5 +1,7 @@
 import crypto from "node:crypto"
 import type { Store } from "../store.js"
+import type { Dataset } from "../services.js"
+import { buildAnalyticsInsights } from "../analytics-insights.js"
 
 export const AGENT_KEYS = [
   "revenue_growth", "financial_strategy", "supply_chain_intelligence",
@@ -9,11 +11,47 @@ export type AgentKey = typeof AGENT_KEYS[number]
 export type MissionStatus = "draft" | "in_progress" | "awaiting_approval" | "reviewed" | "cancelled"
 export type ApprovalStatus = "pending" | "approved" | "rejected"
 export type Actor = { id: string; role: string; agencies: string[] }
+export type MissionStepKey = "scope" | "analysis" | "approval" | "handoff"
+export type WorkspaceStep = {
+  key: MissionStepKey; label: string; status: "completed" | "active" | "pending" | "blocked"
+  completedAt: string | null; completedBy: string | null
+}
+export type ApprovedAction = {
+  id: string; approvalId: string; missionId: string; agency: string; agent: AgentKey
+  actionType: string; summary: string; evidence: string[]; source: string
+  asOf: string; preparedBy: string; approvedBy: string; createdAt: string
+  status: "approved_for_manual_handoff"; erpWriteExecuted: false
+}
+export type WorkspaceSignal = {
+  id: string; key: string; agency: string
+  kind: "revenue_decline" | "overdue_receivables" | "stock_below_reorder"
+  severity: "medium" | "high"; title: string; explanation: string
+  source: string; asOf: string; evidence: string[]; createdAt: string
+  acknowledgedAt: string | null; acknowledgedBy: string | null
+}
+const createSteps = (time: string, actorId: string): WorkspaceStep[] => [
+  {key:"scope",label:"01 · Cadrage et périmètre",status:"completed",completedAt:time,completedBy:actorId},
+  {key:"analysis",label:"02 · Analyse des données",status:"active",completedAt:null,completedBy:null},
+  {key:"approval",label:"03 · Validation humaine",status:"pending",completedAt:null,completedBy:null},
+  {key:"handoff",label:"04 · Dossier d'action approuvée",status:"pending",completedAt:null,completedBy:null},
+]
+function step(m:WorkspaceMission,key:MissionStepKey,status:WorkspaceStep["status"],by?:string) {
+  m.steps ??= createSteps(m.createdAt,m.createdBy) // compatibility with existing JSONB records
+  const entry=m.steps.find(s=>s.key===key)
+  if(entry){
+    entry.status=status
+    entry.completedAt=status==="completed"?now():null
+    entry.completedBy=status==="completed"?(by??null):null
+  }
+}
+
 export type WorkspaceMission = {
   id: string; agency: string; agent: AgentKey; objective: string; title: string
   createdBy: string; status: MissionStatus; dueAt: string | null
   version: number; createdAt: string; updatedAt: string
-  lastRun: null | { asOf: string; source: string; summary: string; findings: number; evidence: string[] }
+  steps?: WorkspaceStep[]
+  lastRun: null | { asOf: string; source: string; summary: string; findings: number; evidence: string[];
+    prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null} }
 }
 export type WorkspaceApproval = {
   id: string; missionId: string; agency: string; agent: AgentKey
@@ -24,7 +62,7 @@ export type WorkspaceApproval = {
 }
 export type WorkspaceNotification = {
   id: string; key: string; recipientId: string | null; audience: "user" | "reviewer"
-  agency: string; kind: "mission" | "approval" | "due" | "review"
+  agency: string; kind: "mission" | "approval" | "due" | "review" | "signal"
   title: string; message: string; missionId: string | null
   createdAt: string; readBy: string[]
 }
@@ -38,12 +76,14 @@ export type AgenticWorkspaceData = {
   approvals: WorkspaceApproval[]
   notifications: WorkspaceNotification[]
   messages: WorkspaceMessage[]
+  actions: ApprovedAction[]
+  signals: WorkspaceSignal[]
 }
 export class WorkspaceConflict extends Error {}
 export class WorkspaceForbidden extends Error {}
 export class WorkspaceMissing extends Error {}
 export class WorkspaceFull extends Error {}
-const blank = (): AgenticWorkspaceData => ({ missions:[], approvals:[], notifications:[], messages:[] })
+const blank = (): AgenticWorkspaceData => ({ missions:[], approvals:[], notifications:[], messages:[], actions:[], signals:[] })
 const caches = new WeakMap<Store, Map<string, AgenticWorkspaceData>>()
 const now = () => new Date().toISOString()
 const uuid = () => crypto.randomUUID()
@@ -71,6 +111,9 @@ function validRecord(w: AgenticWorkspaceData) {
   if (!w || !Array.isArray(w.missions) || !Array.isArray(w.approvals) ||
       !Array.isArray(w.notifications) || !Array.isArray(w.messages))
     throw new Error("Invalid stored agentic workspace")
+  // JSONB workspaces created with migration 008 predate Agentic v2.
+  if (!Array.isArray(w.actions)) w.actions=[]
+  if (!Array.isArray(w.signals)) w.signals=[]
   return w
 }
 
@@ -128,6 +171,7 @@ export class AgenticWorkspace {
         title:input.title, objective:input.objective,
         createdBy:actor.id, status:"draft", dueAt:input.dueAt ?? null,
         version:1, createdAt:at, updatedAt:at, lastRun:null,
+        steps:createSteps(at,actor.id),
       }
       w.missions.unshift(mission)
       note(w,"mission.created:"+mission.id,input.agency,"user",actor.id,
@@ -145,6 +189,7 @@ export class AgenticWorkspace {
   submitRun(org: string, actor: Actor, id: string, expectedVersion:number, report: {
     asOf: string; source: string; summary: string; findings: number
     evidence: string[]; actionType?: string
+    prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null}
   }) {
     return this.visit(org,true,(w)=>{
       const mission=w.missions.find((m)=>m.id===id && visibleMission(m,actor))
@@ -153,7 +198,11 @@ export class AgenticWorkspace {
         throw new WorkspaceConflict("Mission modifiée ou déjà soumise")
       mission.version++; mission.updatedAt=now()
       mission.lastRun={asOf:report.asOf,source:report.source,summary:report.summary,
-        findings:report.findings,evidence:report.evidence.slice(0,25)}
+        findings:report.findings,evidence:report.evidence.slice(0,25),
+        ...(report.prediction ? {prediction:report.prediction} : {})}
+      step(mission,"analysis","completed",actor.id)
+      step(mission,"approval",report.findings>0?"active":"blocked")
+      step(mission,"handoff",report.findings>0?"pending":"blocked")
       mission.status=report.findings>0?"awaiting_approval":"reviewed"
       const approval=report.findings>0 ? {
         id:uuid(), missionId:id, agency:mission.agency, agent:mission.agent,
@@ -190,13 +239,119 @@ export class AgenticWorkspace {
         throw new WorkspaceConflict("Décision déjà traitée ou version modifiée")
       a.status=decision;a.version++;a.reviewedAt=now();a.reviewedBy=actor.id;a.comment=comment
       const mission=w.missions.find((m)=>m.id===a.missionId)
-      if(mission){ mission.status=decision==="approved"?"reviewed":"draft";mission.version++;mission.updatedAt=now() }
+      if(mission){
+        mission.status=decision==="approved"?"reviewed":"draft"
+        mission.version++;mission.updatedAt=now()
+        step(mission,"approval",decision==="approved"?"completed":"blocked",actor.id)
+        step(mission,"handoff",decision==="approved"?"completed":"blocked",actor.id)
+        if(decision==="approved"&&!w.actions.some(x=>x.approvalId===a.id)){
+          w.actions.unshift({
+            id:uuid(),approvalId:a.id,missionId:mission.id,
+            agency:a.agency,agent:a.agent,actionType:a.actionType,
+            summary:a.summary,evidence:[...a.evidence],
+            source:mission.lastRun?.source??"Source indisponible",
+            asOf:mission.lastRun?.asOf??"",
+            preparedBy:a.requestedBy,approvedBy:actor.id,createdAt:now(),
+            status:"approved_for_manual_handoff",erpWriteExecuted:false,
+          })
+          note(w,"action.prepared:"+a.id,a.agency,"user",a.requestedBy,"review",
+            "Dossier d'action approuvé",mission.title+" · prêt pour transmission MANUELLE",mission.id)
+        }
+      }
       note(w,"approval.reviewed:"+a.id, a.agency,"user",a.requestedBy,"review",
         decision==="approved"?"Recommandation validée (sans exécution ERP)":"Recommandation refusée",
         mission?.title??a.summary,a.missionId)
       return a
     })
   }
+
+  listActions(org:string,actor:Actor) {
+    return this.visit(org,false,(w)=>w.actions.filter(a=>
+      visibleAgency(a.agency,actor) &&
+      (reviewer(actor)||w.missions.some(m=>m.id===a.missionId && m.createdBy===actor.id)))
+      .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)))
+  }
+  getApprovedAction(org:string,actor:Actor,id:string) {
+    return this.visit(org,false,(w)=>{
+      const action=w.actions.find(a=>a.id===id && visibleAgency(a.agency,actor) &&
+        (reviewer(actor)||w.missions.some(m=>m.id===a.missionId && m.createdBy===actor.id)))
+      if(!action)throw new WorkspaceMissing()
+      return action
+    })
+  }
+  listSignals(org:string,actor:Actor) {
+    if(!reviewer(actor))throw new WorkspaceForbidden()
+    return this.visit(org,false,(w)=>w.signals.filter(s=>visibleAgency(s.agency,actor))
+      .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)))
+  }
+  acknowledgeSignal(org:string,actor:Actor,id:string) {
+    if(!reviewer(actor))throw new WorkspaceForbidden()
+    return this.visit(org,true,(w)=>{
+      const signal=w.signals.find(s=>s.id===id && visibleAgency(s.agency,actor))
+      if(!signal)throw new WorkspaceMissing()
+      if(!signal.acknowledgedAt){
+        signal.acknowledgedAt=now();signal.acknowledgedBy=actor.id
+      }
+      return signal
+    })
+  }
+  /**
+   * Deterministic daily scanner — one alert per source/agency/rule/date of data
+   * (not per polling cycle). No data copied between organizations.
+   * The caller must only pass a dataset authorised for this tenant.
+   */
+  scanSignals(org:string,data:Dataset,at=now()) {
+    return this.visit(org,true,(w)=>{
+      const asOf=data.metadata.asOf??at.slice(0,10)
+      if(Date.parse(at)-Date.parse(asOf+"T00:00:00Z")>90*86400000)
+        return {created:0,reason:"stale_source" as const}
+      const agencies=new Set([
+        ...data.sales.map(r=>r.agency),...data.receivables.map(r=>r.agency),
+        ...data.inventory.map(r=>r.agency),
+      ])
+      let created=0
+      const publish=(agency:string,kind:WorkspaceSignal["kind"],
+        title:string,explanation:string,evidence:string[],severity:WorkspaceSignal["severity"])=>{
+        const key=[kind,agency,asOf,data.metadata.source].join("|")
+        if(w.signals.some(s=>s.key===key))return
+        const signal:WorkspaceSignal={
+          id:uuid(),key,agency,kind,severity,title,explanation,
+          source:data.metadata.source,asOf,evidence:evidence.slice(0,15),
+          createdAt:at,acknowledgedAt:null,acknowledgedBy:null,
+        }
+        w.signals.unshift(signal)
+        note(w,"proactive:"+key,agency,"reviewer",null,"signal",
+          title,explanation+" · source arrêtée "+asOf,null)
+        created++
+      }
+      for(const agency of agencies){
+        const analysis=buildAnalyticsInsights(data,{agencies:[agency],to:asOf})
+        const change=analysis.summary.monthlyChangePercent
+        if(change!==null && change<=-20){
+          publish(agency,"revenue_decline","Baisse du CA entre mois clos",
+            "Variation "+change.toFixed(2)+" % sur les deux derniers mois complets.",
+            analysis.topCustomers.slice(0,5).map(c=>c.id),"medium")
+        }
+        const late=data.receivables.filter(r=>r.agency===agency &&
+          r.dueDate<asOf && r.outstanding>0)
+        const overdueMillimes=late.reduce((n,r)=>n+Math.round(r.outstanding*1000),0)
+        if(overdueMillimes>=1_000_000){
+          publish(agency,"overdue_receivables","Créances échues à vérifier",
+            (overdueMillimes/1000).toFixed(3)+" TND échus ; vérifier litiges et règlements.",
+            late.map(r=>r.invoiceId),"high")
+        }
+        const low=data.inventory.filter(r=>r.agency===agency&&r.quantity<=r.reorderPoint)
+        if(low.length){
+          publish(agency,"stock_below_reorder","Stock sous seuil de réapprovisionnement",
+            low.length+" référence(s) à revoir ; ne pas déclencher d'achat automatique.",
+            low.map(r=>r.reference),"medium")
+        }
+      }
+      if(w.signals.length>1000)w.signals.length=1000
+      return {created,reason:"scanned" as const}
+    })
+  }
+
   listNotifications(org:string,actor:Actor) {
     return this.visit(org,false,(w)=>w.notifications.filter((n)=>visibleNotification(n,actor))
       .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)))
