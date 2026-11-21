@@ -109,7 +109,7 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
             {m.steps&&<ol className="aw-steps" aria-label={"Étapes de "+m.title}>
               {m.steps.map(s=><li className={"aw-step aw-step-"+s.status} key={s.key}>
                 <span>{s.label}</span><b>{s.status==="completed"?"Terminée":s.status==="active"?"En cours":s.status==="blocked"?"Bloquée":"À faire"}</b>
-              </li>)}</ol>
+              </li>)}</ol>}
             <footer><small>Version {m.version} · {m.dueAt?"Échéance : "+when(m.dueAt):"Sans échéance"}</small>
               {["draft","in_progress"].includes(m.status)&&
                 <button className="aw-primary" disabled={busy} onClick={()=>{void run(m)}}>Lancer l'analyse read-only</button>}</footer>
