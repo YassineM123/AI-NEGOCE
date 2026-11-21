@@ -81,7 +81,8 @@ export function buildAnalyticsOverview(input: {
     agentic: {
       status: hasPermission(input.principal.role, "agentic.read") ? "available" : "forbidden",
       executionMode: "read_only",
-      availableAgents: hasPermission(input.principal.role, "agentic.read") ? ["revenue_growth"] : [],
+      availableAgents: hasPermission(input.principal.role, "agentic.read")
+        ? ["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"] : [],
     },
     warnings: ["Aucun service de modeles Data Science n'est configure ou verifie."],
   })
