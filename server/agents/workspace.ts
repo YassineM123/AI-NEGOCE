@@ -19,6 +19,7 @@ export type WorkspaceStep = {
 }
 export type ApprovedAction = {
   id: string; approvalId: string; missionId: string; agency: string; agent: AgentKey
+  from?:string;to?:string
   actionType: string; summary: string; evidence: string[]; source: string
   asOf: string; preparedBy: string; approvedBy: string; createdAt: string
   status: "approved_for_manual_handoff"; erpWriteExecuted: false
@@ -77,6 +78,7 @@ export type WorkspaceMission = {
 }
 export type WorkspaceApproval = {
   id: string; missionId: string; agency: string; agent: AgentKey
+  from?:string;to?:string
   requestedBy: string; actionType: string; summary: string
   evidence: string[]; status: ApprovalStatus; version: number
   createdAt: string; reviewedAt: string | null; reviewedBy: string | null
@@ -385,6 +387,7 @@ export class AgenticWorkspace {
       })
       const approval=report.findings>0 ? {
         id:uuid(), missionId:id, agency:mission.agency, agent:mission.agent,
+        from:mission.from,to:mission.to,
         requestedBy:actor.id, actionType:report.actionType||"review_findings",
         summary:report.summary, evidence:report.evidence.slice(0,25),
         status:"pending" as const, version:1, createdAt,
@@ -452,6 +455,7 @@ export class AgenticWorkspace {
             asOf:mission.lastRun?.asOf??"",
             preparedBy:a.requestedBy,approvedBy:actor.id,createdAt:now(),
             status:"approved_for_manual_handoff",erpWriteExecuted:false,
+            from:mission.from,to:mission.to,
             proposalHash:a.proposalHash,
             idempotencyKey:hash({org,approvalId:a.id,proposalHash:a.proposalHash}),
             approvedUntil:a.expiresAt,
