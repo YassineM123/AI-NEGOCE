@@ -1,4 +1,5 @@
 import crypto from "node:crypto"
+import type { ExecutionTrace } from "./execution-trace.js"
 import type { Store } from "../store.js"
 import type { Dataset } from "../services.js"
 import { buildAnalyticsInsights } from "../analytics-insights.js"
@@ -51,6 +52,7 @@ export type WorkspaceMission = {
   version: number; createdAt: string; updatedAt: string
   steps?: WorkspaceStep[]
   lastRun: null | { asOf: string; source: string; summary: string; findings: number; evidence: string[];
+    trace?: ExecutionTrace;
     prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null} }
 }
 export type WorkspaceApproval = {
@@ -70,6 +72,8 @@ export type WorkspaceMessage = {
   id: string; turnId: string; userId: string; agency: string
   agent: AgentKey; role: "user" | "assistant"; content: string
   sources: string[]; model: string | null; createdAt: string
+  usage?: {promptTokens:number|null;completionTokens:number|null;totalTokens:number|null;
+    estimatedContextTokens:number;maxOutputTokens:number}
 }
 export type AgenticWorkspaceData = {
   missions: WorkspaceMission[]
@@ -78,11 +82,13 @@ export type AgenticWorkspaceData = {
   messages: WorkspaceMessage[]
   actions: ApprovedAction[]
   signals: WorkspaceSignal[]
+  llmQuota?: Record<string,{date:string;calls:number}>
 }
 export class WorkspaceConflict extends Error {}
 export class WorkspaceForbidden extends Error {}
 export class WorkspaceMissing extends Error {}
 export class WorkspaceFull extends Error {}
+export class WorkspaceBudgetExceeded extends Error {}
 const blank = (): AgenticWorkspaceData => ({ missions:[], approvals:[], notifications:[], messages:[], actions:[], signals:[] })
 const caches = new WeakMap<Store, Map<string, AgenticWorkspaceData>>()
 const now = () => new Date().toISOString()
@@ -114,6 +120,7 @@ function validRecord(w: AgenticWorkspaceData) {
   // JSONB workspaces created with migration 008 predate Agentic v2.
   if (!Array.isArray(w.actions)) w.actions=[]
   if (!Array.isArray(w.signals)) w.signals=[]
+  if (!w.llmQuota || typeof w.llmQuota!=="object") w.llmQuota={}
   return w
 }
 
@@ -188,7 +195,7 @@ export class AgenticWorkspace {
   }
   submitRun(org: string, actor: Actor, id: string, expectedVersion:number, report: {
     asOf: string; source: string; summary: string; findings: number
-    evidence: string[]; actionType?: string
+    evidence: string[]; actionType?: string; trace?: ExecutionTrace
     prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null}
   }) {
     return this.visit(org,true,(w)=>{
@@ -199,6 +206,7 @@ export class AgenticWorkspace {
       mission.version++; mission.updatedAt=now()
       mission.lastRun={asOf:report.asOf,source:report.source,summary:report.summary,
         findings:report.findings,evidence:report.evidence.slice(0,25),
+        ...(report.trace?{trace:report.trace}:{}),
         ...(report.prediction ? {prediction:report.prediction} : {})}
       step(mission,"analysis","completed",actor.id)
       step(mission,"approval",report.findings>0?"active":"blocked")
@@ -370,7 +378,7 @@ export class AgenticWorkspace {
       m.userId===actor.id && m.agent===agent && m.agency===agency).slice(-30))
   }
   saveChat(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string,
-    question:string,answer:string,sources:string[],model:string) {
+    question:string,answer:string,sources:string[],model:string,usage?:WorkspaceMessage["usage"]) {
     if(agency!=="all" && !visibleAgency(agency,actor)) throw new WorkspaceForbidden()
     return this.visit(org,true,(w)=>{
       const existing=w.messages.find((m)=>m.turnId===turnId&&m.role==="assistant"&&m.userId===actor.id)
@@ -383,10 +391,29 @@ export class AgenticWorkspace {
       const assistant:WorkspaceMessage={
         id:uuid(),turnId,userId:actor.id,agency,agent,role:"assistant",
         content:answer,sources:sources.slice(0,40),model,createdAt:now(),
+        ...(usage?{usage}:{}),
       }
       w.messages.push(assistant)
       if(w.messages.length>3000)w.messages.splice(0,w.messages.length-3000)
       return assistant
+    })
+  }
+  /**
+   * Atomic server-side call quota: prevents runaway model loops, including
+   * concurrent requests. Counts attempted provider calls, not estimated costs.
+   * A failed call remains counted so a faulty provider cannot be hammered.
+   */
+  reserveLlmCall(org:string,actor:Actor,dailyLimit:number,at=now()) {
+    return this.visit(org,true,(w)=>{
+      const date=at.slice(0,10)
+      w.llmQuota ??={}
+      const key=date+":"+actor.id
+      const previous=w.llmQuota[key]?.calls??0
+      if(previous>=dailyLimit)throw new WorkspaceBudgetExceeded("Quota quotidien de conversations IA atteint")
+      w.llmQuota[key]={date,calls:previous+1}
+      for(const k of Object.keys(w.llmQuota))
+        if(k.slice(0,10)<date)delete w.llmQuota[k]
+      return {callsToday:previous+1,dailyLimit}
     })
   }
   getTurn(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string) {

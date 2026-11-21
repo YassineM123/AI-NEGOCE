@@ -21,6 +21,8 @@ type Mission={
   dueAt:string|null;version:number;createdAt:string;updatedAt:string;
   steps?:Array<{key:string;label:string;status:"completed"|"active"|"pending"|"blocked"}>;
   lastRun:null|{asOf:string;source:string;summary:string;findings:number;evidence:string[];
+    trace?:{version:string;durationMs:number;toolsInvoked:number;modelCalls:number;
+      steps:Array<{id:string;agent:string;tool:string;status:string;findings:number;explanation:string}>};
     prediction?:{status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null}}
 }
 type Approval={
@@ -105,7 +107,12 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
             {m.lastRun&&<div className="aw-result"><strong>{m.lastRun.summary}</strong>
               <span>Source : {m.lastRun.source} · arrêté au {m.lastRun.asOf}</span>
               {m.lastRun.evidence.length>0&&<small>Preuves : {m.lastRun.evidence.slice(0,7).join(", ")}</small>}
-              {m.lastRun.prediction&&<small>Prévision : {m.lastRun.prediction.status} · modèle {m.lastRun.prediction.modelVersion} · sans action autonome</small>}</div>}
+              {m.lastRun.prediction&&<small>Prévision : {m.lastRun.prediction.status} · modèle {m.lastRun.prediction.modelVersion} · sans action autonome</small>}
+              {m.lastRun.trace&&<details className="aw-trace"><summary>Journal des outils : {m.lastRun.trace.toolsInvoked} analyse(s), {m.lastRun.trace.modelCalls} appel LLM, {m.lastRun.trace.durationMs} ms</summary>
+                {m.lastRun.trace.steps.map(s=><div key={s.id} className="aw-trace-line">
+                  <b>{s.tool} · {s.status}</b><small>{s.agent} · {s.findings} résultat(s) · {s.explanation}</small>
+                </div>)}
+              </details>}</div>}
             {m.steps&&<ol className="aw-steps" aria-label={"Étapes de "+m.title}>
               {m.steps.map(s=><li className={"aw-step aw-step-"+s.status} key={s.key}>
                 <span>{s.label}</span><b>{s.status==="completed"?"Terminée":s.status==="active"?"En cours":s.status==="blocked"?"Bloquée":"À faire"}</b>
