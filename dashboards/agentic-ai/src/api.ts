@@ -72,3 +72,71 @@ export async function fetchRevenueGrowth(
   }
   return body as RevenueResult
 }
+
+export type SpecialistAgent = "finance" | "supply" | "strategy"
+export type SpecialistReport = {
+  agent: string
+  status: "ok" | "no_data"
+  executionMode: "read_only"
+  snapshot: { asOf: string; source: string; scope: string[] | "*"; currency: "TND" }
+  metrics: Record<string, number | null>
+  findings: Array<{
+    id: string
+    title: string
+    priority: "high" | "medium" | "low"
+    explanation: string
+    evidence: Array<{ type: string; id: string; agency: string }>
+    action: { type: string; status: "draft_only"; requiresHumanApproval: true }
+  }>
+  scenarios: Array<{ id: string; label: string; assumption: string; valueTnd: number | null }>
+  warnings: string[]
+}
+export type DirectorReport = {
+  director: "ai_director"
+  orchestrationMode: "deterministic_read_only"
+  status: "ok" | "no_data"
+  objective: string
+  snapshot: { asOf: string; source: string; scope: string[] | "*" }
+  plan: Array<{ step: number; agent: string; action: string; status: string }>
+  sections: Array<{
+    agent: string; status: string;
+    metrics: Record<string, number | null>
+    findings: SpecialistReport["findings"]
+    warnings: string[]
+  }>
+  highlights: Array<SpecialistReport["findings"][number] & { agent: string }>
+  summary: { agentsInvoked: number; totalFindings: number; requiresHumanReview: boolean; erpWrites: number }
+  warnings: string[]
+}
+const SPECIALIST_PATHS: Record<SpecialistAgent,string> = {
+  finance:"/api/v1/agentic/financial-strategy/analysis",
+  supply:"/api/v1/agentic/supply-chain/recommendations",
+  strategy:"/api/v1/agentic/business-strategy/scenarios",
+}
+export async function fetchSpecialistReport(
+  token: string, agent: SpecialistAgent, agency: string, signal?:AbortSignal,
+): Promise<SpecialistReport> {
+  const params = new URLSearchParams({limit:"20"})
+  if (agency !== "all") params.set("agency",agency)
+  const response = await fetch(API_BASE + SPECIALIST_PATHS[agent] + "?" + params, {
+    headers:{Authorization:"Bearer " + token},signal,
+  })
+  if (!response.ok) throw new Error("API " + agent + " : HTTP " + response.status)
+  const report = await response.json() as SpecialistReport
+  if (report.executionMode !== "read_only" || !Array.isArray(report.findings)) throw new Error("Réponse Agent invalide")
+  return report
+}
+export async function fetchDirectorReport(
+  token: string, objective: string, agency: string, signal?:AbortSignal,
+): Promise<DirectorReport> {
+  const response = await fetch(API_BASE + "/api/v1/agentic/ai-director/investigate", {
+    method:"POST",
+    headers:{Authorization:"Bearer " + token,"Content-Type":"application/json"},
+    body:JSON.stringify({objective,...(agency==="all"?{}:{agency})}),
+    signal,
+  })
+  if (!response.ok) throw new Error("AI Director : HTTP " + response.status)
+  const report = await response.json() as DirectorReport
+  if (report.orchestrationMode !== "deterministic_read_only") throw new Error("Réponse Director invalide")
+  return report
+}
