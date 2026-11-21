@@ -22,6 +22,7 @@ export type ApprovedAction = {
   actionType: string; summary: string; evidence: string[]; source: string
   asOf: string; preparedBy: string; approvedBy: string; createdAt: string
   status: "approved_for_manual_handoff"; erpWriteExecuted: false
+  proposalHash?:string;idempotencyKey?:string;approvedUntil?:string
 }
 export type WorkspaceSignal = {
   id: string; key: string; agency: string
@@ -79,7 +80,7 @@ export type WorkspaceApproval = {
   evidence: string[]; status: ApprovalStatus; version: number
   createdAt: string; reviewedAt: string | null; reviewedBy: string | null
   comment: string | null
-}
+  expiresAt?:string;proposalHash?:string
 export type WorkspaceNotification = {
   id: string; key: string; recipientId: string | null; audience: "user" | "reviewer"
   agency: string; kind: "mission" | "approval" | "due" | "review" | "signal"
@@ -101,6 +102,9 @@ export type AgenticWorkspaceData = {
   actions: ApprovedAction[]
   signals: WorkspaceSignal[]
   llmQuota?: Record<string,{date:string;calls:number}>
+  activeTurns?: Record<string,{expiresAt:string;agent:AgentKey;agency:string;questionHash:string}>
+  alertPolicy?: {enabled:boolean;revenueDeclinePercent:number;overdueTnd:number;
+    stockAlertEnabled:boolean;cooldownDays:number}
 }
 export class WorkspaceConflict extends Error {}
 export class WorkspaceForbidden extends Error {}
@@ -110,6 +114,11 @@ export class WorkspaceBudgetExceeded extends Error {}
 const blank = (): AgenticWorkspaceData => ({ missions:[], approvals:[], notifications:[], messages:[], actions:[], signals:[] })
 const caches = new WeakMap<Store, Map<string, AgenticWorkspaceData>>()
 const now = () => new Date().toISOString()
+const hash = (data:unknown)=>crypto.createHash("sha256").update(JSON.stringify(data)).digest("hex")
+const ALERT_DEFAULTS={enabled:true,revenueDeclinePercent:20,overdueTnd:1000,
+  stockAlertEnabled:true,cooldownDays:7} as const
+export type AlertPolicy={enabled:boolean;revenueDeclinePercent:number;overdueTnd:number;
+  stockAlertEnabled:boolean;cooldownDays:number}
 const uuid = () => crypto.randomUUID()
 const visibleAgency = (agency: string, actor: Actor) =>
   actor.agencies.includes("*") || actor.agencies.includes(agency)
@@ -139,6 +148,7 @@ function validRecord(w: AgenticWorkspaceData) {
   if (!Array.isArray(w.actions)) w.actions=[]
   if (!Array.isArray(w.signals)) w.signals=[]
   if (!w.llmQuota || typeof w.llmQuota!=="object") w.llmQuota={}
+  if (!w.activeTurns || typeof w.activeTurns!=="object") w.activeTurns={}
   return w
 }
 
@@ -242,6 +252,7 @@ export class AgenticWorkspace {
              step.id!==input.tools[index].id||step.tool!==input.tools[index].tool))
           throw new WorkspaceConflict("Plan modifié depuis la dernière exécution")
         previous.status="running"
+        previous.id=uuid() // invalidate any stale worker lease before retry
         previous.leaseUntil=new Date(Date.parse(at)+120000).toISOString()
         previous.updatedAt=at;previous.attempts++
         mission.status="in_progress";mission.updatedAt=at
@@ -330,11 +341,20 @@ export class AgenticWorkspace {
       step(mission,"approval",report.findings>0?"active":"blocked")
       step(mission,"handoff",report.findings>0?"pending":"blocked")
       mission.status=report.findings>0?"awaiting_approval":"reviewed"
+      const createdAt=now()
+      const proposalHash=hash({
+        org,missionId:id,agency:mission.agency,agent:mission.agent,
+        source:report.source,asOf:report.asOf,
+        summary:report.summary,evidence:report.evidence.slice(0,25),
+        actionType:report.actionType||"review_findings",
+      })
       const approval=report.findings>0 ? {
         id:uuid(), missionId:id, agency:mission.agency, agent:mission.agent,
         requestedBy:actor.id, actionType:report.actionType||"review_findings",
         summary:report.summary, evidence:report.evidence.slice(0,25),
-        status:"pending" as const, version:1, createdAt:now(),
+        status:"pending" as const, version:1, createdAt,
+        expiresAt:new Date(Date.parse(createdAt)+72*3600*1000).toISOString(),
+        proposalHash,
         reviewedAt:null, reviewedBy:null, comment:null,
       } : null
       if(approval){
@@ -355,7 +375,8 @@ export class AgenticWorkspace {
       .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)))
   }
   reviewApproval(org:string,actor:Actor,id:string,
-    expectedVersion:number,decision:"approved"|"rejected",comment:string) {
+    expectedVersion:number,decision:"approved"|"rejected",comment:string,
+    currentSource?:{source:string;asOf:string}) {
     if (!reviewer(actor)) throw new WorkspaceForbidden()
     return this.visit(org,true,(w)=>{
       const a=w.approvals.find((item)=>item.id===id && visibleAgency(item.agency,actor))
@@ -363,8 +384,25 @@ export class AgenticWorkspace {
       if (a.requestedBy===actor.id) throw new WorkspaceForbidden("Separation des tâches : le demandeur ne peut approuver sa propre recommandation")
       if (a.status!=="pending" || a.version!==expectedVersion)
         throw new WorkspaceConflict("Décision déjà traitée ou version modifiée")
-      a.status=decision;a.version++;a.reviewedAt=now();a.reviewedBy=actor.id;a.comment=comment
       const mission=w.missions.find((m)=>m.id===a.missionId)
+      if(decision==="approved"){
+        if(!mission?.lastRun)throw new WorkspaceConflict("Analyse absente ou non vérifiable")
+        if(!a.expiresAt||a.expiresAt<now())
+          throw new WorkspaceConflict("Approbation expirée : ouvrir une nouvelle mission")
+        if(currentSource&&
+          (currentSource.source!==mission.lastRun.source||
+            currentSource.asOf!==mission.lastRun.asOf))
+          throw new WorkspaceConflict("Source ERP modifiée : revue et calculs à renouveler")
+        const expectedHash=hash({
+          org,missionId:a.missionId,agency:a.agency,agent:a.agent,
+          source:mission.lastRun.source,asOf:mission.lastRun.asOf,
+          summary:a.summary,evidence:a.evidence,
+          actionType:a.actionType,
+        })
+        if(a.proposalHash!==expectedHash)
+          throw new WorkspaceConflict("Empreinte de proposition invalide : réapprobation impossible")
+      }
+      a.status=decision;a.version++;a.reviewedAt=now();a.reviewedBy=actor.id;a.comment=comment
       if(mission){
         mission.status=decision==="approved"?"reviewed":"draft"
         mission.version++;mission.updatedAt=now()
@@ -379,6 +417,9 @@ export class AgenticWorkspace {
             asOf:mission.lastRun?.asOf??"",
             preparedBy:a.requestedBy,approvedBy:actor.id,createdAt:now(),
             status:"approved_for_manual_handoff",erpWriteExecuted:false,
+            proposalHash:a.proposalHash,
+            idempotencyKey:hash({org,approvalId:a.id,proposalHash:a.proposalHash}),
+            approvedUntil:a.expiresAt,
           })
           note(w,"action.prepared:"+a.id,a.agency,"user",a.requestedBy,"review",
             "Dossier d'action approuvé",mission.title+" · prêt pour transmission MANUELLE",mission.id)
@@ -405,6 +446,23 @@ export class AgenticWorkspace {
       return action
     })
   }
+  getAlertPolicy(org:string,actor:Actor){
+    if(!reviewer(actor))throw new WorkspaceForbidden()
+    return this.visit(org,false,w=>({...ALERT_DEFAULTS,...w.alertPolicy}))
+  }
+  updateAlertPolicy(org:string,actor:Actor,policy:AlertPolicy){
+    if(actor.role!=="admin")throw new WorkspaceForbidden()
+    return this.visit(org,true,w=>{
+      if(!Number.isFinite(policy.revenueDeclinePercent)||
+        policy.revenueDeclinePercent<5||policy.revenueDeclinePercent>90||
+        !Number.isFinite(policy.overdueTnd)||policy.overdueTnd<0||
+        policy.overdueTnd>100_000_000||
+        !Number.isInteger(policy.cooldownDays)||policy.cooldownDays<0||
+        policy.cooldownDays>90)throw new WorkspaceConflict("Seuils d'alerte non valides")
+      w.alertPolicy={...policy}
+      return w.alertPolicy
+    })
+  }
   listSignals(org:string,actor:Actor) {
     if(!reviewer(actor))throw new WorkspaceForbidden()
     return this.visit(org,false,(w)=>w.signals.filter(s=>visibleAgency(s.agency,actor))
@@ -428,6 +486,8 @@ export class AgenticWorkspace {
    */
   scanSignals(org:string,data:Dataset,at=now()) {
     return this.visit(org,true,(w)=>{
+      const policy={...ALERT_DEFAULTS,...w.alertPolicy}
+      if(!policy.enabled)return {created:0,reason:"disabled" as const}
       const asOf=data.metadata.asOf??at.slice(0,10)
       if(Date.parse(at)-Date.parse(asOf+"T00:00:00Z")>90*86400000)
         return {created:0,reason:"stale_source" as const}
@@ -440,6 +500,8 @@ export class AgenticWorkspace {
         title:string,explanation:string,evidence:string[],severity:WorkspaceSignal["severity"])=>{
         const key=[kind,agency,asOf,data.metadata.source].join("|")
         if(w.signals.some(s=>s.key===key))return
+        if(policy.cooldownDays>0 && w.signals.some(s=>s.agency===agency&&s.kind===kind&&
+          Date.parse(at)-Date.parse(s.createdAt)<policy.cooldownDays*86400000))return
         const signal:WorkspaceSignal={
           id:uuid(),key,agency,kind,severity,title,explanation,
           source:data.metadata.source,asOf,evidence:evidence.slice(0,15),
@@ -453,7 +515,7 @@ export class AgenticWorkspace {
       for(const agency of agencies){
         const analysis=buildAnalyticsInsights(data,{agencies:[agency],to:asOf})
         const change=analysis.summary.monthlyChangePercent
-        if(change!==null && change<=-20){
+        if(change!==null && change<=-policy.revenueDeclinePercent){
           publish(agency,"revenue_decline","Baisse du CA entre mois clos",
             "Variation "+change.toFixed(2)+" % sur les deux derniers mois complets.",
             analysis.topCustomers.slice(0,5).map(c=>c.id),"medium")
@@ -461,13 +523,13 @@ export class AgenticWorkspace {
         const late=data.receivables.filter(r=>r.agency===agency &&
           r.dueDate<asOf && r.outstanding>0)
         const overdueMillimes=late.reduce((n,r)=>n+Math.round(r.outstanding*1000),0)
-        if(overdueMillimes>=1_000_000){
+        if(overdueMillimes>=Math.round(policy.overdueTnd*1000) && overdueMillimes>0){
           publish(agency,"overdue_receivables","Créances échues à vérifier",
             (overdueMillimes/1000).toFixed(3)+" TND échus ; vérifier litiges et règlements.",
             late.map(r=>r.invoiceId),"high")
         }
         const low=data.inventory.filter(r=>r.agency===agency&&r.quantity<=r.reorderPoint)
-        if(low.length){
+        if(policy.stockAlertEnabled&&low.length){
           publish(agency,"stock_below_reorder","Stock sous seuil de réapprovisionnement",
             low.length+" référence(s) à revoir ; ne pas déclencher d'achat automatique.",
             low.map(r=>r.reference),"medium")
@@ -495,12 +557,33 @@ export class AgenticWorkspace {
     return this.visit(org,false,(w)=>w.messages.filter((m)=>
       m.userId===actor.id && m.agent===agent && m.agency===agency).slice(-30))
   }
+  releaseLlmTurn(org:string,actor:Actor,turnId:string){
+    return this.visit(org,true,w=>{
+      const key=actor.id+":"+turnId
+      if(w.activeTurns)delete w.activeTurns[key]
+    })
+  }
+  pruneChat(org:string,at=now(),retentionDays=90){
+    return this.visit(org,true,w=>{
+      const cutoff=new Date(Date.parse(at)-retentionDays*86400000).toISOString()
+      const before=w.messages.length
+      w.messages=w.messages.filter(m=>m.createdAt>=cutoff)
+      for(const [key,value] of Object.entries(w.activeTurns??{}))
+        if(value.expiresAt<at)delete w.activeTurns![key]
+      return before-w.messages.length
+    })
+  }
   saveChat(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string,
     question:string,answer:string,sources:string[],model:string,usage?:WorkspaceMessage["usage"]) {
     if(agency!=="all" && !visibleAgency(agency,actor)) throw new WorkspaceForbidden()
     return this.visit(org,true,(w)=>{
       const existing=w.messages.find((m)=>m.turnId===turnId&&m.role==="assistant"&&m.userId===actor.id)
-      if(existing) return existing
+      if(existing){
+        const user=w.messages.find(m=>m.turnId===turnId&&m.role==="user"&&m.userId===actor.id)
+        if(existing.agent!==agent||existing.agency!==agency||user?.content!==question)
+          throw new WorkspaceConflict("Identifiant de conversation déjà utilisé pour un autre contenu")
+        return existing
+      }
       const createdAt=now()
       w.messages.push({
         id:uuid(),turnId,userId:actor.id,agency,agent,role:"user",
@@ -512,6 +595,7 @@ export class AgenticWorkspace {
         ...(usage?{usage}:{}),
       }
       w.messages.push(assistant)
+      if(w.activeTurns)delete w.activeTurns[actor.id+":"+turnId]
       if(w.messages.length>3000)w.messages.splice(0,w.messages.length-3000)
       return assistant
     })
@@ -528,6 +612,7 @@ export class AgenticWorkspace {
       const measured=replies.filter(m=>m.usage?.totalTokens!=null)
       return {
         date,callsToday:w.llmQuota?.[date+":"+actor.id]?.calls??0,
+        organizationCallsToday:w.llmQuota?.[date+":__organization__"]?.calls??0,
         successfulReplies:replies.length,measuredReplies:measured.length,
         promptTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.promptTokens??0),0),
         completionTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.completionTokens??0),0),
@@ -537,23 +622,46 @@ export class AgenticWorkspace {
       }
     })
   }
-  reserveLlmCall(org:string,actor:Actor,dailyLimit:number,at=now()) {
+  reserveLlmCall(org:string,actor:Actor,dailyLimit:number,at=now(),
+    tenantDailyLimit=250,turn?:{turnId:string;agent:AgentKey;agency:string;question:string}) {
     return this.visit(org,true,(w)=>{
       const date=at.slice(0,10)
-      w.llmQuota ??={}
+      w.llmQuota ??={};w.activeTurns ??={}
       const key=date+":"+actor.id
+      const orgKey=date+":__organization__"
       const previous=w.llmQuota[key]?.calls??0
-      if(previous>=dailyLimit)throw new WorkspaceBudgetExceeded("Quota quotidien de conversations IA atteint")
+      const orgPrevious=w.llmQuota[orgKey]?.calls??0
+      if(previous>=dailyLimit)throw new WorkspaceBudgetExceeded("Quota quotidien utilisateur de conversations IA atteint")
+      if(orgPrevious>=tenantDailyLimit)throw new WorkspaceBudgetExceeded("Quota quotidien organisation de conversations IA atteint")
+      if(turn){
+        const turnKey=actor.id+":"+turn.turnId
+        const existing=w.activeTurns[turnKey]
+        if(existing&&existing.expiresAt>at)
+          throw new WorkspaceConflict("Une réponse existe déjà pour ce tour et est en cours")
+        w.activeTurns[turnKey]={
+          expiresAt:new Date(Date.parse(at)+30000).toISOString(),
+          agent:turn.agent,agency:turn.agency,questionHash:hash(turn.question),
+        }
+      }
       w.llmQuota[key]={date,calls:previous+1}
+      w.llmQuota[orgKey]={date,calls:orgPrevious+1}
       for(const k of Object.keys(w.llmQuota))
         if(k.slice(0,10)<date)delete w.llmQuota[k]
-      return {callsToday:previous+1,dailyLimit}
+      return {callsToday:previous+1,dailyLimit,
+        organizationCallsToday:orgPrevious+1,organizationDailyLimit:tenantDailyLimit}
     })
   }
-  getTurn(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string) {
-    return this.visit(org,false,(w)=>w.messages.find((m)=>
-      m.turnId===turnId&&m.userId===actor.id&&m.agent===agent
-      &&m.agency===agency&&m.role==="assistant"))
+  getTurn(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string,question?:string) {
+    return this.visit(org,false,w=>{
+      const assistant=w.messages.find(m=>m.turnId===turnId&&m.userId===actor.id&&
+        m.agent===agent&&m.agency===agency&&m.role==="assistant")
+      if(assistant&&question!==undefined){
+        const user=w.messages.find(m=>m.turnId===turnId&&m.userId===actor.id&&
+          m.agent===agent&&m.agency===agency&&m.role==="user")
+        if(!user||user.content!==question)throw new WorkspaceConflict("Tour de conversation réutilisé avec une question différente")
+      }
+      return assistant
+    })
   }
   /**
    * Worker process: due reminders are deduplicated by mission and calendar date.

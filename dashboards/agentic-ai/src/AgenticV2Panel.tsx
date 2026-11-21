@@ -9,6 +9,7 @@ type Forecast = {status:"backtested_pilot"|"insufficient_history"|"rejected_back
 type Signal = {id:string;agency:string;title:string;explanation:string;severity:string;
   acknowledgedAt:string|null;source:string;asOf:string}
 type DailyUsage={date:string;callsToday:number;dailyLimit:number;
+  organizationCallsToday:number;
   successfulReplies:number;measuredReplies:number;unreportedReplies:number;
   totalTokensMeasured:number;measurement:string}
 type Action = {id:string;agency:string;actionType:string;summary:string;approvedBy:string;
@@ -23,6 +24,8 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
   const [forecast,setForecast]=useState<Forecast|null>(null)
   const [dailyUsage,setDailyUsage]=useState<DailyUsage|null>(null)
   const [signals,setSignals]=useState<Signal[]>([])
+  const [policy,setPolicy]=useState<{enabled:boolean;revenueDeclinePercent:number;
+    overdueTnd:number;stockAlertEnabled:boolean;cooldownDays:number}|null>(null)
   const [actions,setActions]=useState<Action[]>([])
   const [error,setError]=useState("")
   const [busy,setBusy]=useState(false)
@@ -36,11 +39,14 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
       getJson<{signals:Signal[]}>(token,"/signals"),
       getJson<{actions:Action[]}>(token,"/actions"),
       getJson<DailyUsage>(token,"/usage"),
+      getJson<{policy:{enabled:boolean;revenueDeclinePercent:number;
+        overdueTnd:number;stockAlertEnabled:boolean;cooldownDays:number}}>(token,"/signals/policy"),
     ])
     setForecast(result[0].status==="fulfilled"?result[0].value:null)
     setSignals(result[1].status==="fulfilled"?result[1].value.signals:[])
     setActions(result[2].status==="fulfilled"?result[2].value.actions:[])
     setDailyUsage(result[3].status==="fulfilled"?result[3].value:null)
+    setPolicy(result[4].status==="fulfilled"?result[4].value.policy:null)
   },[token,agency,from,to])
   useEffect(()=>{
     void reload()
@@ -51,6 +57,16 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
     setBusy(true);setError("")
     try{await fn();await reload()}catch(e){setError(e instanceof Error?e.message:"Action non disponible")}
     finally{setBusy(false)}
+  }
+  const savePolicy=async()=>{
+    if(!policy)return
+    await act(()=>fetch(ROOT+"/signals/policy",{
+      method:"PUT",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify(policy),
+    }).then(async r=>{
+      if(!r.ok)throw Error("Modification de politique refusée (HTTP "+r.status+")")
+      return r.json()
+    }))
   }
   const download=async(item:Action)=>{
     const response=await fetch(ROOT+"/actions/"+encodeURIComponent(item.id)+"/export",{
@@ -69,7 +85,8 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
     <div className="aw-v2-grid">
       <section className="aw-panel" data-agentic-v2="usage">
         <h3>Consommation IA de votre session</h3>
-        {dailyUsage?<><p><strong>{dailyUsage.callsToday} / {dailyUsage.dailyLimit}</strong> appels LLM aujourd'hui</p>
+        {dailyUsage?<><p><strong>{dailyUsage.callsToday} / {dailyUsage.dailyLimit}</strong> appels LLM aujourd'hui
+          <small>Organisation : {dailyUsage.organizationCallsToday} appels aujourd'hui</small></p>
           <p><strong>{dailyUsage.totalTokensMeasured.toLocaleString("fr-FR")}</strong> tokens réellement reportés</p>
           <p className="aw-sub">{dailyUsage.measuredReplies} réponse(s) avec comptage connu · {dailyUsage.unreportedReplies} sans comptage fournisseur</p>
           <p className="aw-sub">Les réponses déterministes / briefs n'utilisent aucun token. Les appels échoués sont inclus dans le quota, mais pas dans les tokens mesurés.</p>
@@ -90,7 +107,23 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
         <div className="aw-inline"><h3>Alertes proactives</h3>
           {role==="admin"&&<button className="aw-secondary" disabled={busy}
             onClick={()=>{void act(()=>getJson(token,"/signals/scan","POST"))}}>Analyser les sources</button>}</div>
-        <p className="aw-sub">Surveillance à la date de source (indépendante du filtre période) · in-app.</p>
+        <p className="aw-sub">Surveillance à la date de source · in-app · politiques propres à l'organisation.</p>
+        {role==="admin"&&policy&&<div className="aw-alert-settings">
+          <label><input type="checkbox" checked={policy.enabled}
+            onChange={e=>setPolicy(p=>p?{...p,enabled:e.target.checked}:p)}/> Alertes activées</label>
+          <label>Seuil baisse CA (%)<input type="number" min={5} max={90}
+            value={policy.revenueDeclinePercent}
+            onChange={e=>setPolicy(p=>p?{...p,revenueDeclinePercent:Number(e.target.value)}:p)}/></label>
+          <label>Montant créances échues (TND)<input type="number" min={0} step="0.001"
+            value={policy.overdueTnd}
+            onChange={e=>setPolicy(p=>p?{...p,overdueTnd:Number(e.target.value)}:p)}/></label>
+          <label><input type="checkbox" checked={policy.stockAlertEnabled}
+            onChange={e=>setPolicy(p=>p?{...p,stockAlertEnabled:e.target.checked}:p)}/> Alertes stock</label>
+          <label>Anti-doublon (jours)<input type="number" min={0} max={90}
+            value={policy.cooldownDays}
+            onChange={e=>setPolicy(p=>p?{...p,cooldownDays:Number(e.target.value)}:p)}/></label>
+          <button className="aw-secondary" disabled={busy} onClick={()=>{void savePolicy()}}>Enregistrer règles</button>
+        </div>}
         {visibleSignals.slice(0,6).map(s=><div className="aw-notification" key={s.id}>
           <div><strong>{s.title}</strong><p>{s.explanation}</p><small>{s.agency} · arrêté {s.asOf} · {s.severity}</small></div>
           {!s.acknowledgedAt&&<button className="aw-secondary" disabled={busy} onClick={()=>{

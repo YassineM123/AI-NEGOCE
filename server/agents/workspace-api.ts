@@ -293,6 +293,8 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       const approval=await workspace.reviewApproval(
         org(req),actor(req),id.data,
         parsed.data.expectedVersion,parsed.data.decision,parsed.data.comment,
+        parsed.data.decision==="approved"?
+          {source:deps.dataset().metadata.source,asOf:deps.dataset().metadata.asOf}:undefined,
       )
       await audit(req,"approval."+parsed.data.decision,approval.id,{
         missionId:approval.missionId,reviewedBy:req.principal!.id,
@@ -317,6 +319,21 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     })
     res.setHeader("Cache-Control","no-store")
     return res.json(forecast)
+  })
+  app.get(base+"/signals/policy",requireRoles("admin","manager"),async(req,res)=>{
+    res.setHeader("Cache-Control","no-store")
+    return res.json({policy:await workspace.getAlertPolicy(org(req),actor(req))})
+  })
+  app.put(base+"/signals/policy",requireRoles("admin"),async(req,res)=>{
+    const parsed=z.object({
+      enabled:z.boolean(),revenueDeclinePercent:z.number().min(5).max(90),
+      overdueTnd:z.number().min(0).max(100_000_000),
+      stockAlertEnabled:z.boolean(),cooldownDays:z.number().int().min(0).max(90),
+    }).strict().safeParse(req.body)
+    if(!parsed.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    const policy=await workspace.updateAlertPolicy(org(req),actor(req),parsed.data)
+    await audit(req,"proactive.policy.updated",org(req),{policy})
+    return res.json({policy})
   })
   app.get(base+"/signals",requireRoles("admin","manager"),async(req,res)=>{
     res.setHeader("Cache-Control","no-store")
@@ -412,7 +429,11 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         code:"AGENT_LLM_UNCONFIGURED",
         message:"Configurez un fournisseur LLM réel (GEMINI_API_KEY) sur le serveur pour les conversations agentiques.",
       }})
-    const previous=await workspace.getTurn(org(req),actor(req),agent.data,parsed.data.agency,parsed.data.turnId)
+    let previous
+    try{
+      previous=await workspace.getTurn(org(req),actor(req),agent.data,
+        parsed.data.agency,parsed.data.turnId,parsed.data.message)
+    }catch(error){return apiError(res,error)}
     if(previous)return res.json({message:previous,reused:true})
     const history=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency)
     const report=extractReport(agent.data,s,deps.dataset(),parsed.data.message)
@@ -421,11 +442,19 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     // Security/trace: prompt budget is capped, history is bounded and selected
     // citations are only those actually supplied to the model.
     const system=compact.prompt
-    let quota:{callsToday:number;dailyLimit:number}
+    let quota:{callsToday:number;dailyLimit:number;
+      organizationCallsToday:number;organizationDailyLimit:number}
     try{
       const configured=Number(process.env.AGENTIC_DAILY_LLM_CALL_LIMIT||"40")
       const dailyLimit=Number.isInteger(configured)&&configured>=1&&configured<=100?configured:40
-      quota=await workspace.reserveLlmCall(org(req),actor(req),dailyLimit)
+      const configuredOrg=Number(process.env.AGENTIC_TENANT_DAILY_LLM_CALL_LIMIT||"250")
+      const orgDailyLimit=Number.isInteger(configuredOrg)&&configuredOrg>=1&&configuredOrg<=10000?
+        configuredOrg:250
+      quota=await workspace.reserveLlmCall(org(req),actor(req),dailyLimit,
+        new Date().toISOString(),orgDailyLimit,{
+          turnId:parsed.data.turnId,agent:agent.data,agency:parsed.data.agency,
+          question:parsed.data.message,
+        })
     }catch(error){return apiError(res,error)}
     try {
       const response=await llm.chat([
@@ -434,7 +463,8 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         {role:"user",content:parsed.data.message},
       ],{temperature:0.2,maxTokens:compact.maxOutputTokens,timeoutMs:15000})
       const answer=response.content.trim().slice(0,4500)
-      if(!answer)return res.status(502).json({error:{code:"LLM_EMPTY_RESPONSE"}})
+      if(!answer){await workspace.releaseLlmTurn(org(req),actor(req),parsed.data.turnId)
+        return res.status(502).json({error:{code:"LLM_EMPTY_RESPONSE"}})}
       const saved=await workspace.saveChat(org(req),actor(req),agent.data,
         parsed.data.agency,parsed.data.turnId,parsed.data.message,
         answer,compact.references,response.model,{
@@ -453,11 +483,14 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       })
       res.setHeader("Cache-Control","no-store")
       return res.json({message:saved,mode:"llm_grounded",erpWrites:0,
-        budget:{callsToday:quota.callsToday,dailyLimit:quota.dailyLimit},
+        budget:{callsToday:quota.callsToday,dailyLimit:quota.dailyLimit,
+          organizationCallsToday:quota.organizationCallsToday,
+          organizationDailyLimit:quota.organizationDailyLimit},
         context:{factsIncluded:compact.selected.length,characters:compact.contextChars,
           estimatedTokens:compact.approximatePromptTokens}})
     }catch(error){
-      if(error instanceof WorkspaceForbidden)return apiError(res,error)
+      await workspace.releaseLlmTurn(org(req),actor(req),parsed.data.turnId)
+      if(error instanceof WorkspaceForbidden||error instanceof WorkspaceConflict)return apiError(res,error)
       req.log.warn({reason:"provider_unavailable"}, "agent LLM call failed")
       return res.status(502).json({error:{
         code:"AGENT_LLM_UNAVAILABLE",message:"Modèle conversationnel temporairement indisponible",

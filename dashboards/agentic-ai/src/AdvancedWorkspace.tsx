@@ -35,7 +35,8 @@ type MissionPreview={planVersion:string;status:string;source:string;asOf:string;
 type Approval={
   id:string;missionId:string;agency:string;agent:AgentDomain;requestedBy:string;
   status:"pending"|"approved"|"rejected";version:number;actionType:string;
-  summary:string;evidence:string[];createdAt:string;reviewedBy:string|null;comment:string|null
+  summary:string;evidence:string[];createdAt:string;reviewedBy:string|null;comment:string|null;
+  expiresAt?:string;proposalHash?:string
 }
 export type Notification={
   id:string;agency:string;kind:string;title:string;message:string;missionId:string|null;
@@ -219,6 +220,7 @@ export function AdvancedApprovals({token,agency,userId}:{token:string;agency:str
         <article className="aw-mission" key={a.id}>
           <div className="aw-inline"><strong>{a.summary}</strong><span className={"aw-status aw-status-"+a.status}>{a.status}</span></div>
           <p>{label(a.agent)} · {a.agency} · {when(a.createdAt)}</p>
+          {a.expiresAt&&<small>Validation valable jusqu'au {when(a.expiresAt)} · source à revalider au moment de l'accord</small>}
           <p className="aw-sub">Action proposée : <strong>{a.actionType}</strong> · demandeur : {a.requestedBy}</p>
           {a.evidence.length>0&&<div className="aw-result">Références : {a.evidence.slice(0,8).join(", ")}</div>}
           {a.status==="pending" && a.requestedBy===userId?<Notice>Double validation obligatoire : vous ne pouvez pas approuver votre propre demande.</Notice>:null}
