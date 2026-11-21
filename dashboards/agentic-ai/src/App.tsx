@@ -7,7 +7,7 @@ import {
   type DecisionState, type Mission, type MissionState, type Priority,
 } from "./data"
 import {
-  createLocalDemoSession, fetchPlatformContext, fetchRevenueGrowth,
+  createLocalDemoSession, createReinvestigation, fetchPlatformContext, fetchRevenueGrowth,
   fetchSpecialistReport, fetchDirectorReport, fetchSharedOverview,
   type PlatformContext, type AnalyticsOverview, type SharedFilters, type RevenueResult, type SpecialistReport,
   type SpecialistAgent, type DirectorReport,
@@ -107,6 +107,9 @@ export default function App() {
   const [portalTab, setPortalTab] = useState<"bi" | "ds">("bi")
   const [sharedOverview, setSharedOverview] = useState<AnalyticsOverview | null>(null)
   const [sharedError, setSharedError] = useState("")
+  const snapshotsSeen = useRef<Record<string,string>>({})
+  const [snapshotChange,setSnapshotChange] = useState<{previous:string;current:string}|null>(null)
+  const [reinvestigating,setReinvestigating] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const bridgeVersion = useRef(0)
   const sharedFilters: SharedFilters = useMemo(
@@ -210,6 +213,56 @@ export default function App() {
     return () => controller.abort()
   }, [token, sharedFilters, refreshSeq])
 
+  // Detect only changed revisions for the SAME agency and period; changing
+  // filters alone must never manufacture a data-change notification.
+  useEffect(()=>{
+    if(!sharedOverview||!token)return
+    const key=JSON.stringify([platform?.principal.organizationId||"sandbox",agency,sharedFilters.from,sharedFilters.to])
+    const previous=snapshotsSeen.current[key]
+    const current=sharedOverview.snapshotId
+    if(sharedOverview.snapshot.storage==="postgres" && previous && previous!==current){
+      setSnapshotChange({previous,current})
+    }else if(!previous||previous===current){
+      setSnapshotChange(null)
+    }
+    snapshotsSeen.current[key]=current
+  },[sharedOverview,token,platform?.principal.organizationId,agency,sharedFilters])
+
+  // Lightweight revision polling; full BI/DS and specialist refresh only when
+  // the snapshot actually changes. No direct browser-to-PostgreSQL connection.
+  useEffect(()=>{
+    if(!token)return
+    let busy=false
+    const interval=window.setInterval(()=>{
+      if(busy||document.visibilityState!=="visible")return
+      busy=true
+      void fetchSharedOverview(token,sharedFilters).then(next=>{
+        if(next.snapshot.storage!=="postgres")return
+        const key=JSON.stringify([platform?.principal.organizationId||"sandbox",agency,sharedFilters.from,sharedFilters.to])
+        const previous=snapshotsSeen.current[key]
+        if(previous && previous!==next.snapshotId){
+          setRefreshSeq(n=>n+1)
+        }
+      }).catch(()=>{/* keep the last known snapshot; manual refresh shows errors */})
+        .finally(()=>{busy=false})
+    },30000)
+    return ()=>window.clearInterval(interval)
+  },[token,sharedFilters,agency,platform?.principal.organizationId])
+
+  const reinvestigate=async()=>{
+    if(!token||!sharedOverview||!snapshotChange)return
+    setReinvestigating(true)
+    try{
+      const result=await createReinvestigation(token,sharedFilters,snapshotChange.current)
+      setSnapshotChange(null)
+      setToast("Dossier "+result.missionId+" créé : "+result.findings+" constat(s), "+
+        (result.approvalId?"validation humaine requise.":"aucune approbation nécessaire."))
+      setPage("missions")
+    }catch(error){
+      setToast(error instanceof Error?error.message:"Création du dossier impossible")
+    }finally{setReinvestigating(false)}
+  }
+
   // Child apps never receive tokens. A strict origin/source allow-list limits bridge requests.
   useEffect(() => {
     const version = ++bridgeVersion.current
@@ -295,6 +348,8 @@ export default function App() {
     setToken(null)
     setPlatform(null)
     setSharedOverview(null)
+    setSnapshotChange(null)
+    snapshotsSeen.current={}
     setRevenue(null)
     setSpecialistReports({})
     setSpecialistErrors({})
@@ -820,6 +875,16 @@ export default function App() {
         {page !== "agent" && <div className="page-heading"><div><div className="breadcrumb">AI-NÉGOCE / AGENTIC INTELLIGENCE</div><h1>{title}</h1><p>{subtitle}</p></div><div className="heading-actions"><Action light icon="refresh" onClick={() => { if (token) { setRefreshSeq((n) => n + 1); setToast("Actualisation de la session et des rapports en cours."); } else setToast("Connectez la session centrale pour actualiser."); }}>Rafraîchir</Action>{(page === "overview" || page === "missions" || page === "director") && <Action icon="play" onClick={() => token ? navigate("missions") : setMissionModal(true)}>Lancer une mission</Action>}</div></div>}
         <div className="demo-banner"><Icon name="alert" size={17}/><span><strong>{token ? "Session sandbox connectée." : "Mode démonstration."}</strong> {token ? "Missions, approbations et notifications serveur actives. Le chat LLM exige une clé modèle réelle. Aucun write-back ERP." : "Les missions et décisions affichées sont illustratives tant que le backend n'est pas connecté."}</span><SmallLink onClick={() => navigate("connections")}>Connexions</SmallLink></div>
         {sharedSnapshotPanel()}
+        {token&&snapshotChange&&sharedOverview?.snapshot.storage==="postgres"&&
+          <section className="demo-banner" role="status" data-analytics-change={snapshotChange.current}>
+            <Icon name="refresh" size={18}/>
+            <span><strong>Nouvelle révision du dataset détectée.</strong> BI, Data Science et les spécialistes ont été recalculés sur le snapshot {snapshotChange.current}. Les anciennes approbations sont revalidées avant toute transmission.</span>
+            {agency==="all"?<span>Sélectionnez une agence pour réinvestiguer.</span>:
+              <Action light disabled={reinvestigating} onClick={()=>{void reinvestigate()}}>
+                {reinvestigating?"Analyse en cours…":"Créer nouveau dossier AI Director"}
+              </Action>}
+          </section>}
+
         {page === "overview" ? overview()
           : page === "missions" ? (token ? <AdvancedMissions token={token} agency={agency} from={sharedFilters.from} to={sharedFilters.to}/> : missionsPage())
           : page === "agents" ? agentsPage()
