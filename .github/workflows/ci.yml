@@ -10,6 +10,8 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run typecheck
+      - name: Check client demo BI JavaScript syntax
+        run: node --check dashboards/data-analysis/app.js
       - run: npm run dataset:generate
       - run: npm run db:seed
       - name: Validate pseudonymized Phase 2 Database extractions
