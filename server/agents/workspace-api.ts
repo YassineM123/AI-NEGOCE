@@ -291,6 +291,17 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     if(parsed.data.decision==="rejected" && parsed.data.comment.length<5)
       return res.status(400).json({error:{code:"COMMENT_REQUIRED"}})
     try{
+      if(parsed.data.decision==="approved"){
+        const requested=(await workspace.listApprovals(org(req),actor(req)))
+          .find(a=>a.id===id.data)
+        if(!requested)return res.status(404).json({error:{code:"NOT_FOUND"}})
+        const allowed=scope(req,requested.agency)
+        if(!allowed)return fail(res)
+        const mission=await workspace.getMission(org(req),actor(req),requested.missionId)
+        if(!mission.execution?.sourceFingerprint ||
+          mission.execution.sourceFingerprint!==scopedFingerprint(deps.dataset(),allowed))
+          throw new WorkspaceConflict("Source ou données modifiées : relancer une mission avant approbation")
+      }
       const approval=await workspace.reviewApproval(
         org(req),actor(req),id.data,
         parsed.data.expectedVersion,parsed.data.decision,parsed.data.comment,
