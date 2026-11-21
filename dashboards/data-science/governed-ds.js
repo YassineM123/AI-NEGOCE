@@ -30,7 +30,10 @@ global.AINegoceGovernedDataScience=function(x,page,h){
  ]);
  const months=ds.trend.months;
  const history=fCard("CA mensuel · observations contrôlées",
-  months.length?lineChart(months.map(v=>({m:v.month,ht:v.revenue}))):warn("Aucun mois de vente observé dans le périmètre."),
+  months.length?lineChart(months.map(v=>({m:v.month,ht:v.revenue})),
+    page==="forecast"&&forecast.status==="backtested_pilot"?
+      forecast.predictions.map(p=>({m:p.month,pred:p.revenueTnd,lo:p.lowerTnd,hi:p.upperTnd})):[]):
+    warn("Aucun mois de vente observé dans le périmètre."),
   {icon:"trend"});
  const trendTable=table([
   {label:"Mois",key:"month"},{label:"CA HT TND",format:r=>tnd(r.revenue)},
