@@ -40,7 +40,38 @@ function overviewFixture(params: URLSearchParams) {
         metadata: { source: "Synthetic QA", asOf: "2026-10-31", currency: "TND" },
       },
     },
-    dataScience: { status: "not_configured", modelServingVerified: false, predictions: [] },
+    dataScience: {status:"available",modelServingVerified:false,predictions:[],
+      analysis:{
+        version:"ds-scoped-v1",mode:"governed_read_only",
+        source:"Synthetic QA",asOf:"2026-10-31",referenceDate:"2026-10-31",
+        portfolio:{status:"observed",customers:1,inactive90:1,watch30to89:0,recent0to29:0,
+          scoring:"observed_recency_not_churn_probability",
+          top:[{customerId:"qa-customer",name:"Client QA",revenueTnd:seed,
+            documents:2,daysSinceLastPurchase:111,segment:"inactive_90"}]},
+        trend:{months:[{month:from.slice(0,7),revenue:seed,documents:2,customers:1,closed:true}],
+          changePercent:null,classification:"not_comparable",method:"consecutive_closed_months_only"},
+        forecast:{status:"insufficient_history",modelVersion:"ridge-trend-v1.0.0",
+          trainedThrough:null,trainingMonths:1,
+          backtest:{holdoutMonths:0,wape:null,bias:null,thresholdWape:0.35},
+          predictions:[],verifiedProduction:false,warnings:["historique insuffisant"]},
+        inventory:{status:"not_available",periodApplicable:false,positions:0,positionsWithThreshold:0,
+          belowReorder:0,topBelow:[]},
+        cash:{status:"not_available",asOf:"2026-10-31",
+          basis:"outstanding_for_invoices_issued_in_selected_period",
+          outstandingTnd:0,overdueTnd:0,buckets:[
+            {key:"not_due",label:"Non échues",amountTnd:0,documents:0}]},
+        scenarios:{status:"hypotheses",basisRevenueTnd:seed,
+          options:[{id:"prudent",label:"Prudent",variationPercent:-10,
+            revenueTnd:Math.round(seed*900)/1000,cashImpactTnd:null,netMarginTnd:null,feasible:null},
+          {id:"central",label:"Central",variationPercent:0,revenueTnd:seed,
+            cashImpactTnd:null,netMarginTnd:null,feasible:null},
+          {id:"ambitious",label:"Ambitieux",variationPercent:15,
+            revenueTnd:Math.round(seed*1150)/1000,
+            cashImpactTnd:null,netMarginTnd:null,feasible:null}],
+          method:"arithmetic_sensitivity_not_forecast"},
+        warnings:["Données synthétiques; modèles expérimentaux"],
+      },
+    },
     agentic: {
       status: "available", executionMode: "read_only",
       availableAgents: ["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"],
@@ -123,12 +154,16 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(ds.locator('[data-shared-kpi="revenue"]')).toHaveText("100.000", { timeout: 45000 })
   await expect(ds.locator('[data-shared-kpi="receivables"]')).toHaveText("10.000")
   await expect(ds.getByText("Client QA")).toBeVisible()
+  await expect(ds.locator('[data-ds-version="ds-scoped-v1"]')).toHaveCount(1)
+  await expect(ds.locator('[data-ds-snapshot]')).toHaveAttribute("data-ds-snapshot","snap-Sfax-2026-10-01")
+  await expect(ds.getByText("Prudent",{exact:true})).toBeVisible()
 
   await page.getByRole("combobox", { name: "Période" }).selectOption("T3 2026")
   await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("1100.000")
   await expect(ds.locator('[data-shared-kpi="revenue"]')).toHaveText("1100.000", { timeout: 45000 })
   await expect(ds.locator('[data-shared-kpi="receivables"]')).toHaveText("110.000")
   await expect(ds.locator('[data-platform-app="ds"]')).toHaveAttribute("data-platform-snapshot", "snap-Sfax-2026-07-01")
+  await expect(ds.locator('[data-ds-snapshot]')).toHaveAttribute("data-ds-snapshot","snap-Sfax-2026-07-01")
 
   await page.getByRole("tab", { name: "Data Analyse · BI" }).click()
   await expect(bi.locator('[data-shared-kpi="revenue"]')).toHaveText("1100.000", { timeout: 30000 })
