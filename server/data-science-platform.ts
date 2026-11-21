@@ -6,6 +6,7 @@ import type {Dataset,Filters} from "./services.js"
 import {filteredSales} from "./services.js"
 import {buildAnalyticsInsights} from "./analytics-insights.js"
 import {evaluateAgenticForecast} from "./agents/predictive.js"
+import {forecastSkuDemand} from "./sku-demand-model.js"
 const m=(n:number)=>Math.round(n*1000)
 const money=(n:number)=>Math.round(n)/1000
 const between=(d:string,f:Filters)=>(!f.from||d>=f.from)&&(!f.to||d<=f.to)
@@ -67,6 +68,7 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
         i.summary.monthlyChangePercent<=-20?"declining" as const:
         i.summary.monthlyChangePercent>=20?"growing" as const:"stable" as const,
       method:"consecutive_closed_months_only" as const},
+    skuDemand:forecastSkuDemand(data,filters),
     forecast:{status:pilot.status,modelVersion:pilot.model.version,
       trainedThrough:pilot.model.trainedThrough,trainingMonths:pilot.trainingMonths,
       backtest:pilot.backtest,predictions:pilot.predictions,
@@ -92,6 +94,7 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
       })),method:"arithmetic_sensitivity_not_forecast" as const},
     warnings:[
       "La récence observée n'est pas une probabilité ML de churn.",
+      "Prévision SKU calculée uniquement si quantité et historique vérifiables; aucun chiffre de quantité déduit du CA.",
       "Prévision CA ridge expérimentale; sans backtest admissible, aucun chiffre prédit.",
       "Stock = position actuelle, non reconstituée pour une période historique.",
       "Créances = encours arrêté sur factures émises dans la période; pas prévision cash.",
