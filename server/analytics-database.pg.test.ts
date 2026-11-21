@@ -99,6 +99,40 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect(rev.status).toBe(200)
     expect(rev.body.snapshot.period).toEqual({from:filter.from,to:filter.to})
     expect(JSON.stringify(rev.body)).not.toContain("Client Tunis")
+    const allPeriod={agency:"Sfax",from:"2026-01-01",to:"2026-12-31"}
+    for(const endpoint of [
+      "/api/v1/agentic/financial-strategy/analysis",
+      "/api/v1/agentic/supply-chain/recommendations",
+      "/api/v1/agentic/business-strategy/scenarios",
+      "/api/v1/agentic/revenue-growth/opportunities",
+    ]){
+      const report=await request(app).get(endpoint).set(bearer("dev-admin")).query(allPeriod)
+      expect(report.status,endpoint).toBe(200)
+      expect(report.body.snapshot.period,endpoint)
+        .toEqual({from:allPeriod.from,to:allPeriod.to})
+      expect(JSON.stringify(report.body),endpoint).not.toContain("Client Tunis")
+    }
+    const director=await request(app).post("/api/v1/agentic/ai-director/investigate")
+      .set(bearer("dev-admin"))
+      .send({...allPeriod,objective:"Comparer ventes, finance, stocks et stratégie pour la direction"})
+    expect(director.status).toBe(200)
+    expect(director.body.sections).toHaveLength(4)
+    expect(director.body.summary.erpWrites).toBe(0)
+    expect(JSON.stringify(director.body)).not.toContain("Client Tunis")
+    const mission=await request(app).post("/api/v1/agentic/workspace/missions")
+      .set(bearer("dev-admin")).send({...allPeriod,agent:"supply_chain_intelligence",
+        title:"Stock fictif QA à examiner",
+        objective:"Étudier le seuil de stock de Sfax et préparer une demande manuelle"})
+    expect(mission.status).toBe(201)
+    const run=await request(app)
+      .post("/api/v1/agentic/workspace/missions/"+mission.body.mission.id+"/run")
+      .set(bearer("dev-admin")).send({expectedVersion:1})
+    expect(run.status).toBe(200)
+    expect(run.body.mission.execution.status).toBe("completed")
+    expect(run.body.mission.lastRun.findings).toBeGreaterThan(0)
+    expect(run.body.approval.status).toBe("pending")
+    const approvalId=run.body.approval.id
+
     const financial=await request(app).get("/api/v1/agentic/financial-strategy/analysis")
       .set(bearer("dev-manager-sfax")).query(filter)
     expect(financial.status).toBe(200)
@@ -113,6 +147,13 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect((await saveAnalyticalDataset(t,second,"synthetic",true)).revision).toBe(2)
     const reread=await readAnalyticalDataset(t)
     expect(reread?.revision).toBe(2)
+    const staleReview=await request(app)
+      .post("/api/v1/agentic/workspace/approvals/"+approvalId+"/review")
+      .set(bearer("dev-manager-sfax"))
+      .send({expectedVersion:1,decision:"approved",comment:"Approbation périmée"})
+    expect(staleReview.status).toBe(409)
+    expect((await request(app).get("/api/v1/agentic/workspace/actions")
+      .set(bearer("dev-admin"))).body.actions).toEqual([])
     const two=await request(app).get("/api/v1/analytics/overview")
       .set(bearer("dev-manager-sfax")).query(filter)
     expect(two.status).toBe(200)
