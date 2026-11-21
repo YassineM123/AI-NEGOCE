@@ -87,15 +87,15 @@ export class AgenticWorkspace {
     const tenant = this.store.forTenant(organizationId)
     if (tenant.transaction) {
       return tenant.transaction(async (client) => {
-        await client.query(
+        if (write) await client.query(
           "INSERT INTO agentic_workspaces(organization_id) VALUES($1) ON CONFLICT (organization_id) DO NOTHING",
           [organizationId],
         )
         const response = await client.query(
-          "SELECT payload FROM agentic_workspaces WHERE organization_id=$1 FOR UPDATE",
+          "SELECT payload FROM agentic_workspaces WHERE organization_id=$1" + (write ? " FOR UPDATE" : ""),
           [organizationId],
         )
-        const w = validRecord(response.rows[0]?.payload as AgenticWorkspaceData)
+        const w = validRecord((response.rows[0]?.payload ?? blank()) as AgenticWorkspaceData)
         const result = fn(w)
         if (write) await client.query(
           "UPDATE agentic_workspaces SET payload=$2::jsonb,revision=revision+1,updated_at=now() WHERE organization_id=$1",
