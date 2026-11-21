@@ -124,6 +124,25 @@ describe("analytics platform API", () => {
     expect(commercial.body.dataScience.analysis).toBeUndefined()
   })
 
+  it("returns identical BI revenue and DS/Agentic forecast from one agency-period dataset",async()=>{
+    const {app}=makeApp()
+    const filters={agency:"Sfax",from:"2025-01-01",to:"2025-12-31"}
+    const overview=await request(app).get("/api/v1/analytics/overview")
+      .query(filters).set(bearer("dev-manager-sfax"))
+    const agentic=await request(app).get("/api/v1/agentic/workspace/predictions")
+      .query(filters).set(bearer("dev-manager-sfax"))
+    expect(overview.status).toBe(200)
+    expect(agentic.status).toBe(200)
+    const ds=overview.body.dataScience.analysis
+    expect(ds.source).toBe(overview.body.snapshot.source)
+    expect(ds.scenarios.basisRevenueTnd).toBe(overview.body.bi.data.revenue)
+    expect(ds.trend.months).toEqual(overview.body.insights.months)
+    expect(ds.forecast.status).toBe(agentic.body.status)
+    expect(ds.forecast.predictions).toEqual(agentic.body.predictions)
+    expect(ds.forecast.modelVersion).toBe(agentic.body.model.version)
+    expect(overview.body.dataScience.modelServingVerified).toBe(false)
+  })
+
   it("rejects invalid periods", async () => {
     const { app } = makeApp()
     const response = await request(app)
