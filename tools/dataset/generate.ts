@@ -14,6 +14,13 @@ import path from "node:path"
 export const GENERATOR_VERSION = "1.0.0"
 const SEED = Number(process.env.SEED ?? 20261015)
 const OUT = path.resolve(process.argv[2] ?? "datasets/synthetic/v1")
+const demoEnd=process.env.SYNTHETIC_PERIOD_END??"2026-06-30"
+if(!/^202[56]-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])$/.test(demoEnd)||
+  demoEnd<"2025-01-01"||demoEnd>"2026-12-31"||
+  Number.isNaN(Date.parse(demoEnd+"T00:00:00Z"))||
+  new Date(demoEnd+"T00:00:00Z").toISOString().slice(0,10)!==demoEnd)
+  throw new Error("SYNTHETIC_PERIOD_END must be a valid date from 2025-01-01 to 2026-12-31")
+
 
 // Explicit TEST SCENARIO assumptions — not statements about Tunisian tax law.
 export const SCENARIO = {
@@ -26,8 +33,8 @@ export const SCENARIO = {
   ],
   stampDutyMillimes: 1000, // flat stamp per sales invoice (scenario value)
   periodStart: "2025-01-01",
-  periodEnd: "2026-06-30",
-  asOf: "2026-06-30",
+  periodEnd: demoEnd,
+  asOf: demoEnd,
   costRule:
     "Line cost = quantity x product standard unit cost at generation time (no WAC revaluation).",
 }
