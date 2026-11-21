@@ -69,7 +69,12 @@ describe("Phase 2 pseudonymized IAINEG database demo", () => {
     expect(overview.body.bi.data.recordCount).toBe(3101)
     expect(overview.body.bi.data.revenue).toBeCloseTo(41223328.922, 3)
 
-    expect(overview.body.dataScience.status).toBe("not_configured")
+    expect(overview.body.dataScience.status).toBe("available")
+    expect(overview.body.dataScience.analysis.version).toBe("ds-scoped-v1")
+    expect(overview.body.dataScience.analysis.scenarios.basisRevenueTnd).toBeCloseTo(overview.body.bi.data.revenue,3)
+    expect(overview.body.dataScience.analysis.forecast.verifiedProduction).toBe(false)
+    expect(overview.body.dataScience.analysis.inventory.status).toBe("not_available")
+    expect(overview.body.dataScience.analysis.cash.status).toBe("not_available")
     expect(overview.body.warnings.join(" ")).toMatch(/EUR\/USD/)
 
     const revenue = await request(app)

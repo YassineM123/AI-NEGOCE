@@ -99,7 +99,7 @@ global.AINegoceGovernedDataScience=function(x,page,h){
     {icon:"shield"});
  const grid=(...parts)=>'<div class="f-grid f-halves">'+parts.join("")+"</div>";
  let body=scope;
- if(page==="home")body+=grid(history,seg,scenariosTable,sourcePanel);
+ if(page==="home")body+=grid(history,clients,seg,scenariosTable,sourcePanel);
  else if(page==="clients")body+=grid(clients,seg);
  else if(page==="churn")body+=grid(seg,clients);
  else if(page==="forecast")body+=grid(history,forecastInfo)+trendTable;
