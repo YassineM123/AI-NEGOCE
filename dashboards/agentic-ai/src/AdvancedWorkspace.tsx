@@ -257,3 +257,57 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
     <p className="aw-sub">Les échanges ne déclenchent aucun email, achat, paiement ou autre action ERP. Sans fournisseur LLM configuré, le serveur renvoie une erreur explicite.</p>
   </section>
 }
+
+
+export function AdvancedOverview({token,agency,onNavigate}:{
+  token:string;agency:string;onNavigate:(page:"missions"|"decisions"|"notifications")=>void
+}){
+  const [missions,setMissions]=useState<Mission[]>([])
+  const [approvals,setApprovals]=useState<Approval[]>([])
+  const [notifications,setNotifications]=useState<Notification[]>([])
+  const [error,setError]=useState("")
+  const load=useCallback(async()=>{
+    try{
+      const [m,a,n]=await Promise.all([
+        api<{missions:Mission[]}>(token,"/missions"),
+        api<{approvals:Approval[]}>(token,"/approvals"),
+        api<{notifications:Notification[]}>(token,"/notifications"),
+      ])
+      setMissions(m.missions);setApprovals(a.approvals);setNotifications(n.notifications);setError("")
+    }catch(e){setError(e instanceof Error?e.message:"Données Agentic indisponibles")}
+  },[token])
+  useEffect(()=>{
+    void load()
+    const timer=setInterval(()=>{if(!document.hidden)void load()},20000)
+    return ()=>clearInterval(timer)
+  },[load])
+  const filteredMissions=missions.filter(m=>agency==="all"||m.agency===agency)
+  const filteredApprovals=approvals.filter(a=>agency==="all"||a.agency===agency)
+  const filteredAlerts=notifications.filter(n=>agency==="all"||n.agency===agency)
+  return <div className="aw-overview">
+    <header className="aw-heading"><div><h3>Supervision Agentic — données serveur</h3>
+      <p>Missions et notifications enregistrées · approbations tracées · rafraîchissement automatique</p></div>
+      <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
+    {error&&<Notice>{error}</Notice>}
+    <div className="aw-metrics">
+      <button onClick={()=>onNavigate("missions")}><small>Missions</small><strong>{filteredMissions.length}</strong><span>Dossiers persistés</span></button>
+      <button onClick={()=>onNavigate("missions")}><small>Analyses en revue</small><strong>{filteredMissions.filter(m=>m.status==="awaiting_approval").length}</strong><span>En attente humaine</span></button>
+      <button onClick={()=>onNavigate("decisions")}><small>Décisions ouvertes</small><strong>{filteredApprovals.filter(a=>a.status==="pending").length}</strong><span>Jamais exécutées en ERP</span></button>
+      <button onClick={()=>onNavigate("notifications")}><small>Notifications serveur</small><strong>{filteredAlerts.length}</strong><span>Événements en application</span></button>
+    </div>
+    <div className="aw-overview-row">
+      <section className="aw-panel"><h3>Dernières missions</h3>{filteredMissions.length?
+        filteredMissions.slice(0,5).map(m=><div className="aw-notification" key={m.id}>
+          <div><strong>{m.title}</strong><p>{label(m.agent)} · {m.agency}</p></div>
+          <span className={"aw-status aw-status-"+m.status}>{status(m.status)}</span>
+        </div>):<Empty>Pas encore de mission enregistrée.</Empty>}
+        <button className="aw-secondary" onClick={()=>onNavigate("missions")}>Gérer les missions</button>
+      </section>
+      <section className="aw-panel"><h3>Revue et gouvernance</h3>
+        <p className="aw-sub">Les recommandations sont archivées avec preuves et soumises à séparation des rôles.</p>
+        <p className="aw-hint">Un bouton « Approuver » valide le dossier uniquement : aucun bon de commande, paiement ou message externe n'est émis.</p>
+        <button className="aw-primary" onClick={()=>onNavigate("decisions")}>Ouvrir les approbations</button>
+      </section>
+    </div>
+  </div>
+}
