@@ -36,7 +36,8 @@
     "agentic:typecheck": "tsc --project dashboards/agentic-ai/tsconfig.json --noEmit",
     "agentic:build": "vite build --config dashboards/agentic-ai/vite.config.ts",
     "agentic:worker": "tsx --env-file-if-exists=.env server/agents/workspace-worker.ts",
-    "demo:database:audit": "tsx scripts/audit-demo-database.ts"
+    "demo:database:audit": "tsx scripts/audit-demo-database.ts",
+    "analytics:seed": "tsx --env-file-if-exists=.env scripts/seed-analytics-database.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.100",
