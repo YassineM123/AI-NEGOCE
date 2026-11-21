@@ -10,6 +10,7 @@ import { evaluateAgenticForecast } from "./predictive.js"
 import { buildGroundedPrompt,compactHistory,deterministicBrief } from "./context-budget.js"
 import { buildExecutionTrace,type DomainRun } from "./execution-trace.js"
 import { previewMissionPlan } from "./mission-plan.js"
+import { routeAnalyticalQuestion } from "./agent-router.js"
 import { requirePermission } from "../permissions.js"
 import { analyzeFinancialStrategy } from "./financial-strategy.js"
 import { analyzeSupplyChain } from "./supply-chain.js"
@@ -423,18 +424,35 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     if(!agentAllowed(req.principal!.role,agent.data))return res.status(403).json({error:{code:"FORBIDDEN"}})
     const s=scope(req,parsed.data.agency)
     if(!s)return fail(res)
-    const llm=deps.llm
-    if(!llm || !llm.isConfigured() || llm.name==="mock")
-      return res.status(503).json({error:{
-        code:"AGENT_LLM_UNCONFIGURED",
-        message:"Configurez un fournisseur LLM réel (GEMINI_API_KEY) sur le serveur pour les conversations agentiques.",
-      }})
     let previous
     try{
       previous=await workspace.getTurn(org(req),actor(req),agent.data,
         parsed.data.agency,parsed.data.turnId,parsed.data.message)
     }catch(error){return apiError(res,error)}
     if(previous)return res.json({message:previous,reused:true})
+    const direct=routeAnalyticalQuestion({
+      agent:agent.data,question:parsed.data.message,scope:s,dataset:deps.dataset(),
+    })
+    if(direct){
+      const saved=await workspace.saveChat(org(req),actor(req),agent.data,
+        parsed.data.agency,parsed.data.turnId,parsed.data.message,
+        direct.content,direct.sources,"rules-engine-v1",{
+          promptTokens:0,completionTokens:0,totalTokens:0,
+          estimatedContextTokens:0,maxOutputTokens:0,
+        })
+      await audit(req,"agent.chat.deterministic",saved.id,{
+        agent:agent.data,agency:parsed.data.agency,rule:direct.rule,
+        modelCalls:0,tokens:0,erpWrites:0,
+      })
+      res.setHeader("Cache-Control","no-store")
+      return res.json({message:saved,mode:"deterministic",modelCalls:0,erpWrites:0})
+    }
+    const llm=deps.llm
+    if(!llm || !llm.isConfigured() || llm.name==="mock")
+      return res.status(503).json({error:{
+        code:"AGENT_LLM_UNCONFIGURED",
+        message:"Modèle conversationnel non configuré ; consultez le résumé factuel gratuit ou configurez GEMINI_API_KEY.",
+      }})
     const history=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency)
     const report=extractReport(agent.data,s,deps.dataset(),parsed.data.message)
     const compact=buildGroundedPrompt({agent:agent.data,question:parsed.data.message,
