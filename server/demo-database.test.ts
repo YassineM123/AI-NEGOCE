@@ -69,6 +69,30 @@ describe("Phase 2 pseudonymized IAINEG database demo", () => {
     expect(overview.body.bi.data.recordCount).toBe(3101)
     expect(overview.body.bi.data.revenue).toBeCloseTo(41223328.922, 3)
 
+    expect(overview.body.dataScience.status).toBe("not_configured")
+    expect(overview.body.warnings.join(" ")).toMatch(/EUR\/USD/)
+
+    const revenue = await request(app)
+      .get("/api/v1/agentic/revenue-growth/opportunities?limit=5")
+      .set(headers)
+    expect(revenue.status).toBe(200)
+    expect(revenue.body.snapshot.source).toMatch(/Database\/extractions/)
+    expect(revenue.body.executionMode).toBe("read_only")
+
+    const finance = await request(app)
+      .get("/api/v1/agentic/financial-strategy/analysis?limit=5")
+      .set(headers)
+    expect(finance.status).toBe(200)
+    expect(finance.body.snapshot.source).toMatch(/Database\/extractions/)
+    expect(finance.body.executionMode).toBe("read_only")
+
+    const supply = await request(app)
+      .get("/api/v1/agentic/supply-chain/recommendations?limit=5")
+      .set(headers)
+    expect(supply.status).toBe(200)
+    expect(supply.body.snapshot.source).toMatch(/Database\/extractions/)
+    expect(supply.body.executionMode).toBe("read_only")
+
     // The provenance endpoint is admin-only, unlike the cross-platform KPI endpoint.
     const anon = await request(app).get("/api/v1/demo/database/quality")
     expect(anon.status).toBe(401)
