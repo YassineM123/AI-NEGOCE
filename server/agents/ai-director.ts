@@ -4,7 +4,7 @@ import { analyzeRevenueGrowth } from "./revenue-growth.js"
 import { analyzeFinancialStrategy } from "./financial-strategy.js"
 import { analyzeSupplyChain } from "./supply-chain.js"
 import { analyzeBusinessStrategy } from "./business-strategy.js"
-import { ensureLimit, snapshot, type AgentDomain, type AgentFinding, type AgentReport } from "./common.js"
+import { ensureLimit, snapshot, type AgentDomain, type AgentFinding, type AgentReport, type ReportPeriod } from "./common.js"
 
 export type DirectorAgent = "revenue_growth" | AgentDomain
 export const DIRECTOR_AGENTS: DirectorAgent[] = [
@@ -32,8 +32,8 @@ export function chooseAgents(objective: string): DirectorAgent[] {
     return [...DIRECTOR_AGENTS]
   return selected.length ? selected : [...DIRECTOR_AGENTS]
 }
-function revenueSection(data: Dataset, scope: AgencyScope, limit: number): DirectorSection {
-  const result=analyzeRevenueGrowth({dataset:data,scope,limit})
+function revenueSection(data: Dataset, scope: AgencyScope, limit: number,period:ReportPeriod={}): DirectorSection {
+  const result=analyzeRevenueGrowth({dataset:data,scope,limit,period})
   return {
     agent:"revenue_growth",
     status:result.status === "ok" ? "ok" : "no_data",
@@ -72,6 +72,7 @@ export function investigateWithDirector(input: {
   dataset:Dataset
   agents?:DirectorAgent[]
   limit?:number
+  period?:ReportPeriod
 }) {
   const objective=input.objective.trim()
   if (objective.length<5 || objective.length>500) throw new Error("objective length must be from 5 to 500")
@@ -80,13 +81,13 @@ export function investigateWithDirector(input: {
   const requested=input.agents ?? chooseAgents(objective)
   const selected=DIRECTOR_AGENTS.filter((x)=>requested.includes(x))
   if (!selected.length) throw new Error("At least one recognized agent is required")
-  const snap=snapshot(input.dataset,input.scope)
+  const snap=snapshot(input.dataset,input.scope,input.period)
   const sections:DirectorSection[]=selected.map((agent)=>{
     switch(agent){
-      case "revenue_growth": return revenueSection(input.dataset,input.scope,limit)
-      case "financial_strategy": return reportSection(analyzeFinancialStrategy({dataset:input.dataset,scope:input.scope,limit}))
-      case "supply_chain_intelligence": return reportSection(analyzeSupplyChain({dataset:input.dataset,scope:input.scope,limit}))
-      case "business_strategy": return reportSection(analyzeBusinessStrategy({dataset:input.dataset,scope:input.scope,limit}))
+      case "revenue_growth": return revenueSection(input.dataset,input.scope,limit,input.period)
+      case "financial_strategy": return reportSection(analyzeFinancialStrategy({dataset:input.dataset,scope:input.scope,limit,period:input.period}))
+      case "supply_chain_intelligence": return reportSection(analyzeSupplyChain({dataset:input.dataset,scope:input.scope,limit,period:input.period}))
+      case "business_strategy": return reportSection(analyzeBusinessStrategy({dataset:input.dataset,scope:input.scope,limit,period:input.period}))
     }
   })
   const highlights=sections.flatMap((s)=>s.findings.map((f)=>({agent:s.agent,...f})))

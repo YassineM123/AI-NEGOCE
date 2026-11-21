@@ -15,7 +15,7 @@ const normalize=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/
   .toLowerCase().replace(/[’']/g,"'").trim()
 const money=(n:number)=>n.toLocaleString("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3})+" TND"
 export function routeAnalyticalQuestion(input:{
-  agent:AgentKey;question:string;scope:AgencyScope;dataset:Dataset
+  agent:AgentKey;question:string;scope:AgencyScope;dataset:Dataset;from?:string;to?:string
 }):RoutedAnswer|null {
   const q=normalize(input.question)
   if(q.length<8||q.length>280) return null
@@ -49,14 +49,14 @@ export function routeAnalyticalQuestion(input:{
   ]
   if(domains.filter(r=>r.test(q)).length>1)return null
   const prefix="Source : "+dataset.metadata.source+" ; arrêté : "+asOf+
-    " ; montant TND ; périmètre autorisé."
+    " ; période : "+(input.from??"début")+" → "+(input.to??"fin")+" ; montant TND ; périmètre autorisé."
   const answer=(rule:string,description:string,sources:string[]=[]):RoutedAnswer=>({
     mode:"deterministic",content:description+"\n"+prefix,
     sources:[...new Set(sources)].slice(0,10),modelCalls:0,tokens:0,rule,
   })
   if(["director","revenue_growth","business_strategy"].includes(input.agent)){
     if(/\b(ca|chiffre d'affaires|revenus? (total|net)|montant des ventes)\b/.test(q)){
-      const x=buildAnalyticsInsights(dataset,{agencies:scope})
+      const x=buildAnalyticsInsights(dataset,{agencies:scope,from:input.from,to:input.to})
       if(x.summary.salesRows===0)return answer("revenue_unavailable",
         "Aucune vente documentée dans ce périmètre : CA non calculable, pas zéro certifié.")
       return answer("revenue_ht_total",
@@ -65,11 +65,11 @@ export function routeAnalyticalQuestion(input:{
         " client(s). Hors données non rapprochées de l'ERP officiel.")
     }
     if(/\b(combien de clients|nombre de clients)\b/.test(q)){
-      const x=buildAnalyticsInsights(dataset,{agencies:scope})
+      const x=buildAnalyticsInsights(dataset,{agencies:scope,from:input.from,to:input.to})
       return answer("customer_count","Clients distincts sur ventes postées : "+x.summary.customerCount+".")
     }
     if(/\b(top clients|plus gros clients|principaux clients)\b/.test(q)){
-      const x=analyzeCustomerConcentration(dataset,scope)
+      const x=analyzeCustomerConcentration(dataset,scope,{from:input.from,to:input.to})
       return answer("customer_top3",x.top5.slice(0,3).length?
         x.top5.slice(0,3).map((c,i)=>String(i+1)+". "+c.customerId+" ("+c.agency+") : "+money(c.revenueTnd)).join("\n"):
         "Aucun client exploitable dans les ventes du périmètre.")
@@ -77,7 +77,7 @@ export function routeAnalyticalQuestion(input:{
   }
   if(["director","financial_strategy"].includes(input.agent)){
     if(/\b(creances? echues?|factures? en retard|retard de paiement)\b/.test(q)){
-      const x=analyzeReceivablesAging(dataset,scope)
+      const x=analyzeReceivablesAging(dataset,scope,{from:input.from,to:input.to})
       if(x.status==="not_available")return answer("receivables_unavailable",
         "Les échéances documentaires ne sont pas disponibles : ne pas conclure à zéro impayé.")
       const overdue=x.buckets.slice(1).reduce((n,b)=>n+Math.round(b.amountTnd*1000),0)/1000
@@ -88,7 +88,7 @@ export function routeAnalyticalQuestion(input:{
   }
   if(["director","supply_chain_intelligence"].includes(input.agent)){
     if(/\b(stocks? (sous|en dessous) (le )?seuil|ruptures? de stock|references? sous seuil)\b/.test(q)){
-      const r=analyzeSupplyChain({dataset,scope})
+      const r=analyzeSupplyChain({dataset,scope,period:{from:input.from,to:input.to}})
       if(r.status==="no_data")return answer("stock_unavailable",
         "Positions de stock indisponibles dans ce périmètre ; aucune absence de rupture déduite.")
       return answer("stock_threshold","Positions de stock sous seuil constatées : "+
@@ -99,7 +99,7 @@ export function routeAnalyticalQuestion(input:{
   }
   if(["director","business_strategy"].includes(input.agent)){
     if(/\b(trois scenarios|3 scenarios|prudent central ambitieux)\b/.test(q)){
-      const s=compareThreeStrategyScenarios(dataset,scope)
+      const s=compareThreeStrategyScenarios(dataset,scope,{from:input.from,to:input.to})
       return answer("strategy_what_if",s.scenarios.map(x=>x.title+" ("+
         (x.variationPercent>0?"+":"")+x.variationPercent+"% du CA) : "+
         (x.revenueTnd===null?"non disponible":money(x.revenueTnd))).join("\n")+

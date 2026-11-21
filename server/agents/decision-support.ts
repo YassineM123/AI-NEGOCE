@@ -5,15 +5,15 @@
  */
 import type {AgencyScope} from "../auth.js"
 import type {Dataset} from "../services.js"
-import {salesInScope,receivablesInScope,inventoryInScope} from "./common.js"
+import {salesInScope,receivablesInScope,inventoryInScope,reportEnd,type ReportPeriod} from "./common.js"
 
 const money=(v:number)=>Math.round(v*1000)/1000
 const sumMilli=(values:number[])=>values.reduce((n,x)=>n+Math.round(x*1000),0)/1000
 const daysBetween=(old:string,at:string)=>
   Math.round((Date.parse(at+"T00:00:00Z")-Date.parse(old+"T00:00:00Z"))/86400000)
 
-export function analyzeCustomerConcentration(data:Dataset,scope:AgencyScope){
-  const sales=salesInScope(data,scope)
+export function analyzeCustomerConcentration(data:Dataset,scope:AgencyScope,period:ReportPeriod={}){
+  const sales=salesInScope(data,scope,period)
   const clients=new Map<string,{id:string;agency:string;revenueMilli:number;invoices:Set<string>;lastPurchase:string|null}>()
   for(const sale of sales){
     const id=sale.customerId || "name:"+sale.agency+":"+sale.customer
@@ -32,23 +32,23 @@ export function analyzeCustomerConcentration(data:Dataset,scope:AgencyScope){
   const totalTop5Milli=ranked.slice(0,5).reduce((n,r)=>n+r.revenueMilli,0)
   return {
     metric:"customer_portfolio_concentration_not_churn_ml",
-    asOf:data.metadata.asOf,source:data.metadata.source,scope,
+    asOf:data.metadata.asOf,source:data.metadata.source,scope,period,
     customers:clients.size,
     revenueTnd:money(totalMilli/1000),
     top5SharePercent:totalMilli>0?Math.round(totalTop5Milli/totalMilli*10000)/100:null,
     dormant90Observed:ranked.filter(r=>r.lastPurchase!==null&&
-      daysBetween(r.lastPurchase,data.metadata.asOf)>=90).length,
+      daysBetween(r.lastPurchase,reportEnd(data.metadata.asOf,period))>=90).length,
     top5:ranked.slice(0,5).map(r=>({
       customerId:r.id,agency:r.agency,revenueTnd:money(r.revenueMilli/1000),
       documents:r.invoices.size,daysSinceLastPurchase:r.lastPurchase?
-        daysBetween(r.lastPurchase,data.metadata.asOf):null,
+        daysBetween(r.lastPurchase,reportEnd(data.metadata.asOf,period)):null,
     })),
     warnings:["Récence constatée, pas probabilité calibrée de churn.",
       "Les clients sans identifiant ERP stable sont isolés par libellé et agence."],
   }
 }
-export function analyzeReceivablesAging(data:Dataset,scope:AgencyScope){
-  const rows=receivablesInScope(data,scope)
+export function analyzeReceivablesAging(data:Dataset,scope:AgencyScope,period:ReportPeriod={}){
+  const rows=receivablesInScope(data,scope,period)
   const buckets=[
     {key:"not_due",label:"Non échues",amountMilli:0,documents:0},
     {key:"late_1_30",label:"1–30 jours",amountMilli:0,documents:0},
@@ -64,7 +64,7 @@ export function analyzeReceivablesAging(data:Dataset,scope:AgencyScope){
     buckets[index].documents++
   }
   return {
-    asOf:data.metadata.asOf,source:data.metadata.source,scope,
+    asOf:data.metadata.asOf,source:data.metadata.source,scope,period,
     status:rows.length?"observed":"not_available",
     buckets:buckets.map(b=>({
       key:b.key,label:b.label,amountTnd:money(b.amountMilli/1000),documents:b.documents,
@@ -74,8 +74,8 @@ export function analyzeReceivablesAging(data:Dataset,scope:AgencyScope){
       "DSO et prévision cash non calculés sans journal de facturation et rapprochement bancaire."],
   }
 }
-export function proposeTransferCandidates(data:Dataset,scope:AgencyScope){
-  const rows=inventoryInScope(data,scope).filter(r=>
+export function proposeTransferCandidates(data:Dataset,scope:AgencyScope,period:ReportPeriod={}){
+  const rows=inventoryInScope(data,scope,period).filter(r=>
     r.reference.trim() && Number.isFinite(r.quantity)&&Number.isFinite(r.reorderPoint)&&r.reorderPoint>0)
   // A duplicated SKU/depot position makes allocation ambiguous: exclude that pair.
   const key=(ref:string,agency:string)=>agency+"\u0000"+ref
@@ -106,12 +106,12 @@ export function proposeTransferCandidates(data:Dataset,scope:AgencyScope){
         "Confirmer unité ERP identique et autorisations de transfert avant un brouillon."],
     })
   }
-  return {asOf:data.metadata.asOf,source:data.metadata.source,scope,
+  return {asOf:data.metadata.asOf,source:data.metadata.source,scope,period,
     candidates:options.slice(0,25),
     warnings:["Candidats intra-périmètre uniquement. Aucun transfert physique ou ERP déclenché."]}
 }
-export function compareThreeStrategyScenarios(data:Dataset,scope:AgencyScope){
-  const sales=salesInScope(data,scope)
+export function compareThreeStrategyScenarios(data:Dataset,scope:AgencyScope,period:ReportPeriod={}){
+  const sales=salesInScope(data,scope,period)
   const baselineTnd=sumMilli(sales.map(s=>s.revenue))
   const options=[
     {id:"PRUDENT",title:"Prudent",variationPercent:-10},
@@ -125,7 +125,7 @@ export function compareThreeStrategyScenarios(data:Dataset,scope:AgencyScope){
     feasible:null as boolean|null,
     status:"hypothesis_only" as const,
   }))
-  return {asOf:data.metadata.asOf,source:data.metadata.source,scope,
+  return {asOf:data.metadata.asOf,source:data.metadata.source,scope,period,
     model:"deterministic_what_if_not_forecast",
     sameAssumptions:true,
     scenarios:options,

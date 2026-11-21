@@ -2,6 +2,13 @@ import type { AgencyScope } from "../auth.js"
 import type { Dataset } from "../services.js"
 import type { Sale, Receivable, InventoryItem } from "../data.js"
 
+export type ReportPeriod={from?:string;to?:string}
+export const matchesReportPeriod=(date:string,period:ReportPeriod={})=>
+  (!period.from||date>=period.from)&&(!period.to||date<=period.to)
+export const periodContainsSnapshot=(asOf:string,period:ReportPeriod={})=>
+  matchesReportPeriod(asOf,period)
+export const reportEnd=(asOf:string,period:ReportPeriod={})=>
+  period.to&&period.to<asOf?period.to:asOf
 export type AgentDomain = "financial_strategy" | "supply_chain_intelligence" | "business_strategy"
 export type AgentPriority = "high" | "medium" | "low"
 export type Evidence = { type: "invoice" | "stock_position" | "receivable"; id: string; agency: string }
@@ -19,6 +26,7 @@ export type AgentSnapshot = {
   lastUpdated: string
   scope: AgencyScope
   currency: "TND"
+  period: {from:string|null;to:string|null}
 }
 export type AgentReport = {
   agent: AgentDomain
@@ -34,7 +42,7 @@ export type AgentReport = {
 export const inScope = (agency: string, scope: AgencyScope) =>
   scope === "*" || scope.includes(agency)
 
-export function snapshot(data: Dataset, scope: AgencyScope): AgentSnapshot {
+export function snapshot(data: Dataset, scope: AgencyScope, period:ReportPeriod={}): AgentSnapshot {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data.metadata.asOf)) throw new Error("Missing dataset asOf date")
   return {
     asOf: data.metadata.asOf,
@@ -42,21 +50,23 @@ export function snapshot(data: Dataset, scope: AgencyScope): AgentSnapshot {
     lastUpdated: data.metadata.lastUpdated,
     scope,
     currency: "TND",
+    period:{from:period.from??null,to:period.to??null},
   }
 }
-export function salesInScope(data: Dataset, scope: AgencyScope): Sale[] {
+export function salesInScope(data: Dataset, scope: AgencyScope, period:ReportPeriod={}): Sale[] {
   const asOf = data.metadata.asOf
   return data.sales.filter((row) =>
-    inScope(row.agency, scope) && row.date <= asOf && (row.status ?? "posted") === "posted"
+    inScope(row.agency, scope) && row.date <= asOf && matchesReportPeriod(row.date,period) && (row.status ?? "posted") === "posted"
   )
 }
-export function receivablesInScope(data: Dataset, scope: AgencyScope): Receivable[] {
+export function receivablesInScope(data: Dataset, scope: AgencyScope, period:ReportPeriod={}): Receivable[] {
   const asOf = data.metadata.asOf
   return data.receivables.filter((row) =>
-    inScope(row.agency, scope) && row.date <= asOf && Number.isFinite(row.outstanding) && row.outstanding > 0
+    inScope(row.agency, scope) && row.date <= asOf && matchesReportPeriod(row.date,period) && Number.isFinite(row.outstanding) && row.outstanding > 0
   )
 }
-export function inventoryInScope(data: Dataset, scope: AgencyScope): InventoryItem[] {
+export function inventoryInScope(data: Dataset, scope: AgencyScope, period:ReportPeriod={}): InventoryItem[] {
+  if(!periodContainsSnapshot(data.metadata.asOf,period))return []
   return data.inventory.filter((row) => inScope(row.agency, scope))
 }
 export const amount = (n: number): number => Math.round(n * 1000) / 1000

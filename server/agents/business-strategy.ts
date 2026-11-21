@@ -3,7 +3,7 @@ import { compareThreeStrategyScenarios } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
  amount, ensureLimit, finding, inventoryInScope, percent,
- receivablesInScope, salesInScope, snapshot, sumMoney, type AgentReport,
+ receivablesInScope, salesInScope, snapshot, sumMoney, type AgentReport, type ReportPeriod,
 } from "./common.js"
 
 /**
@@ -11,14 +11,14 @@ import {
  * Never infer strategy ROI, demand elasticity or guaranteed investment returns.
  */
 export function analyzeBusinessStrategy(input: {
- scope: AgencyScope; dataset: Dataset; limit?: number
+ scope: AgencyScope; dataset: Dataset; limit?: number; period?:ReportPeriod
 }): AgentReport {
  const limit=input.limit ?? 20
  ensureLimit(limit)
- const snap=snapshot(input.dataset,input.scope)
- const sales=salesInScope(input.dataset,input.scope)
- const debt=receivablesInScope(input.dataset,input.scope)
- const inventory=inventoryInScope(input.dataset,input.scope)
+ const snap=snapshot(input.dataset,input.scope,input.period)
+ const sales=salesInScope(input.dataset,input.scope,input.period)
+ const debt=receivablesInScope(input.dataset,input.scope,input.period)
+ const inventory=inventoryInScope(input.dataset,input.scope,input.period)
  const agencyKeys=[...new Set([...sales.map(x=>x.agency),...debt.map(x=>x.agency),...inventory.map(x=>x.agency)])].sort()
  const rows=agencyKeys.map((agency)=>{
    const ss=sales.filter(x=>x.agency===agency)
@@ -53,7 +53,7 @@ export function analyzeBusinessStrategy(input: {
    "review_strategic_scenario",
    r.invoiceIds.slice(0,20).map((id)=>({type:"invoice" as const,id,agency:r.agency}))
  ))
- const strategic=compareThreeStrategyScenarios(input.dataset,input.scope)
+ const strategic=compareThreeStrategyScenarios(input.dataset,input.scope,input.period)
  const scenarios=[5,10].map((increase)=>({
    id:"REVENUE_UP_"+increase,
    label:"Sensibilité à +"+increase+" % de CA HT",
@@ -83,6 +83,7 @@ export function analyzeBusinessStrategy(input: {
    ],
    decisionSupport:{strategicScenarios:strategic},
    warnings:[
+     "Créances à la date d'arrêté sur factures émises dans la période ; stocks seulement si le snapshot date de la période.",
      "Scénarios limités à la sensibilité arithmétique du CA ; aucun coût d'investissement, marché ou ROI fiable n'est disponible.",
      "Les comparaisons de marges sont indisponibles dès que les coûts historiques sont incomplets.",
      "Aucune recommandation d'investissement automatique ou action ERP.",

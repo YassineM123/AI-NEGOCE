@@ -2,7 +2,7 @@ import type {AgencyScope} from "../auth.js"
 import type {Dataset} from "../services.js"
 import type {AgentKey} from "./workspace.js"
 import {chooseAgents} from "./ai-director.js"
-import {inScope} from "./common.js"
+import {inScope,matchesReportPeriod,periodContainsSnapshot,type ReportPeriod} from "./common.js"
 export type PlanAgent=Exclude<AgentKey,"director">
 export const MISSION_TOOLS:Record<PlanAgent,{
   tool:string;goal:string;required:string[];capabilityIds:string[]
@@ -33,16 +33,16 @@ export const MISSION_TOOLS:Record<PlanAgent,{
   },
 }
 export function previewMissionPlan(input:{
-  agent:AgentKey;objective:string;scope:AgencyScope;dataset:Dataset
+  agent:AgentKey;objective:string;scope:AgencyScope;dataset:Dataset;period?:ReportPeriod
 }){
   const specialists:PlanAgent[]=input.agent==="director"?
     chooseAgents(input.objective):[input.agent]
   const data=input.dataset
   const scope=input.scope
   const validSales=data.sales.filter(s=>inScope(s.agency,scope)&&
-    s.date<=data.metadata.asOf&&(s.status??"posted")==="posted")
-  const validReceivables=data.receivables.filter(r=>inScope(r.agency,scope)&&r.date<=data.metadata.asOf)
-  const validInventory=data.inventory.filter(r=>inScope(r.agency,scope))
+    s.date<=data.metadata.asOf&&matchesReportPeriod(s.date,input.period)&&(s.status??"posted")==="posted")
+  const validReceivables=data.receivables.filter(r=>inScope(r.agency,scope)&&r.date<=data.metadata.asOf&&matchesReportPeriod(r.date,input.period))
+  const validInventory=data.inventory.filter(r=>inScope(r.agency,scope)&&periodContainsSnapshot(data.metadata.asOf,input.period))
   const rows:Record<PlanAgent,number>={
     revenue_growth:validSales.length,financial_strategy:validReceivables.length,
     supply_chain_intelligence:validInventory.length,
@@ -68,7 +68,7 @@ export function previewMissionPlan(input:{
   return {
     planVersion:"director-plan-v1",mode:"bounded_deterministic_read_only",
     objective:input.objective,source:data.metadata.source,asOf:data.metadata.asOf,
-    scope,tools:analyses,toolCallsBudget:4,plannedTools:analyses.length,
+    scope,period:{from:input.period?.from??null,to:input.period?.to??null},tools:analyses,toolCallsBudget:4,plannedTools:analyses.length,
     estimatedLlmCalls:0,estimatedLlmTokens:0,erpWriteBudget:0,
     concurrency:"independent_read_only_tools",
     status:analyses.every(x=>x.status==="blocked_data")?"blocked_data" as const:
@@ -79,7 +79,8 @@ export function previewMissionPlan(input:{
       explanation:"Dossier de proposition uniquement. Aucune mutation ERP ou CRM sans contrat LAI.",
     },
     warnings:[
-      "Données et limites propres au tenant/agence ; aucun autre périmètre consulté.",
+      "Données filtrées par agence et période sur les ventes et documents de créances.",
+      ...(!periodContainsSnapshot(data.metadata.asOf,input.period)?["Stock historique non disponible : snapshot actuel exclu du filtre."]:[]),
       "Préplanification : résultats et impacts inconnus avant exécution.",
       "Budget LLM zéro pour les calculs ; le chat reste une option distincte.",
     ],

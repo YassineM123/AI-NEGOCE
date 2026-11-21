@@ -2,6 +2,7 @@ import type { AgencyScope } from "../auth.js"
 import { analyzeCustomerConcentration } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import type { Sale } from "../data.js"
+import {matchesReportPeriod,reportEnd,type ReportPeriod} from "./common.js"
 
 /**
  * Revenue Growth Agent — deterministic, read-only pilot (REV-02/03/04/29/32/39).
@@ -11,6 +12,7 @@ import type { Sale } from "../data.js"
 export type RevenueAgentInput = {
   scope: AgencyScope
   dataset: Dataset
+  period?:ReportPeriod
   windowDays?: number
   dormantDays?: number
   limit?: number
@@ -64,18 +66,18 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
     throw new Error("limit must be an integer between 1 and 100")
 
-  const asOf = input.dataset.metadata.asOf
+  const asOf = reportEnd(input.dataset.metadata.asOf,input.period)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf) || Number.isNaN(Date.parse(`${asOf}T00:00:00Z`)))
     throw new Error("A valid dataset asOf date is required")
-  const currentFrom = shiftDays(asOf, 1 - windowDays)
+  const currentFrom = input.period?.from && input.period.from>shiftDays(asOf,1-windowDays)?input.period.from:shiftDays(asOf,1-windowDays)
   const previousTo = shiftDays(currentFrom, -1)
-  const previousFrom = shiftDays(currentFrom, -windowDays)
+  const previousFrom = input.period?.from && input.period.from>shiftDays(currentFrom,-windowDays)?input.period.from:shiftDays(currentFrom,-windowDays)
 
   const allowed = (agency: string) => input.scope === "*" || input.scope.includes(agency)
   const customers = new Map<string, CustomerAccumulator>()
   let scopedPostedLines = 0
   for (const row of input.dataset.sales) {
-    if (!allowed(row.agency) || (row.status ?? "posted") !== "posted" || row.date > asOf) continue
+    if (!allowed(row.agency) || !matchesReportPeriod(row.date,input.period) || (row.status ?? "posted") !== "posted" || row.date > asOf) continue
     scopedPostedLines++
     // Use stable IDs; in their absence names are not joined across agencies.
     const id = row.customerId || `name:${row.agency}:${row.customer}`
@@ -103,7 +105,7 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
     const isDormant = currentM <= 0 && lastPurchaseDays !== null && lastPurchaseDays >= dormantDays
     let state: CustomerState | null = null
     if (isDormant) state = "dormant"
-    else if (currentM > 0 && previousM <= 0) state = "new"
+    else if (currentM > 0 && previousM <= 0 && previousFrom<currentFrom) state = "new"
     else if (previousM > 0 && currentM > previousM) state = "growing"
     else if (previousM > 0 && currentM < previousM) state = "declining"
     if (!state) continue
@@ -168,6 +170,7 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
       current: { from: currentFrom, to: asOf },
       previous: { from: previousFrom, to: previousTo },
       scope: input.scope,
+      period:{from:input.period?.from??null,to:input.period?.to??null},
     },
     analysis: {
       customersAnalyzed: customers.size,
@@ -176,11 +179,11 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
       returned: Math.min(ordered.length, limit),
     },
     opportunities: ordered.slice(0, limit),
-    decisionSupport:{portfolio:analyzeCustomerConcentration(input.dataset,input.scope)},
+    decisionSupport:{portfolio:analyzeCustomerConcentration(input.dataset,input.scope,input.period)},
     warnings: [
       "Priorités heuristiques non probabilistes : aucune prédiction ML n'a été utilisée",
       "Les actions proposées ne sont pas exécutées dans l'ERP",
-      ...(scopedPostedLines ? [] : ["Aucune vente exploitable dans le périmètre autorisé"]),
+      ...(scopedPostedLines ? [] : ["Aucune vente exploitable dans le périmètre autorisé et la période sélectionnée"]),
     ],
   }
 }

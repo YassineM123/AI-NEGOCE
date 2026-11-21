@@ -3,7 +3,7 @@ import { proposeTransferCandidates } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
   amount, ensureLimit, finding, inventoryInScope, snapshot, sumMoney,
-  type AgentReport, type Evidence,
+  type AgentReport, type Evidence, type ReportPeriod,
 } from "./common.js"
 
 /**
@@ -11,12 +11,12 @@ import {
  * Reorder point is an input from the dataset, NOT an ML forecast.
  */
 export function analyzeSupplyChain(input: {
-  scope: AgencyScope; dataset: Dataset; limit?: number
+  scope: AgencyScope; dataset: Dataset; limit?: number; period?:ReportPeriod
 }): AgentReport {
   const limit = input.limit ?? 20
   ensureLimit(limit)
-  const snap = snapshot(input.dataset, input.scope)
-  const rows = inventoryInScope(input.dataset,input.scope)
+  const snap = snapshot(input.dataset, input.scope,input.period)
+  const rows = inventoryInScope(input.dataset,input.scope,input.period)
   const validThreshold = rows.filter((r) =>
     Number.isFinite(r.quantity) && Number.isFinite(r.reorderPoint) && r.reorderPoint > 0
   )
@@ -38,7 +38,7 @@ export function analyzeSupplyChain(input: {
         : null,
     },
   ]
-  const transferOptions=proposeTransferCandidates(input.dataset,input.scope)
+  const transferOptions=proposeTransferCandidates(input.dataset,input.scope,input.period)
   const findings = lowStock.slice(0,limit).map((row,index) => {
     const missingQty=Math.max(0,Math.ceil(row.reorderPoint-row.quantity))
     const priority = row.quantity <= 0 ? "high" : row.quantity <= row.reorderPoint/2 ? "high" : "medium"
@@ -79,6 +79,7 @@ export function analyzeSupplyChain(input: {
     scenarios,
     decisionSupport:{transferCandidates:transferOptions},
     warnings:[
+      ...(!rows.length && (input.period?.from||input.period?.to) ? ["Stock historique non disponible : le snapshot au "+snap.asOf+" est hors de la période demandée."] : []),
       "Réapprovisionnement calculé sur seuil existant ; pas de prévision de demande, de délai fournisseur ou de disponibilité réservée.",
       "Aucun bon de commande ERP n'est créé : chaque proposition reste un brouillon.",
       ...(rows.length-validThreshold.length > 0 ? ["Certaines positions sans seuil valide sont exclues du classement."] : []),

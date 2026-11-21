@@ -3,7 +3,7 @@ import { analyzeReceivablesAging } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
   amount, daysBetween, ensureLimit, finding, percent, receivablesInScope,
-  snapshot, sumMoney, type AgentReport, type Evidence,
+  snapshot, sumMoney, type AgentReport, type Evidence, type ReportPeriod,
 } from "./common.js"
 
 /**
@@ -11,12 +11,12 @@ import {
  * Receivables represent a balance at data.metadata.asOf, not bank cash.
  */
 export function analyzeFinancialStrategy(input: {
-  scope: AgencyScope; dataset: Dataset; limit?: number
+  scope: AgencyScope; dataset: Dataset; limit?: number; period?:ReportPeriod
 }): AgentReport {
   const limit = input.limit ?? 20
   ensureLimit(limit)
-  const snap = snapshot(input.dataset, input.scope)
-  const rows = receivablesInScope(input.dataset, input.scope)
+  const snap = snapshot(input.dataset, input.scope,input.period)
+  const rows = receivablesInScope(input.dataset, input.scope,input.period)
   const overdue = rows.filter((r) => r.dueDate < snap.asOf)
   const totalOutstandingTnd = sumMoney(rows.map((r) => r.outstanding))
   const overdueTnd = sumMoney(overdue.map((r) => r.outstanding))
@@ -69,8 +69,9 @@ export function analyzeFinancialStrategy(input: {
     },
     findings,
     scenarios,
-    decisionSupport:{aging:analyzeReceivablesAging(input.dataset,input.scope)},
+    decisionSupport:{aging:analyzeReceivablesAging(input.dataset,input.scope,input.period)},
     warnings:[
+      "Créances arrêtées au "+snap.asOf+" sur des factures émises pendant la période sélectionnée, pas un solde historique à la fin de cette période.",
       "Les créances sont des soldes documentaires, pas un solde bancaire ni un cash-flow prévisionnel.",
       "Clients regroupés sur libellé + agence : confirmer l'identifiant ERP avant toute action.",
       "Les relances proposées restent des brouillons ; vérifier litiges, règlements et permissions.",
