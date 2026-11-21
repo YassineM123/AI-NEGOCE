@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import request from "supertest"
 import { createApp, defaultDependencies } from "./app.js"
 import { loadConfig } from "./config.js"
-import { loadExtractedDemo, UNATTRIBUTED_AGENCY } from "./demo-database.js"
+import { loadExtractedDemo, verifySyntheticComplements, UNATTRIBUTED_AGENCY } from "./demo-database.js"
 
 describe("Phase 2 pseudonymized IAINEG database demo", () => {
   it("loads exactly the TND documents and preserves separate EUR/USD totals", () => {
@@ -31,6 +31,10 @@ describe("Phase 2 pseudonymized IAINEG database demo", () => {
     expect(quality.receivables.clients).toBe(425)
     expect(quality.profit.invoiceLevelMarginAvailable).toBe(false)
     expect(quality.syntheticComplements.every((file) => file.startsWith("demonstration/"))).toBe(true)
+  })
+
+  it("keeps supplier and treasury scenario supplements internally consistent, never joined to IAINEG", () => {
+    expect(verifySyntheticComplements()).toEqual({ demoOnly: true, source: "synthetic_scenarios", supplierDeliveries: 8, cashPlanMonths: 6 })
   })
 
   it("cannot enable original pseudonymized extracts in production", () => {
