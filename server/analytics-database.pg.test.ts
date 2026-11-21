@@ -11,7 +11,7 @@ import {DisabledOcrProvider} from "./ocr.js"
 import {TestErpAdapter} from "./erp.js"
 import {readAnalyticalDataset,saveAnalyticalDataset} from "./analytics-database.js"
 import {defaultDataset, type Dataset} from "./services.js"
-import {bearer} from "../tests/qa/support/harness.js"
+import {bearer,TEST_DEV_KEY} from "../tests/qa/support/harness.js"
 
 const url=process.env.TEST_DATABASE_URL
 const schema="analytics_"+crypto.randomBytes(6).toString("hex")
@@ -66,7 +66,7 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect(missing).toBeNull()
     const app=createApp({
       config:loadConfig({NODE_ENV:"test",AUTH_MODE:"local-dev",DATABASE_URL:scoped(),
-        UNIFIED_ANALYTICS_SOURCE:"postgres"}),
+        UNIFIED_ANALYTICS_SOURCE:"postgres",AUTH_DEV_SIGNING_KEY:TEST_DEV_KEY}),
       store:db,ocr:new DisabledOcrProvider(),erp:new TestErpAdapter(),
     })
     const result=await request(app).get("/api/v1/analytics/overview")
@@ -82,7 +82,7 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     await expect(saveAnalyticalDataset(t,initial,"synthetic"))
       .rejects.toThrow("explicit --replace required")
     const cfg=loadConfig({NODE_ENV:"test",AUTH_MODE:"local-dev",
-      DATABASE_URL:scoped(),UNIFIED_ANALYTICS_SOURCE:"postgres"})
+      DATABASE_URL:scoped(),UNIFIED_ANALYTICS_SOURCE:"postgres",AUTH_DEV_SIGNING_KEY:TEST_DEV_KEY})
     const app=createApp({config:cfg,store:db,ocr:new DisabledOcrProvider(),
       erp:new TestErpAdapter()})
     const filter={agency:"Sfax",from:"2026-07-01",to:"2026-09-30"}
