@@ -10,6 +10,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run dataset:generate
       - run: npm run db:seed
       - run: npm test
       - run: npx playwright install --with-deps chrome

@@ -1,0 +1,510 @@
+import { useEffect, useMemo, useState, type ReactNode, type FormEvent } from "react"
+import Icon from "./Icon"
+import {
+  agents, byAgent, decisionLabel, initialAlerts, initialAudit, initialDecisions,
+  initialMissions, priorityLabel, statusLabel,
+  type AgentKey, type Alert, type Audit, type Decision,
+  type DecisionState, type Mission, type MissionState, type Priority,
+} from "./data"
+import { createLocalDemoSession, fetchRevenueGrowth, type RevenueResult } from "./api"
+
+type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "connections" | "audit" | "settings"
+type ChatMessage = { role: "user" | "assistant"; content: string; time: string }
+type Tone = "blue" | "green" | "amber" | "red" | "gray"
+
+const navigation: { page: Page; label: string; icon: string }[] = [
+  { page: "overview", label: "Vue d'ensemble", icon: "home" },
+  { page: "missions", label: "Centre de missions", icon: "target" },
+  { page: "agents", label: "Mes agents", icon: "users" },
+  { page: "director", label: "AI Director", icon: "layers" },
+  { page: "decisions", label: "Décisions et approbations", icon: "shield" },
+  { page: "connections", label: "Connexions BI / Data Science", icon: "database" },
+  { page: "audit", label: "Historique & audit", icon: "history" },
+  { page: "settings", label: "Paramètres", icon: "settings" },
+]
+const stateTone: Record<MissionState, Tone> = {
+  a_planifier: "gray", en_cours: "blue", en_revue: "amber", terminee: "green",
+}
+const priorityTone: Record<Priority, Tone> = { haute: "red", moyenne: "amber", basse: "blue" }
+const decisionTone: Record<DecisionState, Tone> = { pending: "amber", review: "blue", approved: "green", rejected: "red" }
+const states: MissionState[] = ["a_planifier", "en_cours", "en_revue", "terminee"]
+const timeNow = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+
+function Pill({ children, tone = "gray", dot = false }: { children: ReactNode; tone?: Tone; dot?: boolean }) {
+  return <span className={"pill pill-" + tone}>{dot && <i className="pill-dot" />}{children}</span>
+}
+function Action({ icon, children, onClick, light = false, disabled = false, className = "" }: {
+  icon?: string; children: ReactNode; onClick?: () => void; light?: boolean; disabled?: boolean; className?: string
+}) {
+  return <button type="button" className={"action " + (light ? "action-light " : "action-primary ") + className} onClick={onClick} disabled={disabled}>{icon && <Icon name={icon} size={16} />}{children}</button>
+}
+function Card({ title, icon, children, action, className = "" }: {
+  title?: string; icon?: string; children: ReactNode; action?: ReactNode; className?: string
+}) {
+  return <section className={"card " + className}>
+    {(title || action) && <div className="card-head"><div className="card-title">{icon && <Icon name={icon} size={19} />}{title}</div>{action}</div>}
+    {children}
+  </section>
+}
+function Stat({ label, value, icon, detail, tone = "blue" }: {
+  label: string; value: string | number; icon: string; detail?: string; tone?: Tone
+}) {
+  return <div className="stat-card"><div className={"stat-icon stat-" + tone}><Icon name={icon} size={27} /></div><div className="stat-body"><span>{label}</span><strong>{value}</strong>{detail && <small>{detail}</small>}</div></div>
+}
+function Progress({ value, green = false }: { value: number; green?: boolean }) {
+  return <div className="progress"><span style={{ width: Math.max(0, Math.min(100, value)) + "%", backgroundColor: green ? "#159447" : undefined }} /></div>
+}
+function Avatar({ agent, size = "normal" }: { agent: AgentKey | "director"; size?: "normal" | "large" }) {
+  return <div className={"agent-avatar " + (size === "large" ? "avatar-large" : "")}><Icon name={agent === "director" ? "layers" : byAgent(agent).icon} size={size === "large" ? 27 : 20} /></div>
+}
+function AgentLabel({ agent }: { agent: AgentKey }) {
+  return <span className="agent-label"><Avatar agent={agent} /> <span>{byAgent(agent).name}</span></span>
+}
+function SmallLink({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return <button type="button" className="small-link" onClick={onClick}>{children}<Icon name="arrow" size={15} /></button>
+}
+function Stepper({ steps, progress }: { steps: string[]; progress: number }) {
+  const complete = Math.floor(Math.max(0, Math.min(100, progress)) / 100 * steps.length)
+  return <div className="stepper">{steps.map((label, index) => {
+    const kind = index < complete ? "done" : index === complete && progress < 100 ? "active" : "next"
+    return <div key={label + index} className={"step " + kind}><div className="step-top"><span className="step-circle">{kind === "done" ? <Icon name="check" size={14} /> : index + 1}</span></div><b>{label}</b><small>{kind === "done" ? "Terminée" : kind === "active" ? "En cours" : "À venir"}</small></div>
+  })}</div>
+}
+function Empty({ icon = "layers", title, text }: { icon?: string; title: string; text: string }) {
+  return <div className="empty"><Icon name={icon} size={30} /><strong>{title}</strong><span>{text}</span></div>
+}
+function MiniChart({ values = [36, 51, 47, 64, 62, 78, 72, 91] }: { values?: number[] }) {
+  const pts = values.map((n, i) => (24 + i * (410 / Math.max(1, values.length - 1))) + "," + (155 - n * 1.2)).join(" ")
+  return <div className="mini-chart"><div className="chart-caption"><b>Évolution observée / illustrative</b><Pill tone="gray">DÉMO</Pill></div><svg viewBox="0 0 460 180" role="img" aria-label="Courbe illustrative du chiffre d'affaires"><path className="chart-grid" d="M24 35H440M24 80H440M24 125H440M24 155H440" /><polyline points={pts} fill="none" stroke="#0c5be9" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />{values.map((n, i) => <circle key={i} cx={24 + i * 410 / Math.max(1, values.length - 1)} cy={155 - n * 1.2} r="4" fill="white" stroke="#0c5be9" strokeWidth="2.5" />)}</svg><div className="chart-labels"><span>Période N-1</span><span>Période N</span></div></div>
+}
+
+export default function App() {
+  const [page, setPage] = useState<Page>("overview")
+  const [selectedAgent, setSelectedAgent] = useState<AgentKey>("revenue")
+  const [missions, setMissions] = useState<Mission[]>(initialMissions)
+  const [decisions, setDecisions] = useState<Decision[]>(initialDecisions)
+  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts)
+  const [audit, setAudit] = useState<Audit[]>(initialAudit)
+  const [missionId, setMissionId] = useState("M-2026-014")
+  const [decisionId, setDecisionId] = useState("DEC-2026-041")
+  const [agency, setAgency] = useState("all")
+  const [period, setPeriod] = useState("T4 2026")
+  const [query, setQuery] = useState("")
+  const [missionFilter, setMissionFilter] = useState("all")
+  const [agentFilter, setAgentFilter] = useState("all")
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [missionModal, setMissionModal] = useState(false)
+  const [newTitle, setNewTitle] = useState("")
+  const [newAgent, setNewAgent] = useState<AgentKey>("revenue")
+  const [newPriority, setNewPriority] = useState<Priority>("moyenne")
+  const [chatDraft, setChatDraft] = useState("")
+  const [chats, setChats] = useState<Record<AgentKey, ChatMessage[]>>({
+    revenue: [{ role: "assistant", content: "Bonjour. Je suis l'espace de suivi Revenue Growth. Connectez le sandbox pour consulter les opportunités calculées par le moteur métier.", time: "—" }],
+    finance: [{ role: "assistant", content: "Espace Financial Strategy prêt. Le service agentique conversationnel reste à connecter : aucune donnée financière réelle n'est disponible ici.", time: "—" }],
+    supply: [{ role: "assistant", content: "Espace Supply Chain prêt. L'intégration du spécialiste et des données stock reste à réaliser.", time: "—" }],
+    strategy: [{ role: "assistant", content: "Espace Business Strategy prêt. Les simulations et le service conversationnel sont en attente d'intégration.", time: "—" }],
+  })
+  const [token, setToken] = useState<string | null>(null)
+  const [revenue, setRevenue] = useState<RevenueResult | null>(null)
+  const [backendStatus, setBackendStatus] = useState<"disconnected" | "loading" | "connected" | "error">("disconnected")
+  const [apiError, setApiError] = useState("")
+  const [toast, setToast] = useState("")
+  const [notificationRules, setNotificationRules] = useState({ alerts: true, approvals: true, summary: false })
+
+  useEffect(() => {
+    if (!toast) return
+    const timeout = setTimeout(() => setToast(""), 4200)
+    return () => clearTimeout(timeout)
+  }, [toast])
+  useEffect(() => {
+    if (!token) return
+    const controller = new AbortController()
+    setBackendStatus("loading")
+    fetchRevenueGrowth(token, agency, controller.signal).then((res) => {
+      setRevenue(res)
+      setBackendStatus("connected")
+      setApiError("")
+    }).catch((err: unknown) => {
+      if (controller.signal.aborted) return
+      setRevenue(null)
+      setBackendStatus("error")
+      setApiError(err instanceof Error ? err.message : "Erreur API")
+    })
+    return () => controller.abort()
+  }, [token, agency])
+
+  const activeMission = missions.find((item) => item.id === missionId) ?? missions[0]
+  const activeDecision = decisions.find((item) => item.id === decisionId) ?? decisions[0]
+  const pendingDecisions = decisions.filter((item) => item.status === "pending" || item.status === "review")
+  const unread = alerts.filter((item) => !item.seen).length
+  const filteredMissions = useMemo(() => missions.filter((item) => {
+    if (missionFilter !== "all" && item.state !== missionFilter) return false
+    if (agentFilter !== "all" && item.agent !== agentFilter) return false
+    const haystack = (item.title + " " + item.id + " " + byAgent(item.agent).name).toLowerCase()
+    return haystack.includes(query.toLowerCase())
+  }), [missions, missionFilter, agentFilter, query])
+  const selectedNotifications = alerts.filter((item) => item.agent === selectedAgent)
+  const sampleImpact = "—"
+
+  const navigate = (dest: Page, agent?: AgentKey) => {
+    if (agent) setSelectedAgent(agent)
+    setPage(dest)
+    setNotificationOpen(false)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+  const track = (action: string, result: string, agent: AgentKey | "director", id = "—") => {
+    setAudit((prev) => [{
+      id: "EVT-" + Date.now(),
+      time: new Date().toLocaleString("fr-FR"),
+      action,
+      actor: "Utilisateur (session démo)",
+      agent,
+      result,
+      missionId: id,
+    }, ...prev])
+  }
+  const connectSandbox = async () => {
+    setBackendStatus("loading")
+    setApiError("")
+    try {
+      const sessionToken = await createLocalDemoSession()
+      setToken(sessionToken)
+      setToast("Sandbox de développement connecté. Aucun accès ERP réel.")
+    } catch (error) {
+      setBackendStatus("error")
+      setApiError(error instanceof Error ? error.message : "Connexion impossible")
+      setToast("Connexion impossible : démarrez le backend local.")
+    }
+  }
+  const disconnectSandbox = () => {
+    setToken(null)
+    setRevenue(null)
+    setBackendStatus("disconnected")
+    setApiError("")
+  }
+  const addMission = () => {
+    const title = newTitle.trim()
+    if (title.length < 5) {
+      setToast("Veuillez saisir un objectif d'au moins 5 caractères.")
+      return
+    }
+    const id = "M-DEMO-" + Date.now().toString().slice(-7)
+    setMissions((prev) => [{ id, title, objective: title, agent: newAgent, state: "a_planifier", priority: newPriority, progress: 0, deadline: "Non planifiée", steps: ["Cadrage", "Collecte", "Analyse", "Revue"] }, ...prev])
+    setMissionId(id)
+    setNewTitle("")
+    setMissionModal(false)
+    track("Mission créée", "Brouillon local", newAgent, id)
+    setToast("Mission créée en mode démonstration. Aucune exécution réelle.")
+    navigate("missions")
+  }
+  const updateDecision = (next: DecisionState) => {
+    const previous = activeDecision
+    setDecisions((list) => list.map((item) => item.id === previous.id ? { ...item, status: next } : item))
+    track("Décision", decisionLabel[next] + " (démo)", previous.agent, previous.missionId)
+    setToast("Décision modifiée dans l'interface de démonstration. Aucune écriture ERP.")
+  }
+  const readAlert = (item: Alert) => {
+    setAlerts((list) => list.map((alert) => alert.id === item.id ? { ...alert, seen: true } : alert))
+    setSelectedAgent(item.agent)
+    navigate("agent", item.agent)
+  }
+  const sendChat = (event: FormEvent) => {
+    event.preventDefault()
+    const message = chatDraft.trim()
+    if (!message) return
+    const moment = timeNow()
+    let answer = "Le moteur conversationnel de cet agent n'est pas encore connecté. Cette interface ne génère pas de conseils métiers fictifs."
+    if (selectedAgent === "revenue" && revenue && backendStatus === "connected") {
+      const top = revenue.opportunities.slice(0, 3)
+      answer = top.length
+        ? "Analyse déterministe sur " + revenue.snapshot.source + " (au " + revenue.snapshot.asOf + "). " + revenue.analysis.opportunitiesFound + " opportunité(s) identifiée(s). Priorités : " + top.map((op) => op.customerName + " [" + op.state + ", score " + op.priorityScore + "/100]").join("; ") + ". Le score est une heuristique, pas une probabilité. Consulter les preuves avant toute action."
+        : "Aucune opportunité calculée sur le périmètre choisi. Source : " + revenue.snapshot.source + "."
+    }
+    const updated: ChatMessage[] = [{ role: "user", content: message, time: moment }, { role: "assistant", content: answer, time: moment }]
+    setChats((prev) => ({ ...prev, [selectedAgent]: [...prev[selectedAgent], ...updated] }))
+    setChatDraft("")
+  }
+  const missionDetail = (mission: Mission) => {
+    setMissionId(mission.id)
+    navigate("missions")
+  }
+
+  function overview() {
+    return <>
+      <div className="stats-row stats-five">
+        <Stat icon="layers" label="Missions actives" value={missions.filter((m) => m.state === "en_cours").length} detail="Missions en exécution (démo)" />
+        <Stat icon="check" label="Approbations en attente" value={pendingDecisions.length} detail="Validation humaine requise" />
+        <Stat icon="target" label="Opportunités identifiées" value={revenue ? revenue.analysis.opportunitiesFound : "—"} detail={revenue ? "Source API sandbox" : "Source non connectée"} />
+        <Stat icon="coins" label="Impact estimé (CA)" value={sampleImpact} detail="Calcul ERP à connecter" />
+        <Stat icon="shield" label="Agents développés" value="1 / 4" detail="Revenue Growth MVP" />
+      </div>
+      <div className="overview-main">
+        <div className="stack">
+          <Card title="AI Director — Orchestrateur" action={<Pill tone="amber">Intégration prévue</Pill>}>
+            <p className="card-sub">Coordination et supervision des quatre spécialistes. Orchestration simulée pour la présentation.</p>
+            {orchestrator()}
+          </Card>
+          <Card title="Mission active" action={<SmallLink onClick={() => missionDetail(activeMission)}>Voir la mission</SmallLink>}>
+            <div className="mission-summary"><b>{activeMission.id} — {activeMission.title}</b><Pill tone={stateTone[activeMission.state]}>{statusLabel[activeMission.state]}</Pill></div>
+            <Stepper steps={activeMission.steps} progress={activeMission.progress} />
+          </Card>
+          <Card title="Missions en cours" action={<SmallLink onClick={() => navigate("missions")}>Toutes les missions</SmallLink>}>
+            {missionsTable(missions.slice(0, 5))}
+          </Card>
+        </div>
+        <div className="stack">
+          <Card title={"Décisions et approbations (" + pendingDecisions.length + ")"} action={<SmallLink onClick={() => navigate("decisions")}>Voir tout</SmallLink>}>
+            {pendingDecisions.map((item) => <div key={item.id} className="decision-short">
+              <Avatar agent={item.agent} /><div><b>{item.title}</b><small>Recommandé par {byAgent(item.agent).name} · {item.impact}</small></div>
+              <button type="button" className="outline-mini" onClick={() => { setDecisionId(item.id); navigate("decisions") }}>Revoir</button>
+            </div>)}
+          </Card>
+          <Card title="Connexions BI / Data Science" action={<SmallLink onClick={() => navigate("connections")}>Détails</SmallLink>}>
+            <div className="connection-line"><Avatar agent="revenue" /><span><b>Data Analyse (BI)</b><small>Connexion API externe à configurer</small></span><Pill>Non connectée</Pill></div>
+            <div className="connection-line"><Icon name="spark" size={25} /><span><b>Data Science</b><small>Service modèles à intégrer</small></span><Pill>Non connectée</Pill></div>
+            <div className="connection-line"><Icon name="database" size={25} /><span><b>Revenue Growth API</b><small>{backendStatus === "connected" ? "Sandbox opérationnel" : "Backend local"}</small></span><Pill tone={backendStatus === "connected" ? "green" : "gray"}>{backendStatus === "connected" ? "Connectée" : "Non connectée"}</Pill></div>
+          </Card>
+          <Card title="Notifications prioritaires" action={<SmallLink onClick={() => navigate("agents")}>Voir tout</SmallLink>}>
+            {alerts.filter((n) => !n.seen).slice(0, 3).map((n) => <button type="button" className="alert-inline" key={n.id} onClick={() => readAlert(n)}>
+              <span className={"alert-marker marker-" + priorityTone[n.priority]}><Icon name="bell" size={17} /></span><span><b>{n.title}</b><small>{byAgent(n.agent).name}</small></span><Icon name="chevron" size={16} />
+            </button>)}
+          </Card>
+        </div>
+      </div>
+      <div className="sync-strip"><Icon name="history" size={18}/><b>Journal & synchronisation</b><span><i className="soft-dot" /> Design React actif</span><span><i className="soft-dot" /> Revenue Growth : {backendStatus === "connected" ? "Sandbox connecté" : "À connecter"}</span><span>BI & DS : intégration à réaliser</span></div>
+    </>
+  }
+  function orchestrator() {
+    return <div className="orchestrator"><div className="director-node" onClick={() => navigate("director")} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") navigate("director") }}><Icon name="layers" size={25} /><span><b>AI Director</b><small>Orchestration · Délégation · Arbitrage</small></span></div><div className="connector-line" /><div className="orchestrator-children">{agents.map((agent) => <button key={agent.id} type="button" className="agent-node" onClick={() => navigate("agent", agent.id)}><Icon name={agent.icon} size={26}/><strong>{agent.name}</strong><Pill tone={agent.implemented ? "green" : "gray"}>{agent.implemented ? "MVP disponible" : "À intégrer"}</Pill></button>)}</div></div>
+  }
+  function missionsTable(items: Mission[]) {
+    return <div className="table-scroll"><table><thead><tr><th>Mission</th><th>Agent</th><th>Statut</th><th>Avancement</th><th>Échéance</th></tr></thead><tbody>{items.map((m) => <tr key={m.id} className="clickable-row" onClick={() => missionDetail(m)}><td><b>{m.id}</b><span className="cell-secondary">{m.title}</span></td><td>{byAgent(m.agent).name}</td><td><Pill tone={stateTone[m.state]}>{statusLabel[m.state]}</Pill></td><td><div className="progress-cell"><Progress value={m.progress} green={m.state === "terminee"} /><span>{m.progress} %</span></div></td><td>{m.deadline}</td></tr>)}</tbody></table></div>
+  }
+  function missionsPage() {
+    return <>
+      <div className="stats-row stats-five">
+        <Stat icon="calendar" label="Planifiées" value={missions.filter((m) => m.state === "a_planifier").length} />
+        <Stat icon="play" label="En cours" value={missions.filter((m) => m.state === "en_cours").length} />
+        <Stat icon="check" label="Terminées" value={missions.filter((m) => m.state === "terminee").length} tone="green" />
+        <Stat icon="alert" label="En revue" value={missions.filter((m) => m.state === "en_revue").length} tone="amber" />
+        <Stat icon="target" label="Missions totales" value={missions.length} />
+      </div>
+      <div className="filter-bar"><label><Icon name="search" size={16}/><input aria-label="Rechercher une mission" placeholder="Rechercher une mission..." value={query} onChange={(e) => setQuery(e.target.value)} /></label><select aria-label="Filtrer par agent" value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}><option value="all">Tous les agents</option>{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select><select aria-label="Filtrer par statut" value={missionFilter} onChange={(e) => setMissionFilter(e.target.value)}><option value="all">Tous les statuts</option>{states.map((s) => <option key={s} value={s}>{statusLabel[s]}</option>)}</select><button className="text-link" onClick={() => { setQuery(""); setAgentFilter("all"); setMissionFilter("all") }}>Réinitialiser</button></div>
+      <div className="missions-layout">
+        <Card title={"Tableau des missions (" + filteredMissions.length + ")"} className="mission-board-card" action={<Pill tone="blue">Vue Kanban</Pill>}>
+          <div className="kanban">
+            {states.map((state) => <div className="kanban-column" key={state}><div className={"kanban-header kanban-" + state}><span>{statusLabel[state]}</span><strong>{filteredMissions.filter((m) => m.state === state).length}</strong></div>
+              {filteredMissions.filter((m) => m.state === state).map((m) => <button type="button" key={m.id} className={"mission-tile " + (m.id === missionId ? "selected" : "")} onClick={() => setMissionId(m.id)}><div className="tile-top"><b>{m.id}</b><Pill tone={priorityTone[m.priority]}>{priorityLabel[m.priority]}</Pill></div><strong>{m.title}</strong><small>{byAgent(m.agent).name}</small><div className="tile-bottom"><span>{m.deadline}</span><span>{m.progress} %</span></div><Progress value={m.progress} green={m.state === "terminee"} /></button>)}
+            </div>)}
+          </div>
+        </Card>
+        <Card className="mission-detail" title={activeMission.id} action={<Pill tone={stateTone[activeMission.state]}>{statusLabel[activeMission.state]}</Pill>}>
+          <div className="detail-highlight"><Icon name="target" size={23}/><div><b>Objectif</b><p>{activeMission.objective}</p></div></div>
+          <h4>Agent responsable</h4><AgentLabel agent={activeMission.agent} />
+          <h4>Étapes de la mission</h4><div className="stage-list">{activeMission.steps.map((step, index) => <div key={step} className="stage-row"><span className={"stage-bullet " + (index < activeMission.progress / 25 ? "on" : "")}>{index + 1}</span><span>{step}</span></div>)}</div>
+          <h4>Avancement</h4><div className="progress-cell detail-progress"><Progress value={activeMission.progress}/><b>{activeMission.progress} %</b></div>
+          <h4>Suivi et recommandations</h4><p className="muted-text">Cet écran présente un workflow de démonstration. Les étapes ne représentent pas une exécution ERP réelle.</p>
+          <div className="horizontal-actions"><Action icon="message" onClick={() => navigate("agent", activeMission.agent)}>Parler à l'agent</Action><Action light icon="shield" onClick={() => navigate("decisions")}>Décisions liées</Action></div>
+        </Card>
+      </div>
+      <Card title="Activité récente des missions" action={<SmallLink onClick={() => navigate("audit")}>Historique complet</SmallLink>}>
+        <div className="table-scroll"><table><thead><tr><th>Date</th><th>Mission</th><th>Événement</th><th>Agent</th><th>Résultat</th></tr></thead><tbody>{audit.slice(0, 6).map((row) => <tr key={row.id}><td>{row.time}</td><td>{row.missionId}</td><td>{row.action}</td><td>{row.agent === "director" ? "AI Director" : byAgent(row.agent).name}</td><td>{row.result}</td></tr>)}</tbody></table></div>
+      </Card>
+    </>
+  }
+  function agentsPage() {
+    return <>
+      <div className="stats-row stats-four">
+        <Stat icon="layers" label="Agents développés" value="1 / 4" detail="Revenue Growth disponible" />
+        <Stat icon="bell" label="Alertes ouvertes" value={unread} detail="Notifications illustratives" tone="amber" />
+        <Stat icon="document" label="Décisions à revoir" value={pendingDecisions.length} />
+        <Stat icon="layers" label="Escalades vers AI Director" value="—" detail="Orchestration à développer" />
+      </div>
+      <div className="agents-layout">
+        <div className="agent-grid">
+          {agents.map((agent) => <Card key={agent.id} className={"agent-card " + (selectedAgent === agent.id ? "agent-selected" : "")}>
+            <div className="agent-card-top"><Avatar agent={agent.id} size="large"/><Pill tone={agent.implemented ? "green" : "gray"}>{agent.implemented ? "MVP disponible" : "À intégrer"}</Pill></div>
+            <h3>{agent.name}</h3><p>{agent.description}</p>
+            <div className="agent-stat"><span>Dernière exécution</span><b>{agent.id === "revenue" && revenue ? revenue.snapshot.asOf : "Non disponible"}</b></div>
+            <div className="agent-stat"><span>Notifications (démo)</span><Pill tone="amber">{alerts.filter((n) => n.agent === agent.id && !n.seen).length}</Pill></div>
+            <div className="agent-stat"><span>Service API</span><b>{agent.id === "revenue" && backendStatus === "connected" ? "Sandbox connecté" : "Non connecté"}</b></div>
+            <div className="agent-buttons"><Action icon="message" onClick={() => navigate("agent", agent.id)}>Parler</Action><Action icon="chart" light onClick={() => { setSelectedAgent(agent.id); navigate("agent", agent.id) }}>Suivre</Action></div>
+          </Card>)}
+        </div>
+        <Card title="Vue rapide de l'agent sélectionné"><div className="selected-agent-top"><Avatar agent={selectedAgent} size="large"/><div><h3>{byAgent(selectedAgent).name}</h3><span>{byAgent(selectedAgent).subtitle}</span></div></div><div className="detail-highlight"><Icon name="document"/><div><b>Résumé</b><p>{byAgent(selectedAgent).description}</p></div></div><div className="detail-highlight"><Icon name="shield"/><div><b>État de l'intégration</b><p>{selectedAgent === "revenue" ? "Moteur déterministe implémenté. API sandbox disponible via connexion locale." : "L'espace de l'agent est prêt ; le moteur métier est à développer."}</p></div></div><h4>Prochaine action suggérée</h4><button className="suggested-action" onClick={() => navigate("agent", selectedAgent)}>Ouvrir le dossier de {byAgent(selectedAgent).name} <Icon name="chevron" size={16} /></button><h4>Notifications</h4>{selectedNotifications.slice(0, 2).map((n) => <div key={n.id} className="small-notice">{n.title}</div>)}</Card>
+      </div>
+      <Card title="Flux de recommandations" action={<span className="muted-text small">Suggestions illustratives</span>}>
+        <div className="table-scroll"><table><thead><tr><th>Date / Heure</th><th>Agent</th><th>Notification</th><th>Priorité</th><th>Statut</th><th /></tr></thead><tbody>{alerts.map((n) => <tr key={n.id}><td>{n.timestamp}</td><td><AgentLabel agent={n.agent}/></td><td><b>{n.title}</b><span className="cell-secondary">{n.detail}</span></td><td><Pill tone={priorityTone[n.priority]}>{priorityLabel[n.priority]}</Pill></td><td><Pill tone={n.seen ? "gray" : "green"}>{n.seen ? "Lue" : "À traiter"}</Pill></td><td><button aria-label={"Voir " + n.title} className="icon-button" onClick={() => readAlert(n)}><Icon name="chevron" /></button></td></tr>)}</tbody></table></div>
+      </Card>
+    </>
+  }
+  function agentPage() {
+    const a = byAgent(selectedAgent)
+    const result = selectedAgent === "revenue" ? revenue : null
+    const opportunities = result?.opportunities ?? []
+    return <>
+      <div className="agent-page-head"><Avatar agent={selectedAgent} size="large"/><div><h1>{a.name} Agent</h1><p>{a.description}</p></div><Pill tone={a.implemented ? "green" : "gray"}>{a.implemented ? "MVP développé" : "En attente de développement"}</Pill><Action light icon="layers" onClick={() => navigate("director")}>Voir AI Director</Action><Action icon="plus" onClick={() => { setNewAgent(selectedAgent); setMissionModal(true) }}>Créer une mission</Action></div>
+      <div className="agent-detail-grid">
+        <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Chat supervisé</Pill>}>
+          <div className="chat-messages">{chats[selectedAgent].map((m, i) => <div key={i} className={"chat-message " + m.role}><div className="chat-avatar">{m.role === "user" ? "VO" : <Icon name={a.icon} size={16}/>}</div><div className="chat-bubble"><div className="chat-byline">{m.role === "user" ? "Vous" : a.name + " · Interface"}<span>{m.time}</span></div><p>{m.content}</p></div></div>)}</div>
+          <form className="chat-input" onSubmit={sendChat}><input value={chatDraft} onChange={(e) => setChatDraft(e.target.value)} placeholder={"Écrivez à " + a.name + "..."} aria-label={"Message à " + a.name} /><button type="submit" aria-label="Envoyer"><Icon name="send" size={18}/></button></form>
+          <div className="chat-disclaimer">Sans orchestrateur conversationnel dédié : seules les données API Revenue Growth connectées sont reprises dans les réponses.</div>
+        </Card>
+        <div className="stack">
+          <Card title={"Analyse — " + a.category} action={<Pill tone={result ? "blue" : "gray"}>{result ? "API sandbox" : "Aperçu UI"}</Pill>}>
+            <div className="mini-stats">
+              {selectedAgent === "revenue" ? <>
+                <div><span>Clients analysés</span><b>{result?.analysis.customersAnalyzed ?? "—"}</b></div>
+                <div><span>En croissance</span><b>{result ? opportunities.filter((o) => o.state === "growing").length : "—"}</b></div>
+                <div><span>Opportunités</span><b>{result?.analysis.opportunitiesFound ?? "—"}</b></div>
+                <div><span>Impact validé</span><b>—</b></div>
+              </> : <><div><span>Modèle connecté</span><b>Non</b></div><div><span>Missions ouvertes</span><b>{missions.filter((m) => m.agent === selectedAgent && m.state !== "terminee").length}</b></div><div><span>Prédictions disponibles</span><b>—</b></div><div><span>Actions validées</span><b>—</b></div></>}
+            </div>
+            {result ? <p className="source-note"><Icon name="database" size={15}/> Source : {result.snapshot.source} · arrêté au {result.snapshot.asOf}</p> : <div className="no-connection"><Icon name="alert" size={18}/> Aucune source métier réelle connectée. Les graphiques et actions affichés restent des maquettes.</div>}
+          </Card>
+          <Card title="Évolution & analyse"><MiniChart /></Card>
+          <Card title={selectedAgent === "revenue" ? "Opportunités calculées" : "Données de l'agent"} action={result && <span className="muted-text small">{result.analysis.returned} résultats</span>}>
+            {result && opportunities.length ? <div className="table-scroll"><table><thead><tr><th>Client</th><th>Situation</th><th>CA période (TND)</th><th>Évolution</th><th>Priorité</th></tr></thead><tbody>{opportunities.slice(0, 10).map((o) => <tr key={o.agency + o.customerId}><td><b>{o.customerName}</b><span className="cell-secondary">{o.agency}</span></td><td><Pill tone={o.state === "growing" ? "green" : o.state === "dormant" ? "amber" : "blue"}>{o.state}</Pill></td><td>{o.metrics.currentRevenueTnd.toLocaleString("fr-FR", { minimumFractionDigits: 3 })}</td><td>{o.metrics.growthPercent === null ? "N/D" : o.metrics.growthPercent + " %"}</td><td><Pill tone="blue">{o.priorityScore}/100</Pill></td></tr>)}</tbody></table></div>
+              : <Empty icon="database" title="Données en attente" text={selectedAgent === "revenue" ? "Connectez le sandbox local pour interroger le moteur Revenue Growth." : "Le service métier de cet agent n'est pas encore disponible."} />}
+          </Card>
+          <Card title="Missions liées">{missions.filter((m) => m.agent === selectedAgent).map((m) => <div key={m.id} className="related-mission" onClick={() => missionDetail(m)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") missionDetail(m) }}><span><b>{m.id}</b><small>{m.title}</small></span><div><Progress value={m.progress}/><small>{m.progress} %</small></div><Icon name="chevron" size={16}/></div>)}</Card>
+        </div>
+        <div className="stack">
+          <Card title="Actions suggérées" action={<Pill tone="amber">Revue humaine</Pill>}>
+            {alerts.filter((n) => n.agent === selectedAgent).map((n) => <div key={n.id} className="recommendation"><div className="recommendation-top"><Icon name="target" size={18}/><b>{n.title}</b><Pill tone={priorityTone[n.priority]}>{priorityLabel[n.priority]}</Pill></div><p>{n.detail}</p><div className="recommendation-actions"><Action icon="plus" onClick={() => { setNewAgent(selectedAgent); setNewTitle(n.title); setMissionModal(true) }}>Créer une mission</Action><Action light icon="check" onClick={() => setAlerts((prev) => prev.map((x) => x.id === n.id ? { ...x, seen: true } : x))}>Marquer lue</Action></div></div>)}
+            {selectedAgent === "revenue" && result?.opportunities.length ? <div className="recommendation"><b>Opportunités avec preuve disponible</b><p>{result.opportunities.length} client(s) priorisés par heuristique, à vérifier avant toute prise de contact.</p><Action light icon="document" onClick={() => navigate("decisions")}>Examiner les décisions</Action></div> : null}
+          </Card>
+          <Card title="Notification & suivi"><div className="notification-settings"><div><Icon name="bell" size={19}/><b>Alertes de cet agent</b></div><strong>{selectedNotifications.filter((n) => !n.seen).length}</strong></div><p className="muted-text">Des notifications métier réelles nécessitent des tâches serveur planifiées, une base d'événements et des canaux d'envoi configurés.</p><Action light icon="history" onClick={() => navigate("audit")}>Voir l'historique</Action></Card>
+        </div>
+      </div>
+    </>
+  }
+  function directorPage() {
+    return <>
+      <div className="stats-row stats-four">
+        <Stat icon="layers" label="Agents coordonnables" value="4" detail="1 moteur MVP intégré" />
+        <Stat icon="calendar" label="Missions enregistrées" value={missions.length} />
+        <Stat icon="shield" label="Décisions en revue" value={pendingDecisions.length} />
+        <Stat icon="alert" label="Blocages d'intégration" value="3" tone="amber" detail="BI, DS, Director" />
+      </div>
+      <div className="director-grid">
+        <div className="stack">
+          <Card title="Orchestration des agents — Délégation et coordination" action={<Pill tone="gray">Prototype de visualisation</Pill>}>{orchestrator()}</Card>
+          <Card title="Planification de mission" action={<Action light icon="plus" onClick={() => setMissionModal(true)}>Nouvelle mission</Action>}>
+            <p className="muted-text">Répartition prévue des sous-tâches. Le plan multi-agents n'est pas encore exécuté automatiquement.</p>
+            <div className="director-work"><div><Icon name="target" /><span><b>{activeMission.id} — {activeMission.title}</b><small>Priorité : {priorityLabel[activeMission.priority]} · Progression : {activeMission.progress} %</small></span></div><Progress value={activeMission.progress}/></div>
+            <div className="table-scroll"><table><thead><tr><th>Étape</th><th>Agent</th><th>Statut</th><th>Avancement</th></tr></thead><tbody>{agents.map((a, i) => <tr key={a.id}><td>{["Analyse clients", "Projection financière", "Évaluation stocks", "Arbitrage stratégique"][i]}</td><td><AgentLabel agent={a.id}/></td><td><Pill tone={a.implemented ? "green" : "gray"}>{a.implemented ? "MVP" : "À intégrer"}</Pill></td><td>{a.implemented ? "API disponible" : "Non exécutée"}</td></tr>)}</tbody></table></div>
+          </Card>
+        </div>
+        <div className="stack">
+          <Card title="Synthèse du Director" action={<Pill tone="amber">Moteur à développer</Pill>}><div className="detail-highlight"><Icon name="target" size={22}/><div><b>Prochaine action recommandée</b><p>Finaliser les contrats d'API BI/Data Science et le workflow d'approbation avant l'orchestration autonome.</p></div></div><div className="check-list"><p><Icon name="check" size={17}/> Revenue Growth : première API spécialisée présente</p><p><Icon name="check" size={17}/> Interface de pilotage React créée</p><p><Icon name="clock" size={17}/> AI Director : planificateur à construire</p><p><Icon name="clock" size={17}/> 3 autres agents : non intégrés</p></div><div className="horizontal-actions"><Action icon="plus" onClick={() => setMissionModal(true)}>Créer un plan</Action><Action light icon="document" onClick={() => navigate("decisions")}>Décisions</Action></div></Card>
+          <Card title="Arbitrages en attente">{pendingDecisions.slice(0, 3).map((d) => <button key={d.id} type="button" className="alert-inline" onClick={() => { setDecisionId(d.id); navigate("decisions") }}><span className="alert-marker marker-amber"><Icon name="alert" size={17}/></span><span><b>{d.title}</b><small>{d.risk} · {byAgent(d.agent).name}</small></span><Icon name="chevron" size={16}/></button>)}</Card>
+          <Card title="Demandes à traiter"><button className="director-request" onClick={() => setMissionModal(true)}><Icon name="target"/><span><b>Lancer une investigation</b><small>Créer une mission pour l'agent adapté</small></span><Icon name="chevron"/></button></Card>
+        </div>
+      </div>
+    </>
+  }
+  function decisionsPage() {
+    return <>
+      <div className="stats-row stats-four">
+        <Stat icon="layers" label="Approbations en attente" value={pendingDecisions.length} />
+        <Stat icon="check" label="Approuvées (démo)" value={decisions.filter((d) => d.status === "approved").length} tone="green" />
+        <Stat icon="close" label="Refusées (démo)" value={decisions.filter((d) => d.status === "rejected").length} tone="red" />
+        <Stat icon="coins" label="Impact validé (CA)" value="—" detail="Chiffres ERP non vérifiés" />
+      </div>
+      <div className="decisions-layout">
+        <div className="stack">
+          <Card title={"Boîte de décisions à examiner (" + pendingDecisions.length + ")"} action={<Pill tone="gray">Validation locale · Démo</Pill>}>
+            <div className="table-scroll"><table><thead><tr><th>Décision</th><th>Agent</th><th>Impact</th><th>Urgence</th><th>Statut</th></tr></thead><tbody>{decisions.map((d) => <tr key={d.id} className={"clickable-row " + (d.id === decisionId ? "row-selected" : "")} onClick={() => setDecisionId(d.id)}><td><b>{d.title}</b><span className="cell-secondary">{d.id}</span></td><td>{byAgent(d.agent).name}</td><td>{d.impact}</td><td><Pill tone={priorityTone[d.priority]}>{priorityLabel[d.priority]}</Pill></td><td><Pill tone={decisionTone[d.status]}>{decisionLabel[d.status]}</Pill></td></tr>)}</tbody></table></div>
+          </Card>
+          <Card title="Activité récente">{audit.filter((a) => a.action === "Décision").length ? audit.filter((a) => a.action === "Décision").slice(0, 5).map((a) => <div className="audit-short" key={a.id}><Icon name="check"/><span>{a.result}</span><small>{a.time}</small></div>) : <Empty icon="history" title="Aucune décision locale enregistrée" text="Les actions dans cet écran seront visibles ici et dans l'audit de démonstration."/>}</Card>
+        </div>
+        <Card className="decision-detail" title={activeDecision.title} action={<Pill tone={decisionTone[activeDecision.status]}>{decisionLabel[activeDecision.status]}</Pill>}>
+          <div className="detail-tabs"><span className="tab-active">Détail</span><span>Évidences ({activeDecision.evidence.length})</span><span>Impacts & risques</span></div>
+          <div className="detail-highlight"><Icon name="target" size={23}/><div><b>Justification</b><p>{activeDecision.rationale}</p></div></div>
+          <div className="decision-facts"><div><span>Impact estimé</span><strong>{activeDecision.impact}</strong></div><div><span>Risque</span><strong>{activeDecision.risk}</strong></div><div><span>Priorité</span><strong>{priorityLabel[activeDecision.priority]}</strong></div></div>
+          <h4>Éléments à vérifier</h4><div className="evidence-items">{activeDecision.evidence.map((e) => <span key={e}><Icon name="document" size={14}/>{e}</span>)}</div>
+          <h4>Mission liée</h4><button type="button" className="related-link" onClick={() => { setMissionId(activeDecision.missionId); navigate("missions") }}><Icon name="layers"/>{activeDecision.missionId} <Icon name="chevron" size={14}/></button>
+          <div className="decision-note"><Icon name="alert" size={19}/> Les boutons ci-dessous changent uniquement le statut de la maquette. Aucun achat, paiement, facture ni message ERP n'est déclenché.</div>
+          <div className="decision-actions"><Action icon="check" onClick={() => updateDecision("approved")}>Approuver (démo)</Action><Action light icon="history" onClick={() => updateDecision("review")}>À revoir</Action><button type="button" className="action-danger" onClick={() => updateDecision("rejected")}><Icon name="close" size={17}/> Refuser</button></div>
+        </Card>
+      </div>
+    </>
+  }
+  function connectionsPage() {
+    return <>
+      <div className="stats-row stats-four">
+        <Stat icon="database" label="Sources ERP réelles" value="0" detail="Adaptateur LAI non configuré" />
+        <Stat icon="check" label="API Revenue Growth" value={backendStatus === "connected" ? "1" : "0"} detail="Sandbox de test uniquement" tone={backendStatus === "connected" ? "green" : "blue"} />
+        <Stat icon="alert" label="Intégrations à réaliser" value="3" detail="BI, Data Science, ERP LAI" tone="amber" />
+        <Stat icon="layers" label="Modèles DS validés" value="—" detail="Catalogue non connecté" />
+      </div>
+      <div className="connections-grid">
+        <Card title="Data Analyse (BI)" icon="chart"><div className="integration-header"><Avatar agent="revenue" size="large"/><div><b>Dashboard Data Analyse</b><p>Tableaux de bord et métriques métier</p></div><Pill tone="gray">Non connectée</Pill></div><div className="health-grid"><div><span>API</span><b>Non configurée</b></div><div><span>Synchronisation</span><b>—</b></div><div><span>Fraîcheur</span><b>Inconnue</b></div><div><span>Sources</span><b>À mapper</b></div></div><p className="muted-text">Prévoir un contrat KPI partagé, filtres agence/période et traçabilité par source.</p></Card>
+        <Card title="Data Science" icon="spark"><div className="integration-header"><Icon name="spark" size={36}/><div><b>Dashboard Data Science</b><p>Prédictions, modèles et validation</p></div><Pill tone="gray">Non connectée</Pill></div><div className="health-grid"><div><span>API</span><b>Non configurée</b></div><div><span>Modèles</span><b>Non inventoriés</b></div><div><span>Backtests</span><b>À valider</b></div><div><span>Versioning</span><b>À brancher</b></div></div><p className="muted-text">N'utiliser les scores et probabilités qu'avec modèles validés, versionnés et évalués temporellement.</p></Card>
+        <Card title="Agentic Backend — Revenue Growth" icon="layers"><div className="integration-header"><Avatar agent="revenue" size="large"/><div><b>API gouvernée de démonstration</b><p>Express · RBAC · Isolation agence</p></div><Pill tone={backendStatus === "connected" ? "green" : backendStatus === "error" ? "red" : "gray"}>{backendStatus === "connected" ? "Connectée" : backendStatus === "loading" ? "Connexion..." : "Déconnectée"}</Pill></div><p className="muted-text">Testez la connexion uniquement sur votre poste local, avec AUTH_MODE=local-dev. Aucune clé n'est stockée dans le navigateur.</p>{apiError && <div className="error-banner">{apiError}</div>}<div className="horizontal-actions">{backendStatus === "connected" ? <Action icon="close" light onClick={disconnectSandbox}>Déconnecter</Action> : <Action icon="link" onClick={connectSandbox} disabled={backendStatus === "loading"}>Connecter sandbox local</Action>}<Action light icon="chart" onClick={() => navigate("agent", "revenue")}>Ouvrir Revenue Growth</Action></div></Card>
+        <Card title="Qualité et gouvernance" icon="shield"><div className="governance-row"><Icon name="check" size={18}/><div><b>Données de démonstration identifiées</b><small>Jamais présentées comme données de production</small></div></div><div className="governance-row"><Icon name="check" size={18}/><div><b>Approbation humaine obligatoire</b><small>Les écritures ERP sont désactivées depuis ce dashboard</small></div></div><div className="governance-row"><Icon name="clock" size={18}/><div><b>Connexions inter-plateformes</b><small>Auth SSO, APIs, erreurs et métriques à implémenter</small></div></div></Card>
+      </div>
+      <Card title="Pipelines de modèles et sources" action={<Pill tone="gray">À connecter</Pill>}><div className="table-scroll"><table><thead><tr><th>Service</th><th>Rôle</th><th>Dernière synchronisation</th><th>Statut</th></tr></thead><tbody>{[["BI 360°","Données et KPI","—"],["Data Science","Prédictions ML","—"],["ERP LAI","Transactions métier","—"],["Revenue Growth","Analyse déterministe",revenue?.snapshot.asOf ?? "—"]].map((row, i) => <tr key={row[0]}><td><b>{row[0]}</b></td><td>{row[1]}</td><td>{row[2]}</td><td><Pill tone={i === 3 && backendStatus === "connected" ? "green" : "gray"}>{i === 3 && backendStatus === "connected" ? "Sandbox actif" : "À intégrer"}</Pill></td></tr>)}</tbody></table></div></Card>
+    </>
+  }
+  function auditPage() {
+    return <>
+      <div className="stats-row stats-four">
+        <Stat icon="layers" label="Événements affichés" value={audit.length} detail="Démonstration locale" />
+        <Stat icon="check" label="Décisions approuvées" value={decisions.filter((d) => d.status === "approved").length} />
+        <Stat icon="history" label="Missions créées" value={missions.length - initialMissions.length} />
+        <Stat icon="alert" label="Événements ERP prouvés" value="0" detail="Aucun write-back" tone="amber" />
+      </div>
+      <div className="audit-layout">
+        <Card title="Journal des événements" action={<span className="muted-text small">Trace locale UI uniquement</span>}><div className="table-scroll"><table><thead><tr><th>Date / heure</th><th>Action</th><th>Acteur</th><th>Agent</th><th>Mission</th><th>Résultat</th></tr></thead><tbody>{audit.map((entry) => <tr key={entry.id}><td>{entry.time}</td><td><Pill tone="blue">{entry.action}</Pill></td><td>{entry.actor}</td><td>{entry.agent === "director" ? "AI Director" : byAgent(entry.agent).name}</td><td>{entry.missionId}</td><td>{entry.result}</td></tr>)}</tbody></table></div></Card>
+        <Card title="Traçabilité & conformité"><div className="detail-highlight"><Icon name="shield"/><div><b>Audit du backend</b><p>Le backend existant journalise les investigations Revenue Growth avec l'identité, le périmètre et les volumes analysés.</p></div></div><div className="detail-highlight"><Icon name="document"/><div><b>Audit du frontend</b><p>Les événements affichés ci-contre sont uniquement des interactions locales de démonstration, sans valeur probante serveur.</p></div></div><div className="detail-highlight"><Icon name="lock"/><div><b>Pour la production</b><p>Conserver les missions, approbations et notifications côté serveur avec ID, horodatage, version et preuves.</p></div></div></Card>
+      </div>
+    </>
+  }
+  function settingsPage() {
+    return <>
+      <div className="stats-row stats-four">
+        <Stat icon="users" label="Agents configurables" value="4" />
+        <Stat icon="shield" label="Accès métier" value="RBAC" detail="Contrôlé côté backend" />
+        <Stat icon="bell" label="Alertes visibles" value={alerts.length} />
+        <Stat icon="database" label="Connexions actives" value={backendStatus === "connected" ? "1" : "0"} detail="Sandbox uniquement" />
+      </div>
+      <div className="settings-grid">
+        <Card title="Profil de la plateforme" icon="settings"><div className="form-grid"><label>Produit<input readOnly value="AI-NÉGOCE Intelligence Suite"/></label><label>Espace<input readOnly value="Agentic AI Command Center"/></label><label>Devise<input readOnly value="TND — 3 décimales"/></label><label>Langue<input readOnly value="Français"/></label></div><p className="muted-text small">Profil et identité métier gérés par l'authentification ERP à intégrer.</p></Card>
+        <Card title="Agents et droits" icon="users">{agents.map((a) => <div className="settings-line" key={a.id}><span><b>{a.name}</b><small>{a.implemented ? "MVP déterministe, lecture seule" : "Service à développer"}</small></span><Pill tone={a.implemented ? "green" : "gray"}>{a.implemented ? "MVP" : "Prévu"}</Pill></div>)}</Card>
+        <Card title="Préférences de notifications" icon="bell"><div className="settings-line"><span><b>Alertes prioritaires</b><small>Afficher les recommandations importantes dans l'interface</small></span><input aria-label="Alertes prioritaires" type="checkbox" checked={notificationRules.alerts} onChange={(e) => setNotificationRules((p) => ({ ...p, alerts: e.target.checked }))}/></div><div className="settings-line"><span><b>Décisions à approuver</b><small>Notifier les demandes de validation</small></span><input aria-label="Décisions à approuver" type="checkbox" checked={notificationRules.approvals} onChange={(e) => setNotificationRules((p) => ({ ...p, approvals: e.target.checked }))}/></div><div className="settings-line"><span><b>Synthèse quotidienne</b><small>Nécessite un worker serveur planifié</small></span><input aria-label="Synthèse quotidienne" type="checkbox" checked={notificationRules.summary} onChange={(e) => setNotificationRules((p) => ({ ...p, summary: e.target.checked }))}/></div><p className="muted-text small">Préférences locales de l'aperçu : aucun email ou push n'est envoyé.</p></Card>
+        <Card title="Intégrations & sécurité" icon="lock"><div className="settings-line"><span><b>Connecteur ERP LAI</b><small>Un contrat d'API et l'authentification réelle sont nécessaires</small></span><Pill>Non configuré</Pill></div><div className="settings-line"><span><b>Actions en écriture</b><small>Pas de validation automatique, ni de mutation ERP</small></span><Pill tone="green">Désactivées</Pill></div><div className="settings-line"><span><b>Connexion BI / DS</b><small>API et données communes à brancher</small></span><Action light icon="external" onClick={() => navigate("connections")}>Voir</Action></div></Card>
+      </div>
+    </>
+  }
+
+  const title = page === "overview" ? "Centre de commandement — Agentic AI" : page === "missions" ? "Centre de missions" : page === "agents" ? "Mes agents" : page === "director" ? "AI Director — Orchestration centrale" : page === "decisions" ? "Décisions et approbations" : page === "connections" ? "Connexions BI / Data Science" : page === "audit" ? "Historique & audit" : page === "settings" ? "Paramètres" : byAgent(selectedAgent).name + " Agent"
+  const subtitle = page === "overview" ? "Orchestration des agents IA, suivi des missions, décisions et impact business sur l'ERP."
+    : page === "missions" ? "Suivez les missions de l'ensemble des agents et contrôlez les étapes de validation."
+    : page === "agents" ? "Parlez à chaque agent et suivez les recommandations, notifications et analyses."
+    : page === "director" ? "Pilotage central, délégation des missions et arbitrage métier."
+    : page === "decisions" ? "Revue et validation humaine des recommandations proposées par les agents."
+    : page === "connections" ? "Suivi des connexions, synchronisations et contrats d'API."
+    : page === "audit" ? "Traçabilité de l'activité, des décisions et des opérations."
+    : page === "settings" ? "Personnalisez les préférences et supervisez la configuration." : ""
+
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <div className="brand"><div className="brand-mark"><Icon name="layers" size={27}/></div><div><strong>AI-NÉGOCE</strong><span>Intelligence Suite</span></div></div><p className="brand-sub">ERP & Agentic AI Enterprise</p>
+      <nav aria-label="Navigation principale">{navigation.map((item) => <button key={item.page} type="button" aria-label={item.label} className={"nav-link " + ((page === item.page || item.page === "agents" && page === "agent") ? "active" : "")} onClick={() => navigate(item.page)}><Icon name={item.icon} size={19}/><span>{item.label}</span>{item.page === "decisions" && pendingDecisions.length > 0 && <em>{pendingDecisions.length}</em>}</button>)}</nav>
+      <div className="sidebar-bottom"><div className="sidebar-rule" /><b>Plateformes</b><div className="sidebar-system"><i className="system-dot amber"/>ERP LAI <span>à connecter</span></div><div className="sidebar-system"><i className="system-dot amber"/>Data Analyse <span>à connecter</span></div><div className="sidebar-system"><i className="system-dot amber"/>Data Science <span>à connecter</span></div></div>
+    </aside>
+    <div className="workspace">
+      <header className="topbar"><div className="header-filter"><label>Entreprise : <b>AI-NÉGOCE Distribution</b><Icon name="down" size={15}/></label><label>Agence : <select aria-label="Agence" value={agency} onChange={(e) => setAgency(e.target.value)}><option value="all">Toutes les agences</option>{["Tunis Centre", "Sfax", "Sousse", "Bizerte", "Nabeul"].map((a) => <option key={a} value={a}>{a}</option>)}</select></label><label>Période : <select aria-label="Période" value={period} onChange={(e) => setPeriod(e.target.value)}><option>T4 2026</option><option>T3 2026</option><option>2026</option></select></label></div><div className="topbar-right"><button aria-label="Notifications" className="bell-button" onClick={() => setNotificationOpen((p) => !p)}><Icon name="bell" size={21}/>{unread > 0 && <i/>}</button><div className="user-avatar">AD</div><div className="user-info"><b>Administrateur</b><span>Environnement démo</span></div><Icon name="down" size={15}/></div></header>
+      <main className="main-content">
+        {page !== "agent" && <div className="page-heading"><div><div className="breadcrumb">AI-NÉGOCE / AGENTIC INTELLIGENCE</div><h1>{title}</h1><p>{subtitle}</p></div><div className="heading-actions"><Action light icon="refresh" onClick={() => { if (token) { setToken(null); setRevenue(null); setBackendStatus("disconnected"); setToast("Session API fermée. Reconnectez le sandbox pour actualiser."); } else setToast("Aucune source connectée à rafraîchir.") }}>Rafraîchir</Action>{(page === "overview" || page === "missions" || page === "director") && <Action icon="play" onClick={() => setMissionModal(true)}>Lancer une mission</Action>}</div></div>}
+        <div className="demo-banner"><Icon name="alert" size={17}/><span><strong>Mode démonstration.</strong> Les missions, notifications et décisions sont illustratives. Seul Revenue Growth peut lire l'API sandbox après connexion ; aucune action ERP n'est exécutée.</span><SmallLink onClick={() => navigate("connections")}>Connexions</SmallLink></div>
+        {page === "overview" ? overview() : page === "missions" ? missionsPage() : page === "agents" ? agentsPage() : page === "agent" ? agentPage() : page === "director" ? directorPage() : page === "decisions" ? decisionsPage() : page === "connections" ? connectionsPage() : page === "audit" ? auditPage() : settingsPage()}
+      </main>
+    </div>
+    {notificationOpen && <div className="notifications-popover"><div className="popover-head"><b>Notifications ({unread})</b><button aria-label="Fermer" className="icon-button" onClick={() => setNotificationOpen(false)}><Icon name="close"/></button></div>{alerts.map((n) => <button type="button" key={n.id} className={"popover-notice " + (!n.seen ? "unread" : "")} onClick={() => readAlert(n)}><span className={"alert-marker marker-" + priorityTone[n.priority]}><Icon name="bell" size={17}/></span><span><b>{n.title}</b><small>{n.detail}</small><em>{n.timestamp}</em></span></button>)}</div>}
+    {missionModal && <div className="modal-overlay" role="presentation" onMouseDown={() => setMissionModal(false)}><section className="modal" role="dialog" aria-modal="true" aria-label="Nouvelle mission" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><h2>Créer une nouvelle mission</h2><p>Préparer un brouillon local de mission agentique.</p></div><button className="icon-button" aria-label="Fermer" onClick={() => setMissionModal(false)}><Icon name="close"/></button></div><label>Objectif de mission<textarea value={newTitle} onChange={(e) => setNewTitle(e.target.value)} rows={3} placeholder="Ex. Identifier les clients prioritaires à relancer..."/></label><div className="modal-form-row"><label>Agent responsable<select value={newAgent} onChange={(e) => setNewAgent(e.target.value as AgentKey)}>{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label><label>Priorité<select value={newPriority} onChange={(e) => setNewPriority(e.target.value as Priority)}><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></label></div><p className="modal-info"><Icon name="shield" size={18}/> Enregistrement dans la maquette uniquement : pas d'exécution en arrière-plan.</p><div className="modal-footer"><Action light onClick={() => setMissionModal(false)}>Annuler</Action><Action icon="plus" onClick={addMission}>Créer le brouillon</Action></div></section></div>}
+    {toast && <div className="toast" role="status"><Icon name="check" size={17}/>{toast}</div>}
+  </div>
+}
