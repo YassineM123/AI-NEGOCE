@@ -492,7 +492,7 @@ export default function App() {
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><Icon name="layers" size={27}/></div><div><strong>AI-NÉGOCE</strong><span>Intelligence Suite</span></div></div><p className="brand-sub">ERP & Agentic AI Enterprise</p>
-      <nav aria-label="Navigation principale">{navigation.map((item) => <button key={item.page} type="button" className={"nav-link " + ((page === item.page || item.page === "agents" && page === "agent") ? "active" : "")} onClick={() => navigate(item.page)}><Icon name={item.icon} size={19}/><span>{item.label}</span>{item.page === "decisions" && pendingDecisions.length > 0 && <em>{pendingDecisions.length}</em>}</button>)}</nav>
+      <nav aria-label="Navigation principale">{navigation.map((item) => <button key={item.page} type="button" aria-label={item.label} className={"nav-link " + ((page === item.page || item.page === "agents" && page === "agent") ? "active" : "")} onClick={() => navigate(item.page)}><Icon name={item.icon} size={19}/><span>{item.label}</span>{item.page === "decisions" && pendingDecisions.length > 0 && <em>{pendingDecisions.length}</em>}</button>)}</nav>
       <div className="sidebar-bottom"><div className="sidebar-rule" /><b>Plateformes</b><div className="sidebar-system"><i className="system-dot amber"/>ERP LAI <span>à connecter</span></div><div className="sidebar-system"><i className="system-dot amber"/>Data Analyse <span>à connecter</span></div><div className="sidebar-system"><i className="system-dot amber"/>Data Science <span>à connecter</span></div></div>
     </aside>
     <div className="workspace">
