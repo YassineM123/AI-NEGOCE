@@ -266,14 +266,16 @@ export function AdvancedOverview({token,agency,onNavigate}:{
   const [approvals,setApprovals]=useState<Approval[]>([])
   const [notifications,setNotifications]=useState<Notification[]>([])
   const [error,setError]=useState("")
+  const [environment,setEnvironment]=useState<{persistence:"postgres"|"memory";llmConfigured:boolean;notifications:string}|null>(null)
   const load=useCallback(async()=>{
     try{
-      const [m,a,n]=await Promise.all([
+      const [m,a,n,env]=await Promise.all([
         api<{missions:Mission[]}>(token,"/missions"),
         api<{approvals:Approval[]}>(token,"/approvals"),
         api<{notifications:Notification[]}>(token,"/notifications"),
+        api<{persistence:"postgres"|"memory";llmConfigured:boolean;notifications:string}>(token,"/status"),
       ])
-      setMissions(m.missions);setApprovals(a.approvals);setNotifications(n.notifications);setError("")
+      setEnvironment(env);setMissions(m.missions);setApprovals(a.approvals);setNotifications(n.notifications);setError("")
     }catch(e){setError(e instanceof Error?e.message:"Données Agentic indisponibles")}
   },[token])
   useEffect(()=>{
@@ -289,6 +291,7 @@ export function AdvancedOverview({token,agency,onNavigate}:{
       <p>Missions et notifications enregistrées · approbations tracées · rafraîchissement automatique</p></div>
       <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
     {error&&<Notice>{error}</Notice>}
+    {environment&&<p className="aw-env" role="status"><strong>Stockage : {environment.persistence==="postgres"?"PostgreSQL durable":"Mémoire temporaire — données perdues après redémarrage"}</strong><span> · Chat IA : {environment.llmConfigured?"Fournisseur configuré":"LLM non configuré"} · Notifications : in-app, rappels par worker</span></p>}
     <div className="aw-metrics">
       <button onClick={()=>onNavigate("missions")}><small>Missions</small><strong>{filteredMissions.length}</strong><span>Dossiers persistés</span></button>
       <button onClick={()=>onNavigate("missions")}><small>Analyses en revue</small><strong>{filteredMissions.filter(m=>m.status==="awaiting_approval").length}</strong><span>En attente humaine</span></button>
