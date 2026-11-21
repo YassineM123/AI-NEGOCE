@@ -72,13 +72,13 @@ test("loads the Financial Strategy API and renders source-linked recommendations
   await page.route("**/api/v1/agentic/revenue-growth/opportunities?*", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
       agent:"revenue_growth", status:"ok", executionMode:"read_only",
-      snapshot:{source:"Fixture QA",asOf:"2026-10-31"},analysis:{customersAnalyzed:0,opportunitiesFound:0,returned:0},opportunities:[],warnings:[],
+      snapshot:{source:"Fixture QA",asOf:"2026-10-31",period:{from:"2026-10-01",to:"2026-12-31"}},analysis:{customersAnalyzed:0,opportunitiesFound:0,returned:0},opportunities:[],warnings:[],
     }) })
   })
   await page.route("**/api/v1/agentic/financial-strategy/analysis?*", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
       agent:"financial_strategy", status:"ok", executionMode:"read_only",
-      snapshot:{source:"Fixture QA",asOf:"2026-10-31",scope:["Sfax"],currency:"TND"},
+      snapshot:{source:"Fixture QA",asOf:"2026-10-31",scope:["Sfax"],currency:"TND",period:{from:"2026-10-01",to:"2026-12-31"}},
       metrics:{outstandingTnd:2500.125,overdueTnd:800.100},
       findings:[{id:"FIN-001",title:"Créance échue : TEST-CLIENT",priority:"high",
         explanation:"800.100 TND en attente de revue",
@@ -112,12 +112,14 @@ test("AI Director submits a bounded investigation and renders an auditable deleg
   await page.route("**/api/v1/agentic/revenue-growth/opportunities?*", async (route) => {
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
       agent:"revenue_growth",status:"ok",executionMode:"read_only",
-      snapshot:{source:"Fixture QA",asOf:"2026-10-31"},
+      snapshot:{source:"Fixture QA",asOf:"2026-10-31",period:{from:"2026-10-01",to:"2026-12-31"}},
       analysis:{customersAnalyzed:0,opportunitiesFound:0,returned:0},opportunities:[],warnings:[],
     })})
   })
   await page.route("**/api/v1/agentic/ai-director/investigate", async (route) => {
-    const body=route.request().postDataJSON() as {objective?: string}
+    const body=route.request().postDataJSON() as {objective?: string;from?:string;to?:string}
+    expect(body.from).toBe("2026-10-01")
+    expect(body.to).toBe("2026-12-31")
     if (!body.objective?.includes("croissance")) throw new Error("Objective not sent to Director")
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
       director:"ai_director", orchestrationMode:"deterministic_read_only",status:"ok",
