@@ -47,9 +47,15 @@ const responseSchema = {
 function deterministicInvoicePlan(question: string, asOf: string): CopilotPlan | null {
   const q = question.toLowerCase()
   if (!/\b(factures?|fawatir|factora|invoice)s?\b/i.test(q)) return null
+  // Supplier invoices must never silently fall through to the sales ledger.
+  // When purchases are not connected, the supplier tool explicitly returns
+  // "unsupported", rather than inventing an answer from sales invoices.
+  const isSupplierInvoice =
+    /\b(fournisseurs?|fournissourat|achats?|purchase|supplier|suppliers|factures?\s+d['’]achat)\b/i.test(q)
+    || /فواتير\s*(الموردين|المزودين)|الموردين|المزودين/.test(q)
   const year = q.match(/\b(20\d{2})\b/)?.[1] ?? (/\b(sna|cette annee|cette année|this year)\b/i.test(q) ? asOf.slice(0, 4) : undefined)
   return {
-    intent: "sales_invoices",
+    intent: isSupplierInvoice ? "supplier_purchases" : "sales_invoices",
     language: /[\u0600-\u06ff]/.test(question) ? "ar" : /\b(aateni|mtaa|sna|chouf|nheb)\b/i.test(q) ? "tn" : "fr",
     ...(year ? { from: `${year}-01-01`, to: `${year}-12-31` } : {}),
   }
