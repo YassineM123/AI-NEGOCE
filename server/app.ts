@@ -21,6 +21,7 @@ import {
 } from "./auth.js"
 import { hasPermission, requirePermission } from "./permissions.js"
 import { buildAnalyticsOverview, buildPlatformContext } from "./analytics-platform.js"
+import { loadExtractedDemo, type ExtractQuality } from "./demo-database.js"
 import { loadConfig, type AppConfig } from "./config.js"
 import {
   defaultDataset,
@@ -96,6 +97,8 @@ export type Dependencies = {
   erp: ErpAdapter
   /** BI/Copilot data source; defaults to the declared local test fixture */
   data?: Dataset
+  /** Provenance/coverage report, available only to the sandbox admin in extract mode. */
+  demoQuality?: ExtractQuality
   /** Local ERP database (SQLite) behind the dashboard; null when not built */
   erpDb?: ErpDatabase | null
   /** Log destination; stdout when absent (tests inject one to inspect the output) */
@@ -105,7 +108,10 @@ export type Dependencies = {
 }
 export function defaultDependencies(env = process.env): Dependencies {
   const config = loadConfig(env)
+  const extracted = config.DEMO_DATA_SOURCE === "extractions" ? loadExtractedDemo() : null
   return {
+    data: extracted?.dataset,
+    demoQuality: extracted?.quality,
     config,
     store: config.DATABASE_URL
       ? new PostgresStore(config.DATABASE_URL)
@@ -366,6 +372,22 @@ export function createApp(deps = defaultDependencies()) {
         ? sandboxDenied(res)
         : next()
   registerAgenticWorkspaceRoutes(app, { store, dataset: data, llm: deps.llm, requireErpData })
+
+  // Safe provenance report, never raw client identifiers. Scope remains demo tenant only.
+  app.get(
+    "/api/v1/demo/database/quality",
+    requireRoles("admin"),
+    requireErpData,
+    (_req, res) => {
+      if (!deps.demoQuality)
+        return res.status(404).json({ error: {
+          code: "DEMO_EXTRACTS_NOT_ENABLED",
+          message: "Mode extraits IAINEG non actif",
+        } })
+      res.setHeader("Cache-Control", "no-store")
+      return res.json(deps.demoQuality)
+    },
+  )
 
   app.get("/api/v1/platform/context", async (req, res) => {
     const sourceAvailable =
