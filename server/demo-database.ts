@@ -55,7 +55,7 @@ function readTable(root: string, relative: string, required: string[]) {
   const records = parseCsv(fs.readFileSync(path.join(root, relative), "utf8"))
   if (!records.length) throw new Error("Empty demo source: " + relative)
   for (const col of required)
-    if (!Object.hasOwn(records[0], col))
+    if (!Object.prototype.hasOwnProperty.call(records[0], col))
       throw new Error("Missing column " + col + " in " + relative)
   return records
 }
@@ -200,6 +200,8 @@ export function loadExtractedDemo(root = DEMO_EXTRACT_ROOT): {
       "demonstration/paquets_demo.csv",
       "demonstration/promotions_prix_demo.csv",
       "demonstration/scoring_demo.csv",
+      "demonstration/fournisseurs_livraisons_demo_synthetique.csv",
+      "demonstration/plan_tresorerie_demo_synthetique.csv",
     ],
     warnings,
   }
