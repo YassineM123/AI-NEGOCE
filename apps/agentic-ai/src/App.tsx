@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode, type FormEvent } from "react"
 import Icon from "./Icon"
 import {
   agents, byAgent, decisionLabel, initialAlerts, initialAudit, initialDecisions,
@@ -30,16 +30,16 @@ const decisionTone: Record<DecisionState, Tone> = { pending: "amber", review: "b
 const states: MissionState[] = ["a_planifier", "en_cours", "en_revue", "terminee"]
 const timeNow = () => new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
 
-function Pill({ children, tone = "gray", dot = false }: { children: React.ReactNode; tone?: Tone; dot?: boolean }) {
+function Pill({ children, tone = "gray", dot = false }: { children: ReactNode; tone?: Tone; dot?: boolean }) {
   return <span className={"pill pill-" + tone}>{dot && <i className="pill-dot" />}{children}</span>
 }
 function Action({ icon, children, onClick, light = false, disabled = false, className = "" }: {
-  icon?: string; children: React.ReactNode; onClick?: () => void; light?: boolean; disabled?: boolean; className?: string
+  icon?: string; children: ReactNode; onClick?: () => void; light?: boolean; disabled?: boolean; className?: string
 }) {
   return <button type="button" className={"action " + (light ? "action-light " : "action-primary ") + className} onClick={onClick} disabled={disabled}>{icon && <Icon name={icon} size={16} />}{children}</button>
 }
 function Card({ title, icon, children, action, className = "" }: {
-  title?: string; icon?: string; children: React.ReactNode; action?: React.ReactNode; className?: string
+  title?: string; icon?: string; children: ReactNode; action?: ReactNode; className?: string
 }) {
   return <section className={"card " + className}>
     {(title || action) && <div className="card-head"><div className="card-title">{icon && <Icon name={icon} size={19} />}{title}</div>{action}</div>}
@@ -60,7 +60,7 @@ function Avatar({ agent, size = "normal" }: { agent: AgentKey | "director"; size
 function AgentLabel({ agent }: { agent: AgentKey }) {
   return <span className="agent-label"><Avatar agent={agent} /> <span>{byAgent(agent).name}</span></span>
 }
-function SmallLink({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function SmallLink({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return <button type="button" className="small-link" onClick={onClick}>{children}<Icon name="arrow" size={15} /></button>
 }
 function Stepper({ steps, progress }: { steps: string[]; progress: number }) {
@@ -208,7 +208,7 @@ export default function App() {
     setSelectedAgent(item.agent)
     navigate("agent", item.agent)
   }
-  const sendChat = (event: React.FormEvent) => {
+  const sendChat = (event: FormEvent) => {
     event.preventDefault()
     const message = chatDraft.trim()
     if (!message) return
