@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode, type FormEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode, type FormEvent } from "react"
 import Icon from "./Icon"
 import {
   agents, byAgent, decisionLabel, initialAlerts, initialAudit, initialDecisions,
@@ -8,12 +8,18 @@ import {
 } from "./data"
 import {
   createLocalDemoSession, fetchPlatformContext, fetchRevenueGrowth,
-  fetchSpecialistReport, fetchDirectorReport,
-  type PlatformContext, type RevenueResult, type SpecialistReport,
+  fetchSpecialistReport, fetchDirectorReport, fetchSharedOverview,
+  type PlatformContext, type AnalyticsOverview, type SharedFilters, type RevenueResult, type SpecialistReport,
   type SpecialistAgent, type DirectorReport,
 } from "./api"
 
-type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "connections" | "audit" | "settings"
+type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "platforms" | "connections" | "audit" | "settings"
+const PERIODS: Record<string, { from: string; to: string }> = {
+  "T4 2026": { from: "2026-10-01", to: "2026-12-31" },
+  "T3 2026": { from: "2026-07-01", to: "2026-09-30" },
+  "2026": { from: "2026-01-01", to: "2026-12-31" },
+}
+
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string }
 type Tone = "blue" | "green" | "amber" | "red" | "gray"
 
@@ -23,6 +29,7 @@ const navigation: { page: Page; label: string; icon: string }[] = [
   { page: "agents", label: "Mes agents", icon: "users" },
   { page: "director", label: "AI Director", icon: "layers" },
   { page: "decisions", label: "Décisions et approbations", icon: "shield" },
+  { page: "platforms", label: "Plateformes BI / DS", icon: "chart" },
   { page: "connections", label: "Connexions BI / Data Science", icon: "database" },
   { page: "audit", label: "Historique & audit", icon: "history" },
   { page: "settings", label: "Paramètres", icon: "settings" },
@@ -94,6 +101,14 @@ export default function App() {
   const [decisionId, setDecisionId] = useState("DEC-2026-041")
   const [agency, setAgency] = useState("all")
   const [period, setPeriod] = useState("T4 2026")
+  const [portalTab, setPortalTab] = useState<"bi" | "ds">("bi")
+  const [sharedOverview, setSharedOverview] = useState<AnalyticsOverview | null>(null)
+  const [sharedError, setSharedError] = useState("")
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const bridgeVersion = useRef(0)
+  const sharedFilters: SharedFilters = useMemo(
+    () => ({ agency, ...PERIODS[period] }), [agency, period],
+  )
   const [query, setQuery] = useState("")
   const [missionFilter, setMissionFilter] = useState("all")
   const [agentFilter, setAgentFilter] = useState("all")
