@@ -1,0 +1,46 @@
+import type { ReactNode } from "react"
+
+const shapes: Record<string, ReactNode> = {
+  home: (<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>),
+  chart: (<path d="M4 20V11m5 9V7m5 13v-5m5 5V4"/><path d="M2 20h20"/>),
+  target: (<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/><path d="m12 12 8-8"/>),
+  users: (<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2"/><path d="M17 4a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 5v1"/>),
+  layers: (<path d="m12 2 9 5-9 5-9-5 9-5Zm-9 10 9 5 9-5M3 17l9 5 9-5"/>),
+  coins: (<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>),
+  cube: (<path d="m12 2 9 5v10l-9 5-9-5V7l9-5z"/><path d="m3 7 9 5 9-5M12 12v10"/>),
+  shield: (<path d="M12 2 4 5v6c0 5 3.3 8.2 8 11 4.7-2.8 8-6 8-11V5z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>),
+  bell: (<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>),
+  history: (<path d="M3 12a9 9 0 1 0 3-7L3 8"/><path d="M3 3v5h5m4-1v5l4 3"/>),
+  settings: (<circle cx="12" cy="12" r="3"/><path d="M19 13.5V10.5l2-1-2-4-2.4.7-2.1-1.2L14 2h-4l-.5 3-2.1 1.2L5 5.5l-2 4 2 1v3l-2 1 2 4 2.4-.7 2.1 1.2L10 22h4l.5-3 2.1-1.2 2.4.7 2-4z"/>),
+  message: (<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H5l1.5-4.3A8.5 8.5 0 1 1 21 11.5Z"/>),
+  arrow: (<path d="M5 12h14m-6-6 6 6-6 6"/>),
+  check: (<path d="m5 12 4 4L19 6"/>),
+  play: (<path d="m7 4 13 8-13 8z"/>),
+  filter: (<path d="M4 5h16l-6 7v6l-4 2v-8z"/>),
+  search: (<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>),
+  calendar: (<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/>),
+  refresh: (<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.5 9a7 7 0 0 1 13-2L20 12M4 12l1.5 5a7 7 0 0 0 13-2"/>),
+  plus: (<path d="M12 5v14M5 12h14"/>),
+  close: (<path d="M5 5 19 19M19 5 5 19"/>),
+  chevron: (<path d="m9 18 6-6-6-6"/>),
+  down: (<path d="m6 9 6 6 6-6"/>),
+  menu: (<path d="M4 6h16M4 12h16M4 18h16"/>),
+  alert: (<path d="m12 2 10 18H2L12 2Z"/><path d="M12 9v4m0 3v.1"/>),
+  clock: (<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>),
+  document: (<path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5M9 13h7M9 17h7"/>),
+  upload: (<path d="M12 17V3m-5 5 5-5 5 5"/><path d="M4 16v5h16v-5"/>),
+  external: (<path d="M13 4h7v7m0-7-9 9"/><path d="M20 13v7H4V4h7"/>),
+  spark: (<path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2z"/>),
+  pause: (<path d="M9 5v14m6-14v14"/>),
+  mail: (<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 7 9-7"/>),
+  link: (<path d="m10 13 4-4m-6 7H6a4 4 0 0 1 0-8h5m2 0h5a4 4 0 0 1 0 8h-5"/>),
+  lock: (<rect x="4" y="10" width="16" height="12" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/>),
+  globe: (<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-6 6-6 12 0 18M12 3c6 6 6 12 0 18"/>),
+  send: (<path d="m3 11 18-8-8 18-2-8-8-2z"/>),
+  sliders: (<path d="M4 7h16M4 17h16M8 4v6m8 4v6"/>),
+  database: (<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.6 4 3 9 3s9-1.4 9-3V5M3 12c0 1.6 4 3 9 3s9-1.4 9-3"/>),
+}
+
+export default function Icon({ name, size = 18, className = "" }: { name: string; size?: number; className?: string }) {
+  return <svg aria-hidden="true" className={"icon " + className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{shapes[name] ?? shapes.layers}</svg>
+}
