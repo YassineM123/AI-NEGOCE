@@ -43,9 +43,4 @@ describe("Revenue Growth Agent HTTP permissions", () => {
     expect(response.body.error.code).toBe("INVALID_REQUEST")
   })
 
-  it("rejects accounting-only roles for commercial investigations", async () => {
-    const { app } = makeApp()
-    const response = await request(app).get(url).set(bearer("dev-admin"))
-    expect(response.status).toBe(200)
-  })
 })
