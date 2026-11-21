@@ -27,6 +27,8 @@ export function routeAnalyticalQuestion(input:{
   // answered as an all-time aggregate. Ask for filters in the BI/DS portal.
   if(/\b(20[12][0-9]|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre|trimestre|semaine|mois dernier|mois prochain|cette annee|annee derniere|par (mois|produit|famille|client|commercial))\b/.test(q))
     return null
+  if(/\b(\d+\s*(jours?|semaines?|mois|ans?)|aujourd'hui|hier|depuis|jusqu'a|dernier|derniere|ce mois|cette semaine|cette annee|cette periode|par agence|par depot|sur \d+)\b/.test(q))
+    return null
   const dataset=input.dataset,asOf=dataset.metadata.asOf
   const agencyLabels=[...new Set([
     ...dataset.sales.map(r=>r.agency),
