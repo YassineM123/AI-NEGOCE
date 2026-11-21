@@ -26,7 +26,7 @@ test("creates a local draft mission without a backend action", async ({ page }) 
   await expect(page.getByRole("dialog", { name: "Nouvelle mission" })).toBeVisible()
   await page.getByRole("textbox", { name: "Objectif de mission" }).fill("Étudier les clients stratégiques de Sfax")
   await page.getByRole("button", { name: "Créer le brouillon" }).click()
-  await expect(page.getByText("Étudier les clients stratégiques de Sfax")).toBeVisible()
+  await expect(page.getByText("Étudier les clients stratégiques de Sfax").first()).toBeVisible()
   await expect(page.getByText("Aucune exécution réelle.")).toBeVisible()
 })
 
