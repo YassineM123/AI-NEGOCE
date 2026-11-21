@@ -46,3 +46,11 @@ body{background:var(--bg);font-size:13px}.sidebar{background:var(--nav);box-shad
 .overview-grid{display:grid;grid-template-columns:1.65fr 1fr;gap:12px}.overview-grid.lower{grid-template-columns:1.25fr 1fr}.overview-grid>.panel{min-width:0}.overview-grid .table-wrap{max-height:310px}
 @media(max-width:1000px){.overview-grid,.overview-grid.lower{grid-template-columns:1fr}}
 .platform-connect{border:1px solid #cbd9ea;border-radius:8px;background:#fff;color:#174e92;padding:8px 11px;font-weight:700;cursor:pointer}.platform-connect:disabled{opacity:.55;cursor:wait}.environment-status.api-connected{background:#e7f7ef;color:#117249}.environment-status.api-forbidden{background:#fff2dd;color:#925b13}
+
+
+/* Same enterprise shell semantics as the unified Command Center. */
+.unified-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+#exportEvidenceBtn{background:#eef5ff;color:#1856ab;border-color:#c7d9ef}
+#exportEvidenceBtn:hover{background:#dcecff}
+#exportEvidenceBtn[hidden]{display:none!important}
+@media(max-width:720px){.unified-header-actions{width:100%;justify-content:flex-start}.unified-header-actions button{min-height:36px}}
