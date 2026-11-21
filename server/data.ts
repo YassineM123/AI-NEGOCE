@@ -8,6 +8,8 @@ export type Sale = {
   /** stable ERP ids; names are display labels and are not unique */
   customerId?: string
   productId?: string
+  /** Original invoiced line quantity; absent for incomplete extracts. */
+  quantity?: number | null
   product: string
   family: string
   representative: string
