@@ -1,41 +1,32 @@
-# figma-make-app
+# AI-NÉGOCE — Repository Instructions
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+## Canonical working branch
 
-## Development Server
+**`feature/unified-ai-analytics-platform`** is the agreed integration branch for subsequent project work. Never push features directly to `main` unless explicitly requested. Preserve the existing Data Analyse and Data Science dashboards; do not replace their files with another branch's root tree.
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+## The three independent platforms
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+1. `dashboards/data-analysis/`: current BI HTML/CSS/JavaScript prototype, using anonymized CSV exports under `data/extractions/`.
+2. `dashboards/data-science/`: existing standalone HTML-based 16-page Data Science prototype; do not claim it has verified ML model serving.
+3. `apps/agentic-ai/`: React + TypeScript + Vite Agentic Command Center, linked from `dashboards/agentic-ai/README.md`. Start via `npm run agentic:dev` (port 8444).
 
-## Project Structure
+All three live in the same branch, while the backend is shared in `server/`; **live BI/DS service-to-service integration is a separate, unfinished task**. No unverified ERP data or model outputs may be presented as genuine.
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+## Backend & first agent
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+`server/agents/revenue-growth.ts`: read-only deterministic Revenue Growth MVP; route `GET /api/v1/agentic/revenue-growth/opportunities` in `server/app.ts`. Existing backend handles authorization, tenant scope, audit and source availability. Do not bypass those guards.
 
-## Dependencies
+`src/` hosts the existing React ERP/BI/Copilot app on port 8443; `apps/agentic-ai/` is a separate React frontend.
 
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
+## Checks after changes
 
-## Styling
+```bash
+npm ci
+npm run typecheck
+npm run agentic:typecheck
+npm run agentic:build
+npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts
+npx playwright test --config apps/agentic-ai/playwright.config.ts
+```
 
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
-
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
-
-## Code quality
-
-- Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
-- Ensure JSX tags are closed and braces are balanced.
-- Export components as default exports.
+Keep all generated files, browser profiles, tokens and company records out of Git. Do not merge automatically when CI fails. Keep write-back functionality disabled until permissions, human approval and real ERP integration are verified.
