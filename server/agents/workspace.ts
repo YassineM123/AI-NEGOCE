@@ -81,6 +81,7 @@ export type WorkspaceApproval = {
   createdAt: string; reviewedAt: string | null; reviewedBy: string | null
   comment: string | null
   expiresAt?:string;proposalHash?:string
+}
 export type WorkspaceNotification = {
   id: string; key: string; recipientId: string | null; audience: "user" | "reviewer"
   agency: string; kind: "mission" | "approval" | "due" | "review" | "signal"
