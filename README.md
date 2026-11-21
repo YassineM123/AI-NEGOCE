@@ -1,6 +1,6 @@
 # AI-NÉGOCE Intelligence Suite — Plateformes BI, Data Science & Agentic AI
 
-Cette branche regroupe **trois espaces distincts** dans un seul dépôt Git : Data Analyse (BI), Data Science et Agentic AI, ainsi que le backend ERP/Copilot existant. Les deux premiers espaces sont conservés en prototypes HTML/JavaScript et le troisième est une application **React 19 + TypeScript + Vite**. Les services BI/DS ne sont pas encore intégrés au backend agentique ; aucune connexion réelle à l'ERP LAI n'est déclarée.
+Cette branche regroupe **trois espaces distincts** dans un seul dépôt Git : Data Analyse (BI), Data Science et Agentic AI, ainsi que le backend ERP/Copilot existant. Les deux premiers espaces sont conservés en prototypes HTML/JavaScript et le troisième est une application **React 19 + TypeScript + Vite**. Les trois plateformes partagent désormais une session sandbox et des KPI gouvernés (CA, créances, période et agence) depuis un backend commun. Les calculs détaillés historiques BI/DS restent locaux et aucune connexion à l'ERP LAI réel n'est déclarée.
 
 ## Contenu du dépôt
 
@@ -18,60 +18,41 @@ Cette branche regroupe **trois espaces distincts** dans un seul dépôt Git : Da
 - [`tools/`](tools/) — scripts PowerShell utilisés pour les captures et la
   maintenance du prototype.
 
-## Démarrer les prototypes
+## Lancer les trois applications avec une session et des filtres partagés
 
-Un serveur HTTP local est nécessaire pour permettre au navigateur de charger
-les fichiers CSV.
+**Point d'entrée recommandé : http://127.0.0.1:8444**. Le portail React sert aussi les deux dashboards historiques sur /platform/bi/ et /platform/ds/, sous la même origine. Le frontend utilise le proxy /api vers Express localhost:3001.
 
-Depuis la racine du dépôt :
+Depuis la racine du dépôt (sandbox local seulement) :
 
-```powershell
-python -m http.server 8000
-```
-
-Puis ouvrir :
-
-- [Centre BI Data Analysis](http://localhost:8000/dashboards/data-analysis/)
-- [Prototype Data Science](http://localhost:8000/dashboards/data-science/)
-
-Aucune installation JavaScript ni connexion à la base de production n’est
-nécessaire pour consulter ces prototypes.
-
-## Lancer les trois plateformes
-
-Le code de chaque plateforme est indépendant. Exécuter les commandes depuis la **racine** du dépôt.
-
-**Plateformes 1 et 2 — previews HTML/CSV** :
-
-```bash
-python -m http.server 8000
-```
-
-- Data Analyse : http://localhost:8000/dashboards/data-analysis/
-- Data Science : http://localhost:8000/dashboards/data-science/
-
-**Plateforme 3 — React Agentic Command Center** (dans un deuxième terminal) :
-
-```bash
+~~~bash
 npm ci
+# Configurer AUTH_MODE=local-dev et HOST=127.0.0.1 dans l'environnement local
+npm run dev:api
+~~~
+
+Dans un autre terminal :
+
+~~~bash
 npm run agentic:dev
-```
+~~~
 
-- Agentic AI : http://127.0.0.1:8444/
-- Code : [dashboards/agentic-ai](dashboards/agentic-ai/)
+Ouvrir le Command Center, cliquer **Plateformes BI / DS**, puis **Connecter la session sandbox**. Le sélecteur agence/période est unique. Les trois bandes de KPI partagées affichent le même snapshotId, CA et créances ; le jeton reste uniquement en mémoire dans le parent React. Les outils historiques des dashboards BI et DS restent distincts du snapshot commun.
 
-**Agents métier et AI Director — backend sandbox facultatif** : configurer `.env` en local selon [le guide backend](dashboards/agentic-ai/README.md), puis démarrer `npm run dev:api` (API sur 127.0.0.1:3001). Dans le Dashboard Agentic, ouvrir « Connexions BI / Data Science », puis « Connecter sandbox local ».
+**Consultation des maquettes sans session partagée** : un serveur statique permet toujours d'ouvrir séparément les prototypes HTML/CSV sur port 8000, mais n'assure ni authentification commune ni synchronisation des filtres.
 
-```bash
+Tests :
+
+~~~bash
+npm run typecheck
 npm run agentic:typecheck
 npm run agentic:build
-npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts
+npx vitest run server/analytics-platform.test.ts
 npx playwright test --config dashboards/agentic-ai/playwright.config.ts
-```
+~~~
 
-Le mode sandbox utilise des fixtures de test, pas des chiffres de l'entreprise. **Les opérations d'approbation et les notifications sont des simulations UI, sans écriture dans l'ERP**. Les quatre moteurs métier et le Director read-only sont développés ; leur orchestration LLM autonome, la persistance des missions/approbations, et les APIs BI/Data Science restent à développer.
+La session locale n'est pas un SSO production ; Data Science n'a aucun modèle serveur validé ; les rapports des 4 Agents sont encore indépendants du filtre historique de période, et l'ERP LAI réel reste à intégrer. Les décisions et notifications de démonstration n'écrivent aucune donnée ERP.
 
-Documentation détaillée : [AI Director et quatre Agents — MVP](docs/agentic/ai-director-specialists-mvp.md).
+Voir [le guide d'intégration technique](docs/PLATFORM_INTEGRATION.md) et [les Agents read-only](docs/agentic/ai-director-specialists-mvp.md).
 
 ## Règles de développement — branche canonique
 
