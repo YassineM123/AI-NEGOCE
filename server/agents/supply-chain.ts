@@ -2,7 +2,7 @@ import type { AgencyScope } from "../auth.js"
 import { proposeTransferCandidates } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
-  amount, ensureLimit, finding, inventoryInScope, snapshot, sumMoney,
+  amount, ensureLimit, finding, inventoryInScope, snapshot, sumMoney, periodContainsSnapshot,
   type AgentReport, type Evidence, type ReportPeriod,
 } from "./common.js"
 
@@ -17,6 +17,7 @@ export function analyzeSupplyChain(input: {
   ensureLimit(limit)
   const snap = snapshot(input.dataset, input.scope,input.period)
   const rows = inventoryInScope(input.dataset,input.scope,input.period)
+  const snapshotApplicable=periodContainsSnapshot(input.dataset.metadata.asOf,input.period)
   const validThreshold = rows.filter((r) =>
     Number.isFinite(r.quantity) && Number.isFinite(r.reorderPoint) && r.reorderPoint > 0
   )
@@ -33,7 +34,7 @@ export function analyzeSupplyChain(input: {
       id:"RESTORE_MINIMUM",
       label:"Coût indicatif : revenir au seuil de commande",
       assumption:"Simple écart au point de réapprovisionnement, sans lead time, MOQ, disponibilité fournisseur, TVA ni transport.",
-      valueTnd:lowStock.every((r)=>Number.isFinite(r.unitCost)&&r.unitCost>=0)
+      valueTnd:rows.length>0 && lowStock.every((r)=>Number.isFinite(r.unitCost)&&r.unitCost>=0)
         ? sumMoney(lowStock.map((r)=> Math.ceil(r.reorderPoint-r.quantity)*r.unitCost))
         : null,
     },
@@ -66,10 +67,10 @@ export function analyzeSupplyChain(input: {
     executionMode:"read_only",
     snapshot:snap,
     metrics:{
-      stockPositions:rows.length,
-      lowStockPositions:lowStock.length,
-      emptyStockPositions:validThreshold.filter((r)=>r.quantity<=0).length,
-      positionsWithMissingThreshold:rows.length-validThreshold.length,
+      stockPositions:snapshotApplicable?rows.length:null,
+      lowStockPositions:snapshotApplicable?lowStock.length:null,
+      emptyStockPositions:snapshotApplicable?validThreshold.filter((r)=>r.quantity<=0).length:null,
+      positionsWithMissingThreshold:snapshotApplicable?rows.length-validThreshold.length:null,
       indicativeStockValueTnd:availableInventory.length
         ? sumMoney(availableInventory.map((r)=>r.quantity*r.unitCost))
         : null,

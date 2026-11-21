@@ -3,7 +3,7 @@ import { compareThreeStrategyScenarios } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
  amount, ensureLimit, finding, inventoryInScope, percent,
- receivablesInScope, salesInScope, snapshot, sumMoney, type AgentReport, type ReportPeriod,
+ receivablesInScope, salesInScope, snapshot, sumMoney, periodContainsSnapshot, type AgentReport, type ReportPeriod,
 } from "./common.js"
 
 /**
@@ -70,7 +70,8 @@ export function analyzeBusinessStrategy(input: {
      revenueTnd:sales.length?totalRevenueTnd:null,
      agenciesWithMarginUnknown:rows.filter(x=>x.missingCostLines>0).length,
      outstandingTnd:debt.length?sumMoney(debt.map(x=>x.outstanding)):null,
-     lowStockPositions:inventory.filter(x=>x.reorderPoint>0&&x.quantity<x.reorderPoint).length,
+     lowStockPositions:periodContainsSnapshot(input.dataset.metadata.asOf,input.period)?
+       inventory.filter(x=>x.reorderPoint>0&&x.quantity<x.reorderPoint).length:null,
    },
    findings,
    scenarios:[

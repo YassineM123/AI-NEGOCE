@@ -55,7 +55,7 @@ describe("Agentic agency and period applied at the data layer",()=>{
       expect(rev.decisionSupport.portfolio.revenueTnd).toBe(revenue)
       expect(fin.metrics.outstandingTnd).toBe(debt)
       expect(fin.decisionSupport?.aging).toBeTruthy()
-      expect(supply.metrics.stockPositions).toBe(stock)
+      expect(supply.metrics.stockPositions).toBe(period===t3?null:stock)
       expect(strategy.metrics.revenueTnd).toBe(revenue)
       expect(strategy.decisionSupport?.strategicScenarios).toBeTruthy()
       for(const report of [fin,supply,strategy])

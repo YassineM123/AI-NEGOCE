@@ -598,7 +598,7 @@ export default function App() {
                 <div><span>Opportunités</span><b>{revenueResult?.analysis.opportunitiesFound ?? "—"}</b></div>
                 <div><span>Impact validé</span><b>—</b></div>
               </> : specialist ? metricEntries.map(([key,value]) =>
-                <div key={key}><span>{key.replace(/([A-Z])/g, " $1")}</span><b>{value === null ? "N/D" : typeof value === "number" ? value.toLocaleString("fr-FR",{maximumFractionDigits:3}) : String(value)}</b></div>
+                <div key={key}><span>{key.replace(/([A-Z])/g, " $1")}</span><b>{value === null || specialist.status==="no_data" ? "N/D" : typeof value === "number" ? value.toLocaleString("fr-FR",{maximumFractionDigits:3}) : String(value)}</b></div>
               ) : <>
                 <div><span>Rapport</span><b>—</b></div><div><span>Mission</span><b>—</b></div>
                 <div><span>Actions</span><b>—</b></div><div><span>Source</span><b>—</b></div>

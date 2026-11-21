@@ -49,8 +49,8 @@ type AgentBrief={source:string;asOf:string;findings:number;modelCalls:0;estimate
   top:Array<{title:string;reason:string;actionType:string;evidence:string[]}>;remainingFindings:number;
   decisionSupport?:{
     portfolio?:{customers:number;top5SharePercent:number|null;dormant90Observed:number};
-    aging?:{buckets:Array<{key:string;label:string;amountTnd:number;documents:number}>;outstandingTnd:number};
-    transferCandidates?:{candidates:Array<{sku:string;fromAgency:string;toAgency:string;proposedUnits:number}>};
+    aging?:{status?:"observed"|"not_available";buckets:Array<{key:string;label:string;amountTnd:number;documents:number}>;outstandingTnd:number};
+    transferCandidates?:{status?:"observed"|"not_available";candidates:Array<{sku:string;fromAgency:string;toAgency:string;proposedUnits:number}>};
     strategicScenarios?:{scenarios:Array<{id:string;revenueTnd:number|null;variationPercent:number}>};
   }|null}
 async function api<T>(token:string,path:string,options?:{method?:string;body?:unknown;signal?:AbortSignal}):Promise<T>{
@@ -339,13 +339,14 @@ export function AdvancedAgentChat({token,agency,agent,from,to}:{token:string;age
         <small>{brief.decisionSupport.portfolio.dormant90Observed} clients sans achat positif depuis au moins 90 jours (constat, pas score ML).</small>
       </div>}
       {brief.decisionSupport?.aging&&<div className="aw-brief-item">
-        <b>Vieillissement des créances · {brief.decisionSupport.aging.outstandingTnd.toFixed(3)} TND</b>
+        <b>Vieillissement des créances · {brief.decisionSupport.aging.status==="not_available"?"N/D":brief.decisionSupport.aging.outstandingTnd.toFixed(3)+" TND"}</b>
         {brief.decisionSupport.aging.buckets.map(b=><small key={b.key}>{b.label} :
           {b.amountTnd.toFixed(3)} TND · {b.documents} pièce(s)</small>)}
       </div>}
       {brief.decisionSupport?.transferCandidates&&<div className="aw-brief-item">
         <b>Transferts inter-dépôts à vérifier</b>
-        {brief.decisionSupport.transferCandidates.candidates.length===0?<small>Aucun candidat vérifiable dans le périmètre.</small>:
+        {brief.decisionSupport.transferCandidates.status==="not_available"?<small>Positions de stock indisponibles à cette date.</small>:
+        brief.decisionSupport.transferCandidates.candidates.length===0?<small>Aucun candidat vérifiable dans le périmètre.</small>:
           brief.decisionSupport.transferCandidates.candidates.map((t,i)=><small key={i}>
             {t.sku} : {t.fromAgency} → {t.toAgency} · {t.proposedUnits} unité(s) · transport et réservations non vérifiés
           </small>)}

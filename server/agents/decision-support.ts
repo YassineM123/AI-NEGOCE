@@ -107,6 +107,7 @@ export function proposeTransferCandidates(data:Dataset,scope:AgencyScope,period:
     })
   }
   return {asOf:data.metadata.asOf,source:data.metadata.source,scope,period,
+    status:inventoryInScope(data,scope,period).length?"observed" as const:"not_available" as const,
     candidates:options.slice(0,25),
     warnings:["Candidats intra-périmètre uniquement. Aucun transfert physique ou ERP déclenché."]}
 }
