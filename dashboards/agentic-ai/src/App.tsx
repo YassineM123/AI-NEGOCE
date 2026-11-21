@@ -12,8 +12,9 @@ import {
   type PlatformContext, type AnalyticsOverview, type SharedFilters, type RevenueResult, type SpecialistReport,
   type SpecialistAgent, type DirectorReport,
 } from "./api"
+import { AGENT_DOMAIN, AdvancedMissions, AdvancedApprovals, AdvancedNotifications, AdvancedAgentChat, AdvancedOverview } from "./AdvancedWorkspace"
 
-type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "platforms" | "connections" | "audit" | "settings"
+type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "notifications" | "platforms" | "connections" | "audit" | "settings"
 const PERIODS: Record<string, { from: string; to: string }> = {
   "T4 2026": { from: "2026-10-01", to: "2026-12-31" },
   "T3 2026": { from: "2026-07-01", to: "2026-09-30" },
@@ -29,6 +30,7 @@ const navigation: { page: Page; label: string; icon: string }[] = [
   { page: "agents", label: "Mes agents", icon: "users" },
   { page: "director", label: "AI Director", icon: "layers" },
   { page: "decisions", label: "Décisions et approbations", icon: "shield" },
+  { page: "notifications", label: "Notifications", icon: "bell" },
   { page: "platforms", label: "Plateformes BI / DS", icon: "chart" },
   { page: "connections", label: "Connexions BI / Data Science", icon: "database" },
   { page: "audit", label: "Historique & audit", icon: "history" },
@@ -428,6 +430,13 @@ export default function App() {
     </>
   }
   function overview() {
+    if (token) return <>
+      <AdvancedOverview token={token} agency={agency} onNavigate={(dest) => navigate(dest)}/>
+      <Card title="AI Director — Coordination read-only" action={<Pill tone="blue">4 moteurs métier</Pill>}>
+        <p className="card-sub">Les dossiers et événements en haut proviennent du backend. Aucune action ERP automatique.</p>
+        {orchestrator()}
+      </Card>
+    </>
     return <>
       <div className="stats-row stats-five">
         <Stat icon="layers" label="Missions actives" value={missions.filter((m) => m.state === "en_cours").length} detail="Missions en exécution (démo)" />
@@ -552,10 +561,10 @@ export default function App() {
         <div><h1>{a.name} Agent</h1><p>{a.description}</p></div>
         <Pill tone="green">Moteur read-only</Pill>
         <Action light icon="layers" onClick={() => navigate("director")}>Voir AI Director</Action>
-        <Action icon="plus" onClick={() => { setNewAgent(selectedAgent); setMissionModal(true) }}>Créer une mission</Action>
+        <Action icon="plus" onClick={() => token ? navigate("missions") : (setNewAgent(selectedAgent),setMissionModal(true))}>Créer une mission</Action>
       </div>
       <div className="agent-detail-grid">
-        <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Rapport guidé · Non LLM</Pill>}>
+        {token ? <AdvancedAgentChat token={token} agency={agency} agent={AGENT_DOMAIN[selectedAgent]}/> : <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Rapport guidé · Non LLM</Pill>}>
           <div className="chat-messages">{chats[selectedAgent].map((m, i) =>
             <div key={i} className={"chat-message " + m.role}>
               <div className="chat-avatar">{m.role === "user" ? "VO" : <Icon name={a.icon} size={16}/>}</div>
@@ -567,7 +576,7 @@ export default function App() {
             <button type="submit" aria-label="Envoyer"><Icon name="send" size={18}/></button>
           </form>
           <div className="chat-disclaimer">Le chat reprend les rapports métier calculés par les APIs : aucune conversation LLM autonome n'est encore active.</div>
-        </Card>
+        </Card>}
         <div className="stack">
           <Card title={"Analyse — " + a.category} action={<Pill tone={source ? "blue" : "gray"}>{source ? "API sandbox" : "À connecter"}</Pill>}>
             <div className="mini-stats">
@@ -617,6 +626,7 @@ export default function App() {
   }
   function directorPage() {
     return <>
+      {token && <AdvancedAgentChat token={token} agency={agency} agent="director"/>}
       <Card title="Lancer une investigation multi-agents" icon="layers" action={<Pill tone={directorReport ? "green" : "blue"}>{directorReport ? "Rapport calculé" : "Mode read-only"}</Pill>}>
         <div className="director-investigation">
           <label htmlFor="director-objective">Objectif métier</label>
