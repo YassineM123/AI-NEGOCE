@@ -189,6 +189,56 @@ export default function App() {
     return () => controller.abort()
   }, [token, agency])
 
+
+  // Single contract-validated snapshot for BI, Data Science and Agentic.
+  useEffect(() => {
+    setSharedOverview(null)
+    setSharedError("")
+    if (!token) return
+    const controller = new AbortController()
+    fetchSharedOverview(token, sharedFilters, controller.signal).then((data) => {
+      if (!controller.signal.aborted) setSharedOverview(data)
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted) return
+      setSharedError(error instanceof Error ? error.message : "Source indisponible")
+    })
+    return () => controller.abort()
+  }, [token, sharedFilters])
+
+  // Child apps never receive tokens. A strict origin/source allow-list limits bridge requests.
+  useEffect(() => {
+    const version = ++bridgeVersion.current
+    const origin = window.location.origin
+    const sendState = () => iframeRef.current?.contentWindow?.postMessage({
+      type: "AI_NEGOCE_BRIDGE_STATE",
+      revision: version, connected: Boolean(token), filters: sharedFilters,
+    }, origin)
+    const handleMessage = (event: MessageEvent) => {
+      const frame = iframeRef.current?.contentWindow
+      if (!frame || event.origin !== origin || event.source !== frame) return
+      const msg = event.data as { type?: string; id?: unknown; operation?: unknown } | null
+      if (!msg || typeof msg !== "object") return
+      if (msg.type === "AI_NEGOCE_BRIDGE_READY") { sendState(); return }
+      if (msg.type !== "AI_NEGOCE_BRIDGE_REQUEST" ||
+        typeof msg.id !== "string" || !/^req-[0-9]{1,8}$/.test(msg.id)) return
+      const reply = (data: unknown, error?: string) =>
+        frame.postMessage({ type: "AI_NEGOCE_BRIDGE_RESPONSE", id: msg.id, data, error }, origin)
+      if (!token) { reply(null, "Session centrale déconnectée"); return }
+      if (msg.operation === "context") {
+        void fetchPlatformContext(token).then((data) => reply(data))
+          .catch(() => reply(null, "Contexte non autorisé"))
+      } else if (msg.operation === "overview") {
+        void fetchSharedOverview(token, sharedFilters).then((data) => reply(data))
+          .catch(() => reply(null, "Snapshot non autorisé ou indisponible"))
+      } else {
+        reply(null, "Opération refusée")
+      }
+    }
+    window.addEventListener("message", handleMessage)
+    sendState()
+    return () => window.removeEventListener("message", handleMessage)
+  }, [token, sharedFilters, page, portalTab])
+
   const activeMission = missions.find((item) => item.id === missionId) ?? missions[0]
   const activeDecision = decisions.find((item) => item.id === decisionId) ?? decisions[0]
   const pendingDecisions = decisions.filter((item) => item.status === "pending" || item.status === "review")
