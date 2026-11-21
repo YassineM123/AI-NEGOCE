@@ -930,6 +930,7 @@ export function createApp(deps = defaultDependencies()) {
   // Agentic Intelligence Suite: scoped deterministic investigations, read-only only.
   const specialistQuery = z.object({
     agency: z.string().max(80).optional(),
+    from:isoDate.optional(),to:isoDate.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(20),
   })
   const agentHandlers = [
@@ -962,13 +963,17 @@ export function createApp(deps = defaultDependencies()) {
       if (scope === null) return res.status(403).json({
         error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" },
       })
-      const result = handler.compute({ scope, dataset: data(), limit: parsed.data.limit })
+      if(parsed.data.from&&parsed.data.to&&parsed.data.from>parsed.data.to)
+        return res.status(400).json({error:{code:"INVALID_REQUEST",message:"Période inversée"}})
+      const result = handler.compute({ scope, dataset: data(), limit: parsed.data.limit,
+        period:{from:parsed.data.from,to:parsed.data.to} })
       await tenant(req).audit({
         actorId: req.principal!.id,
         action: "agentic." + handler.domain + ".investigated",
         resourceType: "agentic",
         resourceId: handler.domain,
-        metadata: { scope, asOf: result.snapshot.asOf, findings: result.findings.length, executionMode: result.executionMode },
+        metadata: { scope, from:parsed.data.from??null,to:parsed.data.to??null,
+          asOf: result.snapshot.asOf, findings: result.findings.length, executionMode: result.executionMode },
       })
       res.setHeader("Cache-Control", "no-store")
       return res.json(result)
@@ -984,6 +989,7 @@ export function createApp(deps = defaultDependencies()) {
       const parsed = z.object({
         objective: z.string().trim().min(5).max(500),
         agency: z.string().max(80).optional(),
+        from:isoDate.optional(),to:isoDate.optional(),
         agents: z.array(z.enum(DIRECTOR_AGENTS as [string, ...string[]])).min(1).max(4).optional(),
         limit: z.number().int().min(1).max(100).default(10),
       }).safeParse(req.body)
@@ -994,8 +1000,11 @@ export function createApp(deps = defaultDependencies()) {
       if (scope === null) return res.status(403).json({
         error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" },
       })
+      if(parsed.data.from&&parsed.data.to&&parsed.data.from>parsed.data.to)
+        return res.status(400).json({error:{code:"INVALID_REQUEST",message:"Période inversée"}})
       const result = investigateWithDirector({
         objective: parsed.data.objective, scope, dataset: data(),
+        period:{from:parsed.data.from,to:parsed.data.to},
         agents: parsed.data.agents as typeof DIRECTOR_AGENTS | undefined,
         limit: parsed.data.limit,
       })
@@ -1005,7 +1014,8 @@ export function createApp(deps = defaultDependencies()) {
         resourceType: "agentic",
         resourceId: "ai-director",
         metadata: {
-          scope, asOf: result.snapshot.asOf, agents: result.plan.map((step) => step.agent),
+          scope, from:parsed.data.from??null,to:parsed.data.to??null,
+          asOf: result.snapshot.asOf, agents: result.plan.map((step) => step.agent),
           findings: result.summary.totalFindings, erpWrites: 0,
         },
       })
@@ -1021,6 +1031,7 @@ export function createApp(deps = defaultDependencies()) {
     async (req, res) => {
       const parsed = z.object({
         agency: z.string().max(80).optional(),
+        from:isoDate.optional(),to:isoDate.optional(),
         windowDays: z.coerce.number().int().min(30).max(365).default(90),
         dormantDays: z.coerce.number().int().min(30).max(365).default(90),
         limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -1032,8 +1043,10 @@ export function createApp(deps = defaultDependencies()) {
       if (scope === null) return res.status(403).json({
         error: { code: "AGENCY_FORBIDDEN", message: "Agence hors perimetre" },
       })
+      if(parsed.data.from&&parsed.data.to&&parsed.data.from>parsed.data.to)
+        return res.status(400).json({error:{code:"INVALID_REQUEST",message:"Période inversée"}})
       const result = analyzeRevenueGrowth({
-        scope, dataset: data(), windowDays: parsed.data.windowDays,
+        scope, dataset: data(), period:{from:parsed.data.from,to:parsed.data.to},windowDays: parsed.data.windowDays,
         dormantDays: parsed.data.dormantDays, limit: parsed.data.limit,
       })
       await tenant(req).audit({
@@ -1042,7 +1055,7 @@ export function createApp(deps = defaultDependencies()) {
         resourceType: "agentic",
         resourceId: "revenue-growth",
         metadata: {
-          scope, asOf: result.snapshot.asOf,
+          scope, from:parsed.data.from??null,to:parsed.data.to??null,asOf: result.snapshot.asOf,
           customersAnalyzed: result.analysis.customersAnalyzed,
           returned: result.analysis.returned,
           executionMode: result.executionMode,
