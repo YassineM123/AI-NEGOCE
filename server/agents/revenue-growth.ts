@@ -71,7 +71,12 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
     throw new Error("A valid dataset asOf date is required")
   const currentFrom = input.period?.from && input.period.from>shiftDays(asOf,1-windowDays)?input.period.from:shiftDays(asOf,1-windowDays)
   const previousTo = shiftDays(currentFrom, -1)
-  const previousFrom = input.period?.from && input.period.from>shiftDays(currentFrom,-windowDays)?input.period.from:shiftDays(currentFrom,-windowDays)
+  const intendedPreviousFrom=shiftDays(currentFrom,-windowDays)
+  const previousFrom = input.period?.from && input.period.from>intendedPreviousFrom?input.period.from:intendedPreviousFrom
+  // Comparing 90 days with a truncated 2-day baseline would invent growth.
+  // For custom periods, abstain from new/growing/declining if the previous
+  // comparison window cannot be fully observed inside the selected period.
+  const comparable=previousFrom===intendedPreviousFrom
 
   const allowed = (agency: string) => input.scope === "*" || input.scope.includes(agency)
   const customers = new Map<string, CustomerAccumulator>()
@@ -105,9 +110,9 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
     const isDormant = currentM <= 0 && lastPurchaseDays !== null && lastPurchaseDays >= dormantDays
     let state: CustomerState | null = null
     if (isDormant) state = "dormant"
-    else if (currentM > 0 && previousM <= 0 && previousFrom<currentFrom) state = "new"
-    else if (previousM > 0 && currentM > previousM) state = "growing"
-    else if (previousM > 0 && currentM < previousM) state = "declining"
+    else if (currentM > 0 && previousM <= 0 && comparable) state = "new"
+    else if (previousM > 0 && currentM > previousM && comparable) state = "growing"
+    else if (previousM > 0 && currentM < previousM && comparable) state = "declining"
     if (!state) continue
 
     const currentMargin = margin(customer.current)
@@ -184,6 +189,7 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
     warnings: [
       "Priorités heuristiques non probabilistes : aucune prédiction ML n'a été utilisée",
       "Les actions proposées ne sont pas exécutées dans l'ERP",
+      ...(!comparable?["Croissance et nouveaux clients non classés : fenêtre de comparaison antérieure incomplète dans la période sélectionnée."]:[]),
       ...(scopedPostedLines ? [] : ["Aucune vente exploitable dans le périmètre autorisé et la période sélectionnée"]),
     ],
   }
