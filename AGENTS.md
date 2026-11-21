@@ -34,3 +34,13 @@ Keep all generated files, browser profiles, tokens and company records out of Gi
 ## Portal integration rules
 
 See [docs/PLATFORM_INTEGRATION.md](docs/PLATFORM_INTEGRATION.md). Keep BI/DS and Agentic behind one origin when testing shared sessions. Never copy bearer tokens into URLs or postMessages, and do not replace the scoped analytics contract with unaudited CSV totals. Use both server API tests and browser filter-change reconciliation tests when editing agency/period behavior.
+
+## Advanced Agentic workflows
+
+- The new durable workflow lives in `server/agents/workspace.ts` and `server/agents/workspace-api.ts`, mounted in `server/app.ts`. Database migration: `008_agentic_workspace.sql` (PostgreSQL RLS).
+- Run `npm run agentic:worker` with `DATABASE_URL` to schedule persisted in-app due reminders; never claim email/push delivery.
+- Connected UI: `dashboards/agentic-ai/src/AdvancedWorkspace.tsx`. Older disconnected screens remain demos only.
+- Real conversations require an explicitly configured LLM provider. Never treat the built-in mock as a real conversation, persist credentials in the browser, or allow the LLM to invoke arbitrary ERP actions.
+- Reviews enforce maker/checker separation and expected-version compare-and-set. An approved recommendation remains a reviewed dossier only; ERP write-back is disabled.
+- Validate with `npx vitest run server/agents/workspace.api.test.ts` and `npx playwright test --config dashboards/agentic-ai/playwright.config.ts`. With `TEST_DATABASE_URL` pointing to a disposable PostgreSQL database, also run `npx vitest run server/agents/workspace.pg.test.ts`.
+- See `docs/agentic/ADVANCED_WORKFLOWS.md` for operational setup, caveats and test accounts.
