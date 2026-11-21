@@ -52,7 +52,7 @@ test("shows unconnected integrations without claiming production telemetry", asy
   await page.goto("/")
   await page.getByRole("button", { name: /Connexions BI/ }).click()
   await expect(page.getByRole("heading", { name: "Connexions BI / Data Science" })).toBeVisible()
-  await expect(page.getByText("API Revenue Growth")).toBeVisible()
+  await expect(page.getByText("APIs Agentic")).toBeVisible()
   await expect(page.getByRole("button", { name: "Connecter sandbox local" })).toBeVisible()
   await expect(page.getByText("Non connectée", { exact: true }).first()).toBeVisible()
 })
