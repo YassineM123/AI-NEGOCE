@@ -4,7 +4,7 @@ import { defaultDataset, type Dataset } from "../services.js"
 import { overview } from "../services.js"
 function continuousFixture():Dataset {
   const source=defaultDataset()
-  const sales=Array.from({length:16},(_,i)=>({
+  const sales=Array.from({length:17},(_,i)=>({
     id:"forecast-"+i,invoiceId:"forecast-"+i,
     date:new Date(Date.UTC(2025,i,15)).toISOString().slice(0,10),
     agency:i%2===0?"Sfax":"Tunis Centre",
