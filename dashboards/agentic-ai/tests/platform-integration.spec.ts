@@ -125,3 +125,22 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(agentic).toHaveCount(0)
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveCount(0)
 })
+
+test("the BI iframe can reach the exact Database extract paths and isolated synthetic scenarios", async ({ request }) => {
+  // The legacy BI frame resolves ../../Database/extractions from /platform/bi/.
+  // Both static aliases must exist so the client never sees empty BI cards.
+  const checks = [
+    { url: "/Database/extractions/ventes/journal_ventes_2026_demo.csv", header: "date_facture", rows: 3158 },
+    { url: "/data/extractions/ventes/journal_ventes_2026_demo.csv", header: "date_facture", rows: 3158 },
+    { url: "/Database/extractions/demonstration/fournisseurs_livraisons_demo_synthetique.csv", header: "commande_id", rows: 8 },
+    { url: "/Database/extractions/demonstration/plan_tresorerie_demo_synthetique.csv", header: "mois", rows: 6 },
+  ]
+  for (const file of checks) {
+    const response = await request.get(file.url)
+    expect(response.status(), file.url).toBe(200)
+    expect(response.headers()["content-type"], file.url).toContain("text/csv")
+    const lines = (await response.text()).trim().split(/\r?\n/)
+    expect(lines[0], file.url).toContain(file.header)
+    expect(lines.length - 1, file.url).toBe(file.rows)
+  }
+})
