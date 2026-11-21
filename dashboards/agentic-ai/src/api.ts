@@ -182,3 +182,33 @@ export async function fetchDirectorReport(
   if (report.orchestrationMode !== "deterministic_read_only") throw new Error("Réponse Director invalide")
   return report
 }
+
+/** Persist a new Director mission only after the user explicitly requests reinvestigation. */
+export async function createReinvestigation(
+  token:string,filters:SharedFilters,expectedSnapshotId:string,
+):Promise<{missionId:string;findings:number;approvalId:string|null;sourceSnapshotId:string}>{
+  if(filters.agency==="all")throw new Error("Sélectionnez une agence avant de créer un dossier.")
+  const current=await fetchSharedOverview(token,filters)
+  if(current.snapshotId!==expectedSnapshotId)
+    throw new Error("Le snapshot a encore changé. Rafraîchissez les trois plateformes avant de relancer l'analyse.")
+  if(current.snapshot.storage!=="postgres"||!current.snapshot.isSynthetic)
+    throw new Error("Ce parcours est réservé au dataset PostgreSQL synthétique.")
+  const path=API_BASE+"/api/v1/agentic/workspace/missions"
+  const response=await fetch(path,{
+    method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+    body:JSON.stringify({agency:filters.agency,agent:"director",
+      title:"Nouvelle analyse après révision "+current.snapshot.revision,
+      objective:"Réévaluer ventes, risques financiers, disponibilité des stocks et stratégie après actualisation des données",
+      from:filters.from,to:filters.to}),
+  })
+  if(!response.ok)throw new Error("Impossible de créer un dossier de décision (HTTP "+response.status+").")
+  const created=await response.json() as {mission:{id:string;version:number}}
+  const executed=await fetch(path+"/"+encodeURIComponent(created.mission.id)+"/run",{
+    method:"POST",headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+    body:JSON.stringify({expectedVersion:created.mission.version}),
+  })
+  if(!executed.ok)throw new Error("Dossier créé, mais analyse non terminée. Ouvrez le Centre de missions : "+created.mission.id)
+  const result=await executed.json() as {mission:{lastRun?:{findings:number}};approval?:{id:string}|null}
+  return {missionId:created.mission.id,findings:result.mission.lastRun?.findings??0,
+    approvalId:result.approval?.id??null,sourceSnapshotId:current.snapshotId}
+}
