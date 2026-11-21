@@ -880,7 +880,28 @@ function shell(){
  <div class="workspace"><header class="topbar"><form id="searchForm" class="global-search" role="search" onsubmit="return false;"><span>${ico('search',18)}</span><input type="search" id="globalSearch" aria-label="Rechercher un client" placeholder="Rechercher clients et comptes…" autocomplete="off"/><button type="button" class="search-submit" data-action="searchGlobal" aria-label="Lancer la recherche">${ico('arrow',16)}</button></form><div class="topbar-actions"><button class="btn tiny" type="button" data-action="platformConnect">${state.platform.status==='connected'?'Déconnecter API':state.platform.status==='loading'?'Connexion…':'Connecter API partagée'}</button><button class="icon-button" type="button" data-nav="assistant" title="Assistant analytique" aria-label="Assistant analytique">${ico('spark',20)}</button><button class="icon-button" type="button" data-nav="tasks" title="Tâches" aria-label="Tâches">${ico('bell',20)}${openCount?'<span class="notification-dot"></span>':''}</button><button class="icon-button" type="button" data-nav="data" title="Sources et aide" aria-label="Sources et aide">${ico('help',20)}</button><span class="top-avatar" title="Vue Direction - démonstration">DG</span></div></header>
  <main class="main" id="main-content"><div class="page-toolbar"><div class="page-path">AI‑NÉGOCE <span class="sep">/</span> ${html(title)}</div><div class="page-toolbar-actions"><span>${tag(label(),state.source.kind==='audit'?'audit':state.source.kind==='demo'?'sim':'warn')}</span><button class="btn tiny ${state.source.kind==='audit'?'selected':''}" data-action="switchAudit">Extrait SQL</button><button class="btn tiny ${state.source.kind==='demo'?'primary':''}" data-action="switchDemo">${ico('database',14)} Démo 10 000 clients</button></div></div><div id="content" class="module-page module-${state.page}">${content()}</div><div class="footer">AI‑NÉGOCE Intelligence Suite · ${html(label())} · Pilote sans connexion ERP directe · 2026</div></main></div></div>${state.client?drawer(state.client):''}`;
 }
-function render(){const app=$('#app');if(!state.analysis)state.analysis=analyze(state.source,state.horizon);app.innerHTML=shell();}
+function render(){
+ const app=$('#app');
+ if(!state.analysis)state.analysis=analyze(state.source,state.horizon);
+ app.innerHTML=shell();
+ const shared=state.platform.overview;
+ const main=app.querySelector('main');
+ if(shared&&main){
+   const banner=document.createElement('section');
+   banner.className='shared-api-banner';
+   banner.dataset.platformSnapshot=shared.snapshotId;
+   banner.dataset.platformApp='ds';
+   banner.style.cssText='background:#edf4ff;border:1px solid #aac5f7;padding:11px 15px;border-radius:9px;margin:0 0 15px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:12px;color:#163a6e';
+   const stamp=document.createElement('strong');
+   stamp.textContent='Snapshot API partagé · '+shared.snapshotId;
+   const ca=document.createElement('span');ca.dataset.sharedKpi='revenue';ca.textContent=Number(shared.bi.data.revenue).toFixed(3);
+   const debt=document.createElement('span');debt.dataset.sharedKpi='receivables';debt.textContent=Number(shared.bi.data.receivables).toFixed(3);
+   const scope=document.createElement('span');
+   scope.textContent='CA / Créances TND · '+(shared.scope==='*'?'Toutes agences':shared.scope.join(', '))+' · '+(shared.bi.data.filters.from||'—')+' — '+(shared.bi.data.filters.to||'—');
+   banner.append(stamp,ca,debt,scope);
+   main.prepend(banner);
+ }
+}
 const PAGE_GROUP={home:'Direction',clients:'Direction',tasks:'Direction',churn:'Intelligence',affinity:'Intelligence',forecast:'Intelligence',inventory:'Opérations',suppliers:'Opérations',production:'Opérations',cash:'Finance',optim:'Finance',quality:'Contrôle',impact:'Contrôle',models:'Contrôle',assistant:'Configuration',data:'Configuration'};
 function panelIcon(title){const t=String(title).toLowerCase();if(/chiffre|ventes|prévision|projection|historique|tendance|évolution/.test(t))return 'trend';if(/client|commercial|portefeuille|cohort|compte/.test(t))return 'users';if(/modèle|métrique|statistique|qualité|donnée|registre/.test(t))return 'database';if(/facture|recouvrement|trésorerie|créance|financ/.test(t))return 'wallet';if(/production|article|réassort|stock|matière/.test(t))return 'box';if(/fournisseur|retard|réception/.test(t))return 'truck';if(/calibration|écart|risque|alerte|anomalie/.test(t))return 'shield';if(/action|intervention|décision|tâche|plan/.test(t))return 'check';return PAGE_ICONS[state.page]||'chart'}
 function panel(title,desc,body,action=''){return `<section class="panel report-panel"><div class="panel-head"><div class="panel-title-group"><span class="panel-title-icon">${ico(panelIcon(title),18)}</span><div><h2>${title}</h2>${desc?`<p>${desc}</p>`:''}</div></div>${action?`<div class="panel-actions">${action}</div>`:''}</div>${body}</section>`}
@@ -1010,7 +1031,7 @@ async function clickHandler(e){const nav=e.target.closest('[data-nav]');if(nav){
  const task=e.target.closest('[data-task]');if(task){const t=state.tasks.find(x=>x.id===task.dataset.task&&x.dataset===state.source.id);if(t){const step={approve:['brouillon','approuvée'],start:['approuvée','en cours'],done:['en cours','terminée']}[task.dataset.tcmd];if(step&&t.status===step[0]){t.status=step[1];t.history.push({status:t.status,at:new Date().toISOString(),actor:'Utilisateur local'});storeTasks();toast('État : '+t.status);render()}}return}
  const ques=e.target.closest('[data-question]');if(ques){state.assistant=assistantReply(ques.dataset.question);render();return}
  const action=e.target.closest('[data-action]');if(!action)return;const x=action.dataset.action;
- if(x==='platformConnect'){if(state.platform.status==='connected'){window.AINegocePlatform.disconnect();state.platform={status:'disconnected',context:null};render();return}state.platform.status='loading';render();try{const context=await window.AINegocePlatform.connectLocalDemo();if(context.platforms.dataScience?.modelServingVerified!==false)throw new Error('Statut Data Science non vérifié');state.platform={status:'connected',context};toast('Contexte partagé connecté. Les analyses et tâches restent locales.')}catch(error){state.platform={status:'error',context:null};toast(error instanceof Error?error.message:'Connexion API impossible')}render();return}
+ if(x==='platformConnect'){if(state.platform.status==='connected'){window.AINegocePlatform.disconnect();state.platform={status:'disconnected',context:null};render();return}state.platform.status='loading';render();try{const context=await window.AINegocePlatform.connectLocalDemo();if(context.platforms.dataScience?.modelServingVerified!==false)throw new Error('Statut Data Science non vérifié');state.platform={status:'connected',context,overview:context.permissions.includes('analytics.bi.read')?await window.AINegocePlatform.getAnalyticsOverview():null};toast('Snapshot partagé connecté. Les modèles et tâches restent locaux.')}catch(error){state.platform={status:'error',context:null};toast(error instanceof Error?error.message:'Connexion API impossible')}render();return}
  if(x==='openAdvanced'){const el=document.querySelector('.f-advanced');if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});}return}
  if(x==='newTask'){state.showTaskForm=true;render();return}
  if(x==='cancelTask'){state.showTaskForm=false;render();return}
@@ -1231,5 +1252,34 @@ function firstDesignContent(page){return (FIRST_DESIGN_PAGES[page]||firstHome)()
 
 render();
 
+</script>
+
+<script>
+(function(){
+ let revision=0;
+ window.AINegocePlatform.subscribe(async function(message){
+   const n=++revision;
+   if(!message.connected){
+     state.platform={status:'disconnected',context:null,overview:null};
+     render();
+     return;
+   }
+   state.platform.status='loading';
+   render();
+   try {
+     const context=await window.AINegocePlatform.getContext();
+     if(n!==revision)return;
+     const overview=context.permissions.includes('analytics.bi.read')
+       ?await window.AINegocePlatform.getAnalyticsOverview():null;
+     if(n!==revision)return;
+     state.platform={status:'connected',context,overview};
+     render();
+   }catch(err){
+     if(n!==revision)return;
+     state.platform={status:'error',context:null,overview:null};
+     render();
+   }
+ });
+})();
 </script>
 </body></html>
