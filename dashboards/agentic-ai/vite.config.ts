@@ -4,6 +4,7 @@ import path from "node:path"
 import fs from "node:fs"
 import { createReadStream } from "node:fs"
 import { cpSync, mkdirSync } from "node:fs"
+import type { IncomingMessage, ServerResponse } from "node:http"
 
 const root = path.resolve(import.meta.dirname)
 const repoRoot = path.resolve(root, "../..")
@@ -27,7 +28,7 @@ const contentTypes: Record<string, string> = {
   ".webp": "image/webp",
 }
 function servePlatforms(): Plugin {
-  const handler: import("connect").NextHandleFunction = (req, res, next) => {
+  const handler = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next()
     let pathname: string
     try { pathname = decodeURIComponent(new URL(req.url || "/", "http://127.0.0.1").pathname) }
