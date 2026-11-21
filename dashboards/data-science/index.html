@@ -899,7 +899,18 @@ function render(){
    const debt=document.createElement('span');debt.dataset.sharedKpi='receivables';debt.textContent=Number(shared.bi.data.receivables).toFixed(3);
    const scope=document.createElement('span');
    scope.textContent='CA / Créances TND · '+(shared.scope==='*'?'Toutes agences':shared.scope.join(', '))+' · '+(shared.bi.data.filters.from||'—')+' — '+(shared.bi.data.filters.to||'—');
-   banner.append(stamp,ca,debt,scope);
+   const proof=document.createElement('button');
+   proof.type='button';proof.className='btn tiny';proof.textContent='Exporter rapport & preuves';
+   proof.setAttribute('aria-label','Exporter preuves Data Science JSON');
+   proof.addEventListener('click',()=>exportJSON('ai-negoce-ds-'+shared.snapshotId,{
+     reportType:'data_science_governed_evidence',snapshotId:shared.snapshotId,
+     contractVersion:shared.contractVersion,generatedAt:shared.generatedAt,
+     source:shared.snapshot,scope:shared.scope,filters:shared.bi.data.filters,
+     insights:shared.insights??null,analysis:shared.dataScience?.analysis??null,
+     modelServingVerified:false,erpWrites:0,
+     warning:'Pilote sans homologation LAI; aucun scénario local mélangé aux chiffres API.',
+   }));
+   banner.append(stamp,ca,debt,scope,proof);
    main.prepend(banner);
  }
 }
