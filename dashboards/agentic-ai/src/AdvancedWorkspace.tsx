@@ -37,7 +37,7 @@ type Approval={
   id:string;missionId:string;agency:string;agent:AgentDomain;requestedBy:string;
   status:"pending"|"approved"|"rejected";version:number;actionType:string;
   summary:string;evidence:string[];createdAt:string;reviewedBy:string|null;comment:string|null;
-  expiresAt?:string;proposalHash?:string
+  expiresAt?:string;proposalHash?:string;from?:string;to?:string
 }
 export type Notification={
   id:string;agency:string;kind:string;title:string;message:string;missionId:string|null;
@@ -208,7 +208,7 @@ export function AdvancedMissions({token,agency,from,to}:{token:string;agency:str
   </div>
 }
 
-export function AdvancedApprovals({token,agency,userId}:{token:string;agency:string;userId?:string}){
+export function AdvancedApprovals({token,agency,userId,from,to}:{token:string;agency:string;userId?:string;from:string;to:string}){
   const [approvals,setApprovals]=useState<Approval[]>([])
   const [comments,setComments]=useState<Record<string,string>>({})
   const [error,setError]=useState("")
@@ -233,10 +233,10 @@ export function AdvancedApprovals({token,agency,userId}:{token:string;agency:str
       <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
     {error&&<Notice>{error}</Notice>}
     {!approvals.length?<Empty>Aucune demande d'approbation dans les agences autorisées.</Empty>:
-      <div className="aw-approval-grid">{approvals.filter(a=>agency==="all"||a.agency===agency).map(a=>
+      <div className="aw-approval-grid">{approvals.filter(a=>(agency==="all"||a.agency===agency)&&a.from===from&&a.to===to).map(a=>
         <article className="aw-mission" key={a.id}>
           <div className="aw-inline"><strong>{a.summary}</strong><span className={"aw-status aw-status-"+a.status}>{a.status}</span></div>
-          <p>{label(a.agent)} · {a.agency} · {when(a.createdAt)}</p>
+          <p>{label(a.agent)} · {a.agency} · période {a.from??"début"} → {a.to??"fin"} · {when(a.createdAt)}</p>
           {a.expiresAt&&<small>Validation valable jusqu'au {when(a.expiresAt)} · source à revalider au moment de l'accord</small>}
           <p className="aw-sub">Action proposée : <strong>{a.actionType}</strong> · demandeur : {a.requestedBy}</p>
           {a.evidence.length>0&&<div className="aw-result">Références : {a.evidence.slice(0,8).join(", ")}</div>}
@@ -411,7 +411,8 @@ export function AdvancedOverview({token,agency,role,from,to,onNavigate}:{
   },[load])
   const filteredMissions=missions.filter(m=>(agency==="all"||m.agency===agency)&&
     m.from===from&&m.to===to)
-  const filteredApprovals=approvals.filter(a=>(agency==="all"||a.agency===agency))
+  const filteredApprovals=approvals.filter(a=>(agency==="all"||a.agency===agency)&&
+    a.from===from&&a.to===to)
   const filteredAlerts=notifications.filter(n=>agency==="all"||n.agency===agency)
   return <div className="aw-overview">
     <header className="aw-heading"><div><h3>Supervision Agentic — données serveur</h3>

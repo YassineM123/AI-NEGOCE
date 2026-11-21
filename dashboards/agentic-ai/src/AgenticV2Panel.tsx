@@ -13,7 +13,8 @@ type DailyUsage={date:string;callsToday:number;dailyLimit:number;
   successfulReplies:number;deterministicReplies:number;measuredReplies:number;unreportedReplies:number;
   totalTokensMeasured:number;measurement:string}
 type Action = {id:string;agency:string;actionType:string;summary:string;approvedBy:string;
-  source:string;status:"approved_for_manual_handoff";erpWriteExecuted:false}
+  source:string;status:"approved_for_manual_handoff";erpWriteExecuted:false;
+  from?:string;to?:string}
 async function getJson<T>(token:string,path:string,method="GET"):Promise<T>{
   const response=await fetch(ROOT+path,{method,headers:{Authorization:"Bearer "+token}})
   const body=await response.json().catch(()=>({}))
@@ -80,7 +81,8 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
     setTimeout(()=>URL.revokeObjectURL(url),500)
   }
   const visibleSignals=signals.filter(s=>agency==="all"||s.agency===agency)
-  const visibleActions=actions.filter(a=>agency==="all"||a.agency===agency)
+  const visibleActions=actions.filter(a=>(agency==="all"||a.agency===agency)&&
+    a.from===from&&a.to===to)
   return <div className="aw-v2-section">
     <div className="aw-v2-grid">
       <section className="aw-panel" data-agentic-v2="usage">
@@ -134,7 +136,7 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
       </section>
       <section className="aw-panel" data-agentic-v2="actions">
         <h3>Actions approuvées</h3>
-        <p className="aw-sub">Dossiers validés, transmission manuelle uniquement, aucune écriture ERP.</p>
+        <p className="aw-sub">Dossiers validés pour la période {from??"début"} → {to??"fin"} · transmission manuelle, aucune écriture ERP.</p>
         {visibleActions.slice(0,6).map(a=><div className="aw-notification" key={a.id}>
           <div><strong>{a.actionType}</strong><p>{a.summary}</p>
             <small>{a.agency} · approuvé par {a.approvedBy} · {a.source}</small></div>

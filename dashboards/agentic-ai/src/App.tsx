@@ -809,7 +809,7 @@ export default function App() {
           : page === "agents" ? agentsPage()
           : page === "agent" ? agentPage()
           : page === "director" ? directorPage()
-          : page === "decisions" ? (token ? <AdvancedApprovals token={token} agency={agency} userId={platform?.principal.id}/> : decisionsPage())
+          : page === "decisions" ? (token ? <AdvancedApprovals token={token} agency={agency} from={sharedFilters.from} to={sharedFilters.to} userId={platform?.principal.id}/> : decisionsPage())
           : page === "notifications" ? (token ? <AdvancedNotifications token={token} agency={agency} userId={platform?.principal.id}/> : <Card title="Notifications démo"><p>Connectez le backend pour les notifications persistantes.</p></Card>)
           : page === "platforms" ? platformsPage()
           : page === "connections" ? connectionsPage()
