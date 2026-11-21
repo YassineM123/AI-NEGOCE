@@ -122,7 +122,7 @@ test("five Agentic screens show scoped findings and each chat uses its own ident
       await expect(page.getByRole("heading",{name:name+" Agent"})).toBeVisible()
       await expect(page.getByText(needle,{exact:true})).toBeVisible()
     }else{
-      await page.getByRole("button",{name:"AI Director"}).click()
+      await page.getByRole("button",{name:"AI Director",exact:true}).click()
       await page.getByRole("button",{name:"Analyser avec AI Director"}).click()
       await expect(page.getByText(needle)).toBeVisible()
       await expect(page.getByText("Aucune écriture ERP",{exact:true})).toBeVisible()
