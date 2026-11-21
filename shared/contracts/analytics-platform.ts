@@ -86,7 +86,7 @@ export const analyticsOverviewSchema = z.object({
   agentic: z.object({
     status: platformStatusSchema,
     executionMode: z.literal("read_only"),
-    availableAgents: z.array(z.literal("revenue_growth")),
+    availableAgents: z.array(z.enum(["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"])),
   }),
   warnings: z.array(z.string()),
 })
