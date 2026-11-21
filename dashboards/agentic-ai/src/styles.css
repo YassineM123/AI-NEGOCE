@@ -525,3 +525,5 @@ td b { font-weight: 690; color: #173050; }
 .aw-overview-row{display:grid;grid-template-columns:minmax(0,1.3fr)minmax(0,1fr);gap:14px}
 @media(max-width:1180px){.aw-grid,.aw-overview-row{grid-template-columns:1fr}.aw-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.aw-approval-grid{grid-template-columns:1fr}.aw-heading{flex-wrap:wrap}.aw-chat-entry{flex-direction:column}.aw-metrics{gap:8px}.aw-metrics strong{font-size:23px}}
+
+.aw-env{border:1px solid #bfcfe5;background:#f1f6fd;border-radius:8px;padding:11px 14px;font-size:11px;line-height:1.6;color:#365577;margin:0}.aw-env strong{color:#224c83}
