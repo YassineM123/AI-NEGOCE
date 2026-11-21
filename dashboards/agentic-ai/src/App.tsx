@@ -12,6 +12,7 @@ import {
   type PlatformContext, type AnalyticsOverview, type SharedFilters, type RevenueResult, type SpecialistReport,
   type SpecialistAgent, type DirectorReport,
 } from "./api"
+import UnifiedExperience from "./UnifiedExperience"
 import { AGENT_DOMAIN, AdvancedMissions, AdvancedApprovals, AdvancedNotifications, AdvancedAgentChat, AdvancedOverview } from "./AdvancedWorkspace"
 
 type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "notifications" | "platforms" | "connections" | "audit" | "settings"
@@ -458,6 +459,9 @@ export default function App() {
   function platformsPage() {
     const src = portalTab === "bi" ? "/platform/bi/" : "/platform/ds/"
     return <>
+      <UnifiedExperience overview={sharedOverview} agency={agency}
+        from={sharedFilters.from} to={sharedFilters.to} connected={Boolean(token)}
+        onNavigate={(target)=>target==="agentic"?navigate("missions"):setPortalTab(target)}/>
       <Card title="Accès unifié aux trois applications" action={<Pill tone={token ? "green" : "amber"}>{token ? "Session centrale ouverte" : "Session déconnectée"}</Pill>}>
         <p className="muted-text">Même origine, même identité et même période / agence. Les cartes API partagées ont la même source, tandis que les anciens graphiques locaux BI/DS restent clairement distincts et non certifiés ERP.</p>
         {!token && <label className="aw-identity">Identité de test
