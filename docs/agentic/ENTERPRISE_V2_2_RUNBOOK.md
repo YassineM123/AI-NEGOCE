@@ -86,3 +86,16 @@ Exécuter sur la branche :
 **Décision :** démo analytique contrôlée après CI, non une mise en production
 d'agents transactionnels. Ne jamais présenter des recommandations ou
 simulations comme des écritures ou prévisions ERP officielles.
+
+
+## Optimisation de persistance du worker
+Le worker de rappels ne parcourt maintenant que les organisations actives possédant
+déjà un dossier dans agentic_workspaces. Cela évite les insertions JSONB vides dans
+les sociétés qui n'utilisent pas Agentic. Le scan proactif de démonstration vérifie
+séparément que l'organisation sandbox ciblée est active avant d'écrire les alertes.
+
+## Vérification sur le dernier commit
+Les workflows GitHub Actions sont la source de vérité pour le typage, les tests
+des métiers, la persistance PostgreSQL, l'interface et la qualité générale. Ne pas
+considérer une modification déployable tant que la CI du **SHA de tête** n'est pas verte.
+La recette de production exige en outre des preuves LAI pour R01–R10.
