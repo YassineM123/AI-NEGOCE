@@ -150,6 +150,7 @@ export default function App() {
   useEffect(() => {
     if (!token) return
     const controller = new AbortController()
+    setRevenue(null)
     setBackendStatus("loading")
     void (async () => {
       try {
@@ -157,7 +158,7 @@ export default function App() {
         if (controller.signal.aborted) return
         setPlatform(context)
         const result = context.permissions.includes("agentic.read")
-          ? await fetchRevenueGrowth(token, agency, controller.signal)
+          ? await fetchRevenueGrowth(token, agency, controller.signal, sharedFilters)
           : null
         if (controller.signal.aborted) return
         setRevenue(result)
@@ -172,7 +173,7 @@ export default function App() {
       }
     })()
     return () => controller.abort()
-  }, [token, agency, refreshSeq])
+  }, [token, agency, sharedFilters, refreshSeq])
   useEffect(() => {
     setSpecialistReports({})
     setSpecialistErrors({})
@@ -180,7 +181,7 @@ export default function App() {
     if (!token) return
     const controller = new AbortController()
     for (const agent of ["finance", "supply", "strategy"] as const) {
-      fetchSpecialistReport(token, agent, agency, controller.signal)
+      fetchSpecialistReport(token, agent, agency, controller.signal, sharedFilters)
         .then((report) => {
           if (!controller.signal.aborted)
             setSpecialistReports((prev) => ({...prev, [agent]:report}))
@@ -191,7 +192,7 @@ export default function App() {
         })
     }
     return () => controller.abort()
-  }, [token, agency, refreshSeq])
+  }, [token, agency, sharedFilters, refreshSeq])
 
 
   // Single contract-validated snapshot for BI, Data Science and Agentic.
@@ -317,7 +318,7 @@ export default function App() {
     setDirectorBusy(true)
     setDirectorError("")
     try {
-      const report = await fetchDirectorReport(token, directorObjective.trim(), agency)
+      const report = await fetchDirectorReport(token, directorObjective.trim(), agency, undefined, sharedFilters)
       setDirectorReport(report)
       track("AI Director", "Investigation read-only terminée", "director")
       setToast("Investigation Director terminée : aucun changement ERP.")
@@ -572,7 +573,7 @@ export default function App() {
         <Action icon="plus" onClick={() => token ? navigate("missions") : (setNewAgent(selectedAgent),setMissionModal(true))}>Créer une mission</Action>
       </div>
       <div className="agent-detail-grid">
-        {token ? <AdvancedAgentChat token={token} agency={agency} agent={AGENT_DOMAIN[selectedAgent]}/> : <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Rapport guidé · Non LLM</Pill>}>
+        {token ? <AdvancedAgentChat token={token} agency={agency} from={sharedFilters.from} to={sharedFilters.to} agent={AGENT_DOMAIN[selectedAgent]}/> : <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Rapport guidé · Non LLM</Pill>}>
           <div className="chat-messages">{chats[selectedAgent].map((m, i) =>
             <div key={i} className={"chat-message " + m.role}>
               <div className="chat-avatar">{m.role === "user" ? "VO" : <Icon name={a.icon} size={16}/>}</div>
@@ -601,7 +602,7 @@ export default function App() {
               </>}
             </div>
             {source
-              ? <p className="source-note"><Icon name="database" size={15}/> Source : {source} · arrêté au {asOf} · lecture seule</p>
+              ? <p className="source-note"><Icon name="database" size={15}/> Source : {source} · arrêté au {asOf} · période : {sharedFilters.from} → {sharedFilters.to} · lecture seule</p>
               : <div className="no-connection"><Icon name="alert" size={18}/> {specialistError ?? "Connectez le sandbox pour interroger ce spécialiste."}</div>}
           </Card>
           <Card title="Évolution & analyse"><MiniChart /></Card>
@@ -634,7 +635,7 @@ export default function App() {
   }
   function directorPage() {
     return <>
-      {token && <AdvancedAgentChat token={token} agency={agency} agent="director"/>}
+      {token && <AdvancedAgentChat token={token} agency={agency} from={sharedFilters.from} to={sharedFilters.to} agent="director"/>}
       <Card title="Lancer une investigation multi-agents" icon="layers" action={<Pill tone={directorReport ? "green" : "blue"}>{directorReport ? "Rapport calculé" : "Mode read-only"}</Pill>}>
         <div className="director-investigation">
           <label htmlFor="director-objective">Objectif métier</label>
@@ -649,7 +650,7 @@ export default function App() {
         </div>
         {directorError && <div className="error-banner">{directorError}</div>}
         {directorReport && <>
-          <p className="source-note"><Icon name="database" size={15}/> Source : {directorReport.snapshot.source} · arrêté au {directorReport.snapshot.asOf} · périmètre : {directorReport.snapshot.scope === "*" ? "toutes les agences" : directorReport.snapshot.scope.join(", ")}</p>
+          <p className="source-note"><Icon name="database" size={15}/> Source : {directorReport.snapshot.source} · arrêté au {directorReport.snapshot.asOf} · période : {sharedFilters.from} → {sharedFilters.to} · périmètre : {directorReport.snapshot.scope === "*" ? "toutes les agences" : directorReport.snapshot.scope.join(", ")}</p>
           <div className="stats-row stats-four director-result-stats">
             <Stat icon="layers" label="Agents sollicités" value={directorReport.summary.agentsInvoked}/>
             <Stat icon="target" label="Constats" value={directorReport.summary.totalFindings}/>
@@ -804,7 +805,7 @@ export default function App() {
         <div className="demo-banner"><Icon name="alert" size={17}/><span><strong>{token ? "Session sandbox connectée." : "Mode démonstration."}</strong> {token ? "Missions, approbations et notifications serveur actives. Le chat LLM exige une clé modèle réelle. Aucun write-back ERP." : "Les missions et décisions affichées sont illustratives tant que le backend n'est pas connecté."}</span><SmallLink onClick={() => navigate("connections")}>Connexions</SmallLink></div>
         {sharedSnapshotPanel()}
         {page === "overview" ? overview()
-          : page === "missions" ? (token ? <AdvancedMissions token={token} agency={agency}/> : missionsPage())
+          : page === "missions" ? (token ? <AdvancedMissions token={token} agency={agency} from={sharedFilters.from} to={sharedFilters.to}/> : missionsPage())
           : page === "agents" ? agentsPage()
           : page === "agent" ? agentPage()
           : page === "director" ? directorPage()
