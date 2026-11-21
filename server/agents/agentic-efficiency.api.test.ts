@@ -14,6 +14,7 @@ describe("Agentic governed efficiency and transparent tool plans",()=>{
     expect(response.body.estimatedTokens).toBe(0)
     expect(response.body.erpWrites).toBe(0)
     expect(response.body.top.length).toBeLessThanOrEqual(3)
+    expect(response.body.decisionSupport.aging.buckets).toHaveLength(5)
     expect((await request(app).get(base+"/brief/financial_strategy?agency=Tunis%20Centre")
       .set(bearer("dev-manager-sfax"))).status).toBe(403)
     expect((await request(app).get(base+"/brief/business_strategy")

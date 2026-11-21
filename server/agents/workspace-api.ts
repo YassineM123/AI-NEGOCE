@@ -54,6 +54,7 @@ function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objectiv
       actionType:facts[0]?.actionType,
       runs:[{agent:"revenue_growth" as const,status:r.status,findings:facts.length,tool:"sales.customer_opportunities"}],
       warnings:r.warnings,
+      decisionSupport:r.decisionSupport,
     }
   }
   if(agent==="director"){
@@ -68,6 +69,7 @@ function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objectiv
       findings:r.summary.totalFindings,actionType:r.highlights[0]?.action.type,
       runs:r.sections.map(x=>({agent:x.agent,status:x.status,findings:x.findings.length,tool:"analytics."+x.agent})),
       warnings:r.warnings,
+      decisionSupport:null,
     }
   }
   const r=agent==="financial_strategy"
@@ -82,6 +84,7 @@ function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objectiv
     findings:r.findings.length,actionType:r.findings[0]?.action.type,
     runs:[{agent:r.agent,status:r.status,findings:r.findings.length,tool:"analytics."+r.agent}],
     warnings:r.warnings,
+    decisionSupport:r.decisionSupport??null,
   }
 }
 type AgentDeps = {
@@ -306,8 +309,8 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     if(!s)return fail(res)
     const report=extractReport(agent.data,s,deps.dataset())
     res.setHeader("Cache-Control","no-store")
-    return res.json(deterministicBrief({agent:agent.data,source:report.source,asOf:report.asOf,
-      facts:report.facts,findings:report.findings}))
+    return res.json({...deterministicBrief({agent:agent.data,source:report.source,asOf:report.asOf,
+      facts:report.facts,findings:report.findings}),decisionSupport:report.decisionSupport})
   })
 
   app.get(base+"/chat/:agent",allAgents,async(req,res)=>{

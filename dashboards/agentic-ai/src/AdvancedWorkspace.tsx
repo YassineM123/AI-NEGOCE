@@ -41,7 +41,13 @@ export type Notification={
 type ChatMessage={id:string;role:"assistant"|"user";content:string;createdAt:string;model:string|null;sources:string[];
   usage?:{promptTokens:number|null;completionTokens:number|null;totalTokens:number|null;estimatedContextTokens:number;maxOutputTokens:number}}
 type AgentBrief={source:string;asOf:string;findings:number;modelCalls:0;estimatedTokens:0;
-  top:Array<{title:string;reason:string;actionType:string;evidence:string[]}>;remainingFindings:number}
+  top:Array<{title:string;reason:string;actionType:string;evidence:string[]}>;remainingFindings:number;
+  decisionSupport?:{
+    portfolio?:{customers:number;top5SharePercent:number|null;dormant90Observed:number};
+    aging?:{buckets:Array<{key:string;label:string;amountTnd:number;documents:number}>;outstandingTnd:number};
+    transferCandidates?:{candidates:Array<{sku:string;fromAgency:string;toAgency:string;proposedUnits:number}>};
+    strategicScenarios?:{scenarios:Array<{id:string;revenueTnd:number|null;variationPercent:number}>};
+  }|null}
 async function api<T>(token:string,path:string,options?:{method?:string;body?:unknown;signal?:AbortSignal}):Promise<T>{
   const response=await fetch(ROOT+path,{
     method:options?.method??"GET",
@@ -298,6 +304,30 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
     {brief&&<section className="aw-brief" aria-label="Diagnostic factuel sans appel au modèle">
       <div className="aw-inline"><strong>Diagnostic factuel : {brief.findings} constat(s)</strong>
         <small>0 appel LLM · 0 token · arrêté {brief.asOf}</small></div>
+      {brief.decisionSupport?.portfolio&&<div className="aw-brief-item">
+        <b>Portefeuille</b><p>{brief.decisionSupport.portfolio.customers} comptes · top 5 :
+          {brief.decisionSupport.portfolio.top5SharePercent??"N/D"} % du CA</p>
+        <small>{brief.decisionSupport.portfolio.dormant90Observed} clients sans achat positif depuis au moins 90 jours (constat, pas score ML).</small>
+      </div>}
+      {brief.decisionSupport?.aging&&<div className="aw-brief-item">
+        <b>Vieillissement des créances · {brief.decisionSupport.aging.outstandingTnd.toFixed(3)} TND</b>
+        {brief.decisionSupport.aging.buckets.map(b=><small key={b.key}>{b.label} :
+          {b.amountTnd.toFixed(3)} TND · {b.documents} pièce(s)</small>)}
+      </div>}
+      {brief.decisionSupport?.transferCandidates&&<div className="aw-brief-item">
+        <b>Transferts inter-dépôts à vérifier</b>
+        {brief.decisionSupport.transferCandidates.candidates.length===0?<small>Aucun candidat vérifiable dans le périmètre.</small>:
+          brief.decisionSupport.transferCandidates.candidates.map((t,i)=><small key={i}>
+            {t.sku} : {t.fromAgency} → {t.toAgency} · {t.proposedUnits} unité(s) · transport et réservations non vérifiés
+          </small>)}
+      </div>}
+      {brief.decisionSupport?.strategicScenarios&&<div className="aw-brief-item">
+        <b>Trois hypothèses stratégiques · pas un modèle de prévision</b>
+        {brief.decisionSupport.strategicScenarios.scenarios.map(s=><small key={s.id}>
+          {s.id} ({s.variationPercent>0?"+":""}{s.variationPercent} %) :
+          {s.revenueTnd===null?"Non disponible":s.revenueTnd.toFixed(3)+" TND"}
+        </small>)}
+      </div>}
       {brief.top.map((f,i)=><div className="aw-brief-item" key={i}>
         <b>{f.title}</b><p>{f.reason}</p>
         <small>Action suggérée : {f.actionType} · preuves : {f.evidence.length?f.evidence.join(", "):"Aucune pièce disponible"}</small>
