@@ -17,6 +17,7 @@ const AGENTS: {key:AgentDomain;label:string}[]=[
 ]
 type Mission={
   id:string;agency:string;agent:AgentDomain;title:string;objective:string;
+  from?:string;to?:string;
   createdBy:string;status:"draft"|"in_progress"|"awaiting_approval"|"reviewed"|"cancelled";
   dueAt:string|null;version:number;createdAt:string;updatedAt:string;
   steps?:Array<{key:string;label:string;status:"completed"|"active"|"pending"|"blocked"}>;
@@ -72,7 +73,7 @@ const status=(s:Mission["status"])=>({
 function Empty({children}:{children:string}){return <p className="aw-empty">{children}</p>}
 function Notice({children}:{children:string}){return <p className="aw-notice" role="status">{children}</p>}
 
-export function AdvancedMissions({token,agency}:{token:string;agency:string}){
+export function AdvancedMissions({token,agency,from,to}:{token:string;agency:string;from:string;to:string}){
   const [missions,setMissions]=useState<Mission[]>([])
   const [previews,setPreviews]=useState<Record<string,MissionPreview>>({})
   const [error,setError]=useState("")
@@ -93,7 +94,7 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
     setBusy(true);setError("")
     try{
       await api(token,"/missions",{method:"POST",body:{
-        agent,title,objective,agency:targetAgency,...(dueAt?{dueAt:new Date(dueAt).toISOString()}:{})
+        agent,title,objective,agency:targetAgency,from,to,...(dueAt?{dueAt:new Date(dueAt).toISOString()}:{})
       }})
       setTitle("");setObjective("");setDueAt("");await load()
     }catch(e){setError(e instanceof Error?e.message:"Création impossible")}
@@ -136,10 +137,11 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
       <header className="aw-heading"><div><h3>Centre des missions</h3><p>Enregistrement côté serveur · source et preuves conservées · aucune écriture ERP</p></div>
         <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
       {error&&<Notice>{error}</Notice>}
+      <p className="aw-sub">Période active : {from} → {to}. Les dossiers créés avec d'autres périodes restent archivés et n'apparaissent pas ici.</p>
       {!missions.length?<Empty>Aucune mission enregistrée dans cette organisation.</Empty>:
-        <div className="aw-list">{missions.filter(m=>agency==="all"||m.agency===agency).map(m=>
+        <div className="aw-list">{missions.filter(m=>(agency==="all"||m.agency===agency)&&m.from===from&&m.to===to).map(m=>
           <article key={m.id} className="aw-mission">
-            <div className="aw-inline"><div><strong>{m.title}</strong><small>{label(m.agent)} · {m.agency} · {when(m.createdAt)}</small></div>
+            <div className="aw-inline"><div><strong>{m.title}</strong><small>{label(m.agent)} · {m.agency} · {m.from??"Toutes dates"} → {m.to??"Toutes dates"} · {when(m.createdAt)}</small></div>
               <span className={"aw-status aw-status-"+m.status}>{status(m.status)}</span>
             </div>
             <p>{m.objective}</p>
@@ -165,7 +167,7 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
               </li>)}</ol>}
             {previews[m.id]&&<section className="aw-brief" aria-label={"Plan de mission "+m.title}>
               <strong>Plan avant exécution · {previews[m.id].status} · {previews[m.id].plannedTools} outil(s)</strong>
-              <small>Source : {previews[m.id].source} · arrêté : {previews[m.id].asOf}</small>
+              <small>Source : {previews[m.id].source} · arrêté : {previews[m.id].asOf} · filtre : {m.from??"début"} → {m.to??"fin"}</small>
               <p className="aw-sub">Budget : {previews[m.id].toolCallsBudget} outils max,
                 {previews[m.id].estimatedLlmCalls} appel LLM et {previews[m.id].erpWriteBudget} écriture ERP.</p>
               {previews[m.id].tools.map(t=><div className="aw-brief-item" key={t.id}>
@@ -285,7 +287,7 @@ export function AdvancedNotifications({token,agency,userId}:{token:string;agency
   </section>
 }
 
-export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:string;agent:AgentDomain}){
+export function AdvancedAgentChat({token,agency,agent,from,to}:{token:string;agency:string;agent:AgentDomain;from:string;to:string}){
   const [messages,setMessages]=useState<ChatMessage[]>([])
   const [brief,setBrief]=useState<AgentBrief|null>(null)
   const [budget,setBudget]=useState<{callsToday:number;dailyLimit:number}|null>(null)
@@ -294,17 +296,17 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
   const [error,setError]=useState("")
   const fetchHistory=useCallback(async()=>{
     try{
-      const q=new URLSearchParams({agency})
+      const q=new URLSearchParams({agency,from,to})
       const x=await api<{messages:ChatMessage[]}>(token,"/chat/"+agent+"?"+q)
       setMessages(x.messages);setError("")
     }catch(e){setError(e instanceof Error?e.message:"Historique indisponible")}
-  },[token,agency,agent])
+  },[token,agency,agent,from,to])
   useEffect(()=>{void fetchHistory()},[fetchHistory])
-  useEffect(()=>{setBrief(null);setBudget(null)},[agent,agency,token])
+  useEffect(()=>{setBrief(null);setBudget(null);setMessages([])},[agent,agency,from,to,token])
   const getBrief=async()=>{
     setBusy(true);setError("")
     try{
-      const response=await api<AgentBrief>(token,"/brief/"+agent+"?"+new URLSearchParams({agency}))
+      const response=await api<AgentBrief>(token,"/brief/"+agent+"?"+new URLSearchParams({agency,from,to}))
       setBrief(response)
     }catch(e){setError(e instanceof Error?e.message:"Résumé non disponible")}
     finally{setBusy(false)}
@@ -316,7 +318,7 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
     const text=draft.trim()
     try{
       const result=await api<{message:ChatMessage;budget?:{callsToday:number;dailyLimit:number}}>(token,"/chat/"+agent,{
-        method:"POST",body:{agency,turnId:crypto.randomUUID(),message:text},
+        method:"POST",body:{agency,from,to,turnId:crypto.randomUUID(),message:text},
       })
       setDraft("");if(result.budget)setBudget(result.budget);await fetchHistory()
       if(!result.message)throw new Error("Réponse vide")
@@ -325,7 +327,7 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
   }
   return <section className="aw-panel aw-chat-panel">
     <header className="aw-heading"><div><h3>Conversation — {label(agent)}</h3>
-      <p>Résumé sans tokens ou conversation LLM à budget borné · sources datées</p></div>
+      <p>Résumé à 0 token · {agency==="all"?"Toutes agences":agency} · {from} → {to}</p></div>
       <div className="aw-actions"><button className="aw-secondary" disabled={busy} onClick={()=>{void getBrief()}}>Résumé gratuit · 0 token</button>
       <button className="aw-secondary" onClick={()=>{void fetchHistory()}}>Historique</button></div></header>
     {brief&&<section className="aw-brief" aria-label="Diagnostic factuel sans appel au modèle">
@@ -362,7 +364,7 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
       {brief.remainingFindings>0&&<p className="aw-sub">+ {brief.remainingFindings} autres constats consultables dans les rapports métier.</p>}
     </section>}
     <div className="aw-chat-history" aria-live="polite">
-      {messages.length===0?<Empty>Aucun échange pour cette agence. La conversation nécessite une configuration LLM serveur.</Empty>:
+      {messages.length===0?<Empty>Aucun échange pour cette agence et cette période. Le résumé gratuit fonctionne sans LLM.</Empty>:
         messages.map(m=><article className={"aw-chat-bubble "+m.role} key={m.id}>
           <strong>{m.role==="assistant"?label(agent):"Vous"}</strong>
           <p>{m.content}</p>
@@ -407,12 +409,13 @@ export function AdvancedOverview({token,agency,role,from,to,onNavigate}:{
     const timer=setInterval(()=>{if(!document.hidden)void load()},20000)
     return ()=>clearInterval(timer)
   },[load])
-  const filteredMissions=missions.filter(m=>agency==="all"||m.agency===agency)
-  const filteredApprovals=approvals.filter(a=>agency==="all"||a.agency===agency)
+  const filteredMissions=missions.filter(m=>(agency==="all"||m.agency===agency)&&
+    m.from===from&&m.to===to)
+  const filteredApprovals=approvals.filter(a=>(agency==="all"||a.agency===agency))
   const filteredAlerts=notifications.filter(n=>agency==="all"||n.agency===agency)
   return <div className="aw-overview">
     <header className="aw-heading"><div><h3>Supervision Agentic — données serveur</h3>
-      <p>Missions et notifications enregistrées · approbations tracées · rafraîchissement automatique</p></div>
+      <p>Missions de la période {from??"début"} → {to??"fin"} · notifications globales non filtrées par période</p></div>
       <button className="aw-secondary" onClick={()=>{void load()}}>Actualiser</button></header>
     {error&&<Notice>{error}</Notice>}
     {environment&&<p className="aw-env" role="status"><strong>Stockage : {environment.persistence==="postgres"?"PostgreSQL durable":"Mémoire temporaire — données perdues après redémarrage"}</strong><span> · Chat IA : {environment.llmConfigured?"Fournisseur configuré":"LLM non configuré"} · Notifications : in-app, rappels par worker</span></p>}
