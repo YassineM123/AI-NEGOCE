@@ -1,5 +1,6 @@
 import crypto from "node:crypto"
 import { buildAnalyticsInsights } from "./analytics-insights.js"
+import { buildDataScienceAnalysis } from "./data-science-platform.js"
 import {
   ANALYTICS_CONTRACT_VERSION,
   analyticsOverviewSchema,
@@ -33,7 +34,7 @@ export function buildPlatformContext(input: {
     platforms: {
       bi: { status: hasPermission(input.principal.role, "analytics.bi.read") ? input.sourceAvailable ? "available" as const : "unavailable" as const : "forbidden" as const },
       dataScience: {
-        status: hasPermission(input.principal.role, "analytics.ds.read") ? "not_configured" as const : "forbidden" as const,
+        status: hasPermission(input.principal.role, "analytics.ds.read") ? input.sourceAvailable ? "available" as const : "unavailable" as const : "forbidden" as const,
         modelServingVerified: false as const,
       },
       agentic: {
@@ -54,7 +55,10 @@ export function buildAnalyticsOverview(input: {
   dataset: Dataset
   sourceKind: "sandbox" | "erp"
 }): AnalyticsOverview {
-  const bi = overview({ agencies: input.scope, from: input.from, to: input.to }, input.dataset)
+  const filters={agencies:input.scope,from:input.from,to:input.to}
+  const bi=overview(filters,input.dataset)
+  const insights=buildAnalyticsInsights(input.dataset,filters)
+  const canReadDataScience=hasPermission(input.principal.role,"analytics.ds.read")
   const pseudonymizedExtract = input.dataset.metadata.source.includes("Database/extractions")
   const snapshotKey = JSON.stringify({
     organizationId: input.principal.organizationId,
@@ -75,11 +79,11 @@ export function buildAnalyticsOverview(input: {
       isSynthetic: input.organization.isSynthetic,
     },
     bi: { status: "available", data: bi },
-    insights: buildAnalyticsInsights(input.dataset, { agencies: input.scope, from: input.from, to: input.to }),
+    insights,
     dataScience: {
-      status: "not_configured",
-      modelServingVerified: false,
-      predictions: [],
+      status:canReadDataScience?"available" as const:"forbidden" as const,
+      modelServingVerified:false as const,predictions:[],
+      ...(canReadDataScience?{analysis:buildDataScienceAnalysis(input.dataset,filters)}:{}),
     },
     agentic: {
       status: hasPermission(input.principal.role, "agentic.read") ? "available" : "forbidden",
@@ -88,7 +92,7 @@ export function buildAnalyticsOverview(input: {
         ? ["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"] : [],
     },
     warnings: [
-      "Aucun service de modeles Data Science n'est configure ou verifie.",
+      "Analyses Data Science sur dataset commun; modèle CA expérimental et non certifié.",
       ...(pseudonymizedExtract ? [
         "DEMONSTRATION : extraits IAINEG pseudonymises, non rapproches avec les editions officielles.",
         "KPI CA en TND uniquement. EUR/USD exclus des sommes ; aucune conversion FX implicite.",

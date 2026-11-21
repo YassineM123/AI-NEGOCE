@@ -98,6 +98,72 @@ export const analyticsInsightsSchema = z.object({
 })
 export type AnalyticsInsights = z.infer<typeof analyticsInsightsSchema>
 
+
+/** Experimental, read-only Data Science outputs on the governed BI dataset. */
+export const governedDataScienceSchema=z.object({
+  version:z.literal("ds-scoped-v1"),mode:z.literal("governed_read_only"),
+  source:z.string(),asOf:z.string(),referenceDate:z.string(),
+  portfolio:z.object({
+    status:z.enum(["observed","no_data"]),
+    customers:z.number().int().nonnegative(),
+    inactive90:z.number().int().nonnegative(),watch30to89:z.number().int().nonnegative(),
+    recent0to29:z.number().int().nonnegative(),
+    scoring:z.literal("observed_recency_not_churn_probability"),
+    top:z.array(z.object({
+      customerId:z.string(),name:z.string(),revenueTnd:z.number(),
+      documents:z.number().int().nonnegative(),daysSinceLastPurchase:z.number().int().nonnegative(),
+      segment:z.enum(["inactive_90","watch_30_89","recent_0_29"]),
+    })),
+  }),
+  trend:z.object({
+    months:analyticsInsightsSchema.shape.months,changePercent:z.number().nullable(),
+    classification:z.enum(["not_comparable","declining","growing","stable"]),
+    method:z.literal("consecutive_closed_months_only"),
+  }),
+  forecast:z.object({
+    status:z.enum(["backtested_pilot","insufficient_history","rejected_backtest"]),
+    modelVersion:z.string(),trainedThrough:z.string().nullable(),
+    trainingMonths:z.number().int().nonnegative(),
+    backtest:z.object({
+      holdoutMonths:z.number().int().nonnegative(),
+      wape:z.number().nullable(),bias:z.number().nullable(),thresholdWape:z.number(),
+    }),
+    predictions:z.array(z.object({
+      month:z.string(),revenueTnd:z.number(),lowerTnd:z.number(),upperTnd:z.number(),
+    })),
+    verifiedProduction:z.literal(false),warnings:z.array(z.string()),
+  }),
+  inventory:z.object({
+    status:z.enum(["observed_current_snapshot","not_available"]),
+    periodApplicable:z.literal(false),
+    positions:z.number().int().nonnegative(),
+    positionsWithThreshold:z.number().int().nonnegative(),
+    belowReorder:z.number().int().nonnegative(),
+    topBelow:z.array(z.object({
+      reference:z.string(),agency:z.string(),quantity:z.number(),reorderPoint:z.number(),
+    })),
+  }),
+  cash:z.object({
+    status:z.enum(["observed_receivables","not_available"]),asOf:z.string(),
+    basis:z.literal("outstanding_for_invoices_issued_in_selected_period"),
+    outstandingTnd:z.number(),overdueTnd:z.number(),
+    buckets:z.array(z.object({
+      key:z.string(),label:z.string(),amountTnd:z.number(),documents:z.number().int().nonnegative(),
+    })),
+  }),
+  scenarios:z.object({
+    status:z.enum(["hypotheses","not_available"]),
+    basisRevenueTnd:z.number().nullable(),
+    options:z.array(z.object({
+      id:z.string(),label:z.string(),variationPercent:z.number(),revenueTnd:z.number().nullable(),
+      cashImpactTnd:z.null(),netMarginTnd:z.null(),feasible:z.null(),
+    })),
+    method:z.literal("arithmetic_sensitivity_not_forecast"),
+  }),
+  warnings:z.array(z.string()),
+})
+export type GovernedDataScience=z.infer<typeof governedDataScienceSchema>
+
 export const analyticsOverviewSchema = z.object({
   insights: analyticsInsightsSchema.optional(),
   contractVersion: z.literal(ANALYTICS_CONTRACT_VERSION),
@@ -112,9 +178,10 @@ export const analyticsOverviewSchema = z.object({
   }),
   bi: z.object({ status: z.literal("available"), data: biOverviewSchema }),
   dataScience: z.object({
-    status: z.literal("not_configured"),
+    status: z.enum(["available","not_configured","forbidden"]),
     modelServingVerified: z.literal(false),
     predictions: z.array(z.never()),
+    analysis: governedDataScienceSchema.optional(),
   }),
   agentic: z.object({
     status: platformStatusSchema,
