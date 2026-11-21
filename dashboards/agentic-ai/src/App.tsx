@@ -229,7 +229,11 @@ export default function App() {
         void fetchPlatformContext(token).then((data) => reply(data))
           .catch(() => reply(null, "Contexte non autorisé"))
       } else if (msg.operation === "overview") {
-        void fetchSharedOverview(token, sharedFilters).then((data) => reply(data))
+        const required = portalTab === "bi" ? "analytics.bi.read" : "analytics.ds.read"
+        void fetchPlatformContext(token).then((context) => {
+          if (!context.permissions.includes(required)) throw new Error("Permission de plateforme absente")
+          return fetchSharedOverview(token, sharedFilters)
+        }).then((data) => reply(data))
           .catch(() => reply(null, "Snapshot non autorisé ou indisponible"))
       } else {
         reply(null, "Opération refusée")
