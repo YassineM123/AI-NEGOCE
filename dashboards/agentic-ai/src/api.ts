@@ -37,11 +37,11 @@ export type RevenueResult = {
 // This is the existing server contract. No fake backend is called and no secrets are persisted.
 const API_BASE = (import.meta.env.VITE_AGENTIC_API_BASE || "").replace(/\/$/, "")
 
-export async function createLocalDemoSession(signal?: AbortSignal): Promise<string> {
+export async function createLocalDemoSession(identity = "admin", signal?: AbortSignal): Promise<string> {
   const res = await fetch(API_BASE + "/api/v1/auth/dev-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ identity: "admin" }),
+    body: JSON.stringify({ identity }),
     signal,
   })
   if (!res.ok) throw new Error("Session de démonstration locale indisponible (HTTP " + res.status + ")")
