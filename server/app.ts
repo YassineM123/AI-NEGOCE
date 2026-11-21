@@ -29,6 +29,10 @@ import {
 } from "./services.js"
 import { processConversationalQuery } from "./copilot-engine.js"
 import { analyzeRevenueGrowth } from "./agents/revenue-growth.js"
+import { analyzeFinancialStrategy } from "./agents/financial-strategy.js"
+import { analyzeSupplyChain } from "./agents/supply-chain.js"
+import { analyzeBusinessStrategy } from "./agents/business-strategy.js"
+import { investigateWithDirector, DIRECTOR_AGENTS } from "./agents/ai-director.js"
 import { createLlmProvider, type LlmProvider } from "./llm/index.js"
 import { validateInvoice, type InvoiceInput } from "./invoice-validation.js"
 import {
@@ -849,6 +853,93 @@ export function createApp(deps = defaultDependencies()) {
         await tenant(req).clearUserPreferences(req.principal!.id)
       }
       return res.json({ success: true })
+    },
+  )
+
+  // Agentic Intelligence Suite: scoped deterministic investigations, read-only only.
+  const specialistQuery = z.object({
+    agency: z.string().max(80).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  const agentHandlers = [
+    {
+      path: "/api/v1/agentic/financial-strategy/analysis",
+      domain: "financial_strategy",
+      roles: ["admin", "manager", "accountant"] as const,
+      compute: analyzeFinancialStrategy,
+    },
+    {
+      path: "/api/v1/agentic/supply-chain/recommendations",
+      domain: "supply_chain_intelligence",
+      roles: ["admin", "manager"] as const,
+      compute: analyzeSupplyChain,
+    },
+    {
+      path: "/api/v1/agentic/business-strategy/scenarios",
+      domain: "business_strategy",
+      roles: ["admin", "manager"] as const,
+      compute: analyzeBusinessStrategy,
+    },
+  ]
+  for (const handler of agentHandlers) {
+    app.get(handler.path, requireRoles(...handler.roles), requireErpData, async (req, res) => {
+      const parsed = specialistQuery.safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({
+        error: { code: "INVALID_REQUEST", message: "Paramètres Agentic invalides", details: parsed.error.flatten() },
+      })
+      const scope = scopedAgencies(req, parsed.data.agency || "all")
+      if (scope === null) return res.status(403).json({
+        error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" },
+      })
+      const result = handler.compute({ scope, dataset: data(), limit: parsed.data.limit })
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "agentic." + handler.domain + ".investigated",
+        resourceType: "agentic",
+        resourceId: handler.domain,
+        metadata: { scope, asOf: result.snapshot.asOf, findings: result.findings.length, executionMode: result.executionMode },
+      })
+      res.setHeader("Cache-Control", "no-store")
+      return res.json(result)
+    })
+  }
+
+  // AI Director delegates to allow-listed specialists. Not a free-form LLM tool executor.
+  app.post(
+    "/api/v1/agentic/ai-director/investigate",
+    requireRoles("admin", "manager"),
+    requireErpData,
+    async (req, res) => {
+      const parsed = z.object({
+        objective: z.string().trim().min(5).max(500),
+        agency: z.string().max(80).optional(),
+        agents: z.array(z.enum(DIRECTOR_AGENTS as [string, ...string[]])).min(1).max(4).optional(),
+        limit: z.number().int().min(1).max(100).default(10),
+      }).safeParse(req.body)
+      if (!parsed.success) return res.status(400).json({
+        error: { code: "INVALID_REQUEST", message: "Mission Director invalide", details: parsed.error.flatten() },
+      })
+      const scope = scopedAgencies(req, parsed.data.agency || "all")
+      if (scope === null) return res.status(403).json({
+        error: { code: "AGENCY_FORBIDDEN", message: "Agence hors périmètre" },
+      })
+      const result = investigateWithDirector({
+        objective: parsed.data.objective, scope, dataset: data(),
+        agents: parsed.data.agents as typeof DIRECTOR_AGENTS | undefined,
+        limit: parsed.data.limit,
+      })
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "agentic.ai_director.investigated",
+        resourceType: "agentic",
+        resourceId: "ai-director",
+        metadata: {
+          scope, asOf: result.snapshot.asOf, agents: result.plan.map((step) => step.agent),
+          findings: result.summary.totalFindings, erpWrites: 0,
+        },
+      })
+      res.setHeader("Cache-Control", "no-store")
+      return res.json(result)
     },
   )
   // Revenue Growth Agent pilot: deterministic, scoped, read-only, no CRM or ERP writes.
