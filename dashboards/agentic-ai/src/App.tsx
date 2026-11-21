@@ -563,6 +563,7 @@ export default function App() {
     const specialistError = selectedAgent === "revenue" ? null : specialistErrors[selectedAgent]
     const opportunities = revenueResult?.opportunities ?? []
     const findings = specialist?.findings ?? []
+    const trendMonths=sharedOverview?.insights?.months??[]
     const metricEntries = specialist ? Object.entries(specialist.metrics).slice(0, 4) : []
     const source = specialist?.snapshot.source ?? revenueResult?.snapshot.source
     const asOf = specialist?.snapshot.asOf ?? revenueResult?.snapshot.asOf
@@ -608,15 +609,15 @@ export default function App() {
               : <div className="no-connection"><Icon name="alert" size={18}/> {specialistError ?? "Connectez le sandbox pour interroger ce spécialiste."}</div>}
           </Card>
           <Card title="Évolution du CA HT — données BI synchronisées">
-            {sharedOverview?.insights.months.length?
-              <div className="table-scroll" data-agentic-period-chart={sharedOverview.snapshotId}>
+            {trendMonths.length?
+              <div className="table-scroll" data-agentic-period-chart={sharedOverview?.snapshotId}>
                 <table><thead><tr><th>Mois</th><th>CA HT · TND</th><th>Période complète</th></tr></thead>
-                  <tbody>{sharedOverview.insights.months.map(m=><tr key={m.month}>
+                  <tbody>{trendMonths.map(m=><tr key={m.month}>
                     <td>{m.month}</td><td>{m.revenue.toLocaleString("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3})}</td>
                     <td>{m.closed?"Oui":"Partielle"}</td>
                   </tr>)}</tbody>
                 </table>
-                <p className="source-note">Snapshot : {sharedOverview.snapshotId} · source : {sharedOverview.snapshot.source}</p>
+                <p className="source-note">Snapshot : {sharedOverview?.snapshotId} · source : {sharedOverview?.snapshot.source}</p>
               </div>:
               token?<Empty icon="database" title="Aucune vente sur la période" text="Aucune courbe de démonstration n'est substituée aux données filtrées."/>:
               <MiniChart/>}
