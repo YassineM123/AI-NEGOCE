@@ -28,6 +28,7 @@ import {
   type Dataset,
 } from "./services.js"
 import { processConversationalQuery } from "./copilot-engine.js"
+import { analyzeRevenueGrowth } from "./agents/revenue-growth.js"
 import { createLlmProvider, type LlmProvider } from "./llm/index.js"
 import { validateInvoice, type InvoiceInput } from "./invoice-validation.js"
 import {
@@ -848,6 +849,45 @@ export function createApp(deps = defaultDependencies()) {
         await tenant(req).clearUserPreferences(req.principal!.id)
       }
       return res.json({ success: true })
+    },
+  )
+  // Revenue Growth Agent pilot: deterministic, scoped, read-only, no CRM or ERP writes.
+  app.get(
+    "/api/v1/agentic/revenue-growth/opportunities",
+    requireRoles("admin", "manager", "commercial"),
+    requireErpData,
+    async (req, res) => {
+      const parsed = z.object({
+        agency: z.string().max(80).optional(),
+        windowDays: z.coerce.number().int().min(30).max(365).default(90),
+        dormantDays: z.coerce.number().int().min(30).max(365).default(90),
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+      }).safeParse(req.query)
+      if (!parsed.success) return res.status(400).json({
+        error: { code: "INVALID_REQUEST", message: "Parametres Agentic invalides", details: parsed.error.flatten() },
+      })
+      const scope = scopedAgencies(req, parsed.data.agency || "all")
+      if (scope === null) return res.status(403).json({
+        error: { code: "AGENCY_FORBIDDEN", message: "Agence hors perimetre" },
+      })
+      const result = analyzeRevenueGrowth({
+        scope, dataset: data(), windowDays: parsed.data.windowDays,
+        dormantDays: parsed.data.dormantDays, limit: parsed.data.limit,
+      })
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "agentic.revenue_growth.investigated",
+        resourceType: "agentic",
+        resourceId: "revenue-growth",
+        metadata: {
+          scope, asOf: result.snapshot.asOf,
+          customersAnalyzed: result.analysis.customersAnalyzed,
+          returned: result.analysis.returned,
+          executionMode: result.executionMode,
+        },
+      })
+      res.setHeader("Cache-Control", "no-store")
+      return res.json(result)
     },
   )
   app.post(
