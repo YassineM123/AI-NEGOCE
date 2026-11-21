@@ -78,11 +78,11 @@ Pour comprendre le périmètre et les limites des données, commencer par :
 3. [`docs/PLAN_WEB_APP_BI.md`](docs/PLAN_WEB_APP_BI.md)
 4. [`docs/PLAN_DASHBOARDS_NEGOCE.md`](docs/PLAN_DASHBOARDS_NEGOCE.md)
 5. [`data/DICTIONNAIRE_DONNEES_BI.csv`](data/DICTIONNAIRE_DONNEES_BI.csv)
-6. [`data/extractions/README.md`](data/extractions/README.md)
+6. [`Database/extractions/README.md`](Database/extractions/README.md)
 
 ## Données et statut des calculs
 
-Les fichiers du dossier [`data/extractions/`](data/extractions/) sont des
+Les fichiers du dossier [`Database/extractions/`](Database/extractions/) sont des
 extractions de démonstration anonymisées. Les indicateurs et simulations du
 prototype ne doivent pas être interprétés comme des résultats certifiés tant
 qu’ils n’ont pas été rapprochés avec les sources ERP et validés par LAI.

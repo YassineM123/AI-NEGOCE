@@ -6,7 +6,7 @@
 
 ## The three independent platforms
 
-1. `dashboards/data-analysis/`: current BI HTML/CSS/JavaScript prototype, using anonymized CSV exports under `data/extractions/`.
+1. `dashboards/data-analysis/`: current BI HTML/CSS/JavaScript prototype, using anonymized CSV exports under `Database/extractions/`.
 2. `dashboards/data-science/`: existing standalone HTML-based 16-page Data Science prototype; do not claim it has verified ML model serving.
 3. `dashboards/agentic-ai/`: React + TypeScript + Vite Agentic Command Center, located at `dashboards/agentic-ai/`. Start via `npm run agentic:dev` (port 8444).
 

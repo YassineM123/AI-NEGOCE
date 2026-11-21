@@ -13,7 +13,7 @@ const target = path.resolve(repoRoot, "dist-agentic")
 const staticRoutes = [
   { prefix: "/platform/bi/", directory: path.resolve(repoRoot, "dashboards/data-analysis") },
   { prefix: "/platform/ds/", directory: path.resolve(repoRoot, "dashboards/data-science") },
-  { prefix: "/data/extractions/", directory: path.resolve(repoRoot, "data/extractions") },
+  { prefix: "/data/extractions/", directory: path.resolve(repoRoot, "Database/extractions") },
 ] as const
 const contentTypes: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
