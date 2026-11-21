@@ -57,7 +57,7 @@ export type MissionExecutionStep={
   attemptedAt:string|null;completedAt:string|null;errorCode:string|null
 }
 export type MissionExecution={
-  id:string;status:"running"|"partial"|"completed"
+  id:string;status:"running"|"partial"|"completed"|"cancelled"
   sourceFingerprint:string;source:string;asOf:string
   startedAt:string;updatedAt:string;completedAt:string|null
   leaseUntil:string|null;attempts:number;maxToolCalls:4
@@ -212,6 +212,37 @@ export class AgenticWorkspace {
       w.missions.unshift(mission)
       note(w,"mission.created:"+mission.id,input.agency,"user",actor.id,
         "mission","Mission enregistrée",mission.title,mission.id)
+      return mission
+    })
+  }
+  cancelMission(org:string,actor:Actor,id:string,expectedVersion:number,reason:string) {
+    return this.visit(org,true,w=>{
+      const mission=w.missions.find(m=>m.id===id&&visibleMission(m,actor))
+      if(!mission)throw new WorkspaceMissing()
+      if(mission.createdBy!==actor.id&&actor.role!=="admin")
+        throw new WorkspaceForbidden("Seul le créateur ou un admin peut annuler cette mission")
+      if(mission.version!==expectedVersion ||
+          !["draft","in_progress","awaiting_approval"].includes(mission.status))
+        throw new WorkspaceConflict("Mission déjà traitée ou version modifiée")
+      const at=now()
+      mission.status="cancelled";mission.version++;mission.updatedAt=at
+      if(mission.execution){
+        mission.execution.status="cancelled"
+        mission.execution.leaseUntil=null;mission.execution.updatedAt=at
+      }
+      mission.steps ??=createSteps(mission.createdAt,mission.createdBy)
+      for(const part of mission.steps)
+        if(part.status!=="completed"){
+          part.status="blocked";part.completedAt=null;part.completedBy=null
+        }
+      for(const approval of w.approvals){
+        if(approval.missionId!==id||approval.status!=="pending")continue
+        approval.status="rejected";approval.version++
+        approval.reviewedAt=at;approval.reviewedBy=actor.id
+        approval.comment="Annulation de mission : "+reason.slice(0,400)
+      }
+      note(w,"mission.cancelled:"+id,mission.agency,"user",
+        mission.createdBy,"mission","Mission annulée",reason.slice(0,200),id)
       return mission
     })
   }

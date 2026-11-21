@@ -169,6 +169,22 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       return res.status(201).json({mission})
     } catch(error){return apiError(res,error)}
   })
+  app.post(base+"/missions/:id/cancel",allAgents,async(req,res)=>{
+    const id=uuid.safeParse(req.params.id)
+    const parsed=z.object({
+      expectedVersion:z.number().int().positive(),
+      reason:z.string().trim().min(5).max(500),
+    }).strict().safeParse(req.body)
+    if(!id.success||!parsed.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    try{
+      const mission=await workspace.cancelMission(org(req),actor(req),id.data,
+        parsed.data.expectedVersion,parsed.data.reason)
+      await audit(req,"mission.cancelled",mission.id,{
+        agency:mission.agency,version:mission.version,erpWrites:0,
+      })
+      return res.json({mission,erpWrites:0})
+    }catch(error){return apiError(res,error)}
+  })
   app.get(base+"/missions/:id/plan",allAgents,deps.requireErpData,async(req,res)=>{
     const id=uuid.safeParse(req.params.id)
     if(!id.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})

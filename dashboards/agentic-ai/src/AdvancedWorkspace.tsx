@@ -20,7 +20,7 @@ type Mission={
   createdBy:string;status:"draft"|"in_progress"|"awaiting_approval"|"reviewed"|"cancelled";
   dueAt:string|null;version:number;createdAt:string;updatedAt:string;
   steps?:Array<{key:string;label:string;status:"completed"|"active"|"pending"|"blocked"}>;
-  execution?:{status:"running"|"partial"|"completed";attempts:number;updatedAt:string;
+  execution?:{status:"running"|"partial"|"completed"|"cancelled";attempts:number;updatedAt:string;
     steps:Array<{id:string;agent:string;tool:string;status:string;findings:number;
       warnings:string[];errorCode:string|null}>};
   lastRun:null|{asOf:string;source:string;summary:string;findings:number;evidence:string[];
@@ -99,6 +99,18 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
     }catch(e){setError(e instanceof Error?e.message:"Création impossible")}
     finally{setBusy(false)}
   }
+  const cancel=async(m:Mission)=>{
+    const reason=window.prompt("Motif obligatoire d'annulation (minimum 5 caractères)")
+    if(!reason||reason.trim().length<5)return
+    setBusy(true);setError("")
+    try{
+      await api(token,"/missions/"+m.id+"/cancel",{
+        method:"POST",body:{expectedVersion:m.version,reason:reason.trim()},
+      })
+      await load()
+    }catch(e){setError(e instanceof Error?e.message:"Annulation impossible")}
+    finally{setBusy(false)}
+  }
   const preview=async(m:Mission)=>{
     setBusy(true);setError("")
     try{
@@ -166,6 +178,9 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
             </section>}
             <footer><small>Version {m.version} · {m.dueAt?"Échéance : "+when(m.dueAt):"Sans échéance"}</small>
               <button className="aw-secondary" disabled={busy} onClick={()=>{void preview(m)}}>Voir plan & données</button>
+              {["draft","in_progress","awaiting_approval"].includes(m.status)&&
+                <button className="aw-danger" disabled={busy}
+                  onClick={()=>{void cancel(m)}}>Annuler mission</button>}
               {["draft","in_progress"].includes(m.status)&&
                 <button className="aw-primary" disabled={busy} onClick={()=>{void run(m)}}>{m.execution?.status==="partial"?"Reprendre les étapes restantes":"Lancer l'analyse read-only"}</button>}</footer>
           </article>
