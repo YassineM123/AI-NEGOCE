@@ -14,7 +14,7 @@ All three live in the same branch, while the backend is shared in `server/`; **l
 
 ## Backend & first agent
 
-`server/agents/revenue-growth.ts`: read-only deterministic Revenue Growth MVP; route `GET /api/v1/agentic/revenue-growth/opportunities` in `server/app.ts`. Existing backend handles authorization, tenant scope, audit and source availability. Do not bypass those guards.
+`server/agents/revenue-growth.ts`: read-only deterministic Revenue Growth MVP; additional specialists `server/agents/financial-strategy.ts`, `server/agents/supply-chain.ts`, `server/agents/business-strategy.ts` and `server/agents/ai-director.ts` are available in this branch. route `GET /api/v1/agentic/revenue-growth/opportunities` in `server/app.ts`. Existing backend handles authorization, tenant scope, audit and source availability. Do not bypass those guards.
 
 `src/` hosts the existing React ERP/BI/Copilot app on port 8443; `dashboards/agentic-ai/` is a separate React frontend.
 
@@ -25,7 +25,7 @@ npm ci
 npm run typecheck
 npm run agentic:typecheck
 npm run agentic:build
-npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts
+npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts
 npx playwright test --config dashboards/agentic-ai/playwright.config.ts
 ```
 
