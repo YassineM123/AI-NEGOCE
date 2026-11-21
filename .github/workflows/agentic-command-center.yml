@@ -12,4 +12,4 @@ jobs:
       - run: npm run agentic:typecheck
       - run: npm run agentic:build
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --config apps/agentic-ai/playwright.config.ts
+      - run: npx playwright test --config dashboards/agentic-ai/playwright.config.ts

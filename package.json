@@ -32,9 +32,9 @@
     "qa:data": "python tools/qa/data_quality.py datasets/synthetic/v1",
     "qa:oracle": "python tools/qa/bi_oracle.py datasets/synthetic/v1 reports/evidence/bi_expected.json",
     "qa:perf": "tsx tools/qa/perf.ts reports/evidence/performance.json",
-    "agentic:dev": "vite --config apps/agentic-ai/vite.config.ts",
-    "agentic:typecheck": "tsc --project apps/agentic-ai/tsconfig.json --noEmit",
-    "agentic:build": "vite build --config apps/agentic-ai/vite.config.ts"
+    "agentic:dev": "vite --config dashboards/agentic-ai/vite.config.ts",
+    "agentic:typecheck": "tsc --project dashboards/agentic-ai/tsconfig.json --noEmit",
+    "agentic:build": "vite build --config dashboards/agentic-ai/vite.config.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.100",

@@ -1,32 +1,64 @@
-# Plateforme 3 — Agentic AI Command Center (React)
+# AI-NÉGOCE — Troisième plateforme React : Agentic Command Center
 
-Le **troisième dashboard** existe et son code React est maintenu dans [../../apps/agentic-ai/](../../apps/agentic-ai/). Ce dossier sert de point de repère pour les trois plateformes sans créer une copie désynchronisée de l'application.
+Standalone React 19 + TypeScript + Vite 8 app implementing the approved **C (Minimal Premium) + B (Mission Control)** direction. The existing React BI/OCR application remains untouched.
 
-## Démarrage
+## Run
 
-À la racine du dépôt :
+From the repository root:
 
 ```bash
 npm ci
 npm run agentic:dev
 ```
 
-Ouvrir **http://127.0.0.1:8444/**. Les deux autres espaces peuvent être lancés séparément avec `python -m http.server 8000` :
+URL: http://127.0.0.1:8444
 
-- [Data Analyse](../data-analysis/)
-- [Data Science](../data-science/)
+This runs the UI independently of the existing frontend (port 8443). To enable the Revenue Growth sandbox API:
 
-## Fonctionnalités
+```bash
+# terminal 1 — follow root README to configure the local-dev backend
+npm run db:dev:up
+npm run migrate
+npm run dataset:generate
+npm run db:seed
+npm run dev:api
+# terminal 2
+npm run agentic:dev
+```
 
-L'application React comporte les pages **Vue d'ensemble**, **Centre de missions**, **Mes agents**, **AI Director**, **Décisions et approbations**, **Connexions BI / Data Science**, **Historique & audit** et **Paramètres** ; chaque agent possède un espace dédié pour suivre des missions et un panneau de conversation.
+Use **Connexions BI / Data Science → Connecter sandbox local** to obtain a short-lived local-dev token and call the governed Revenue Growth endpoint. Tokens are memory-only. This local-dev endpoint must never be exposed externally.
 
-Le premier spécialiste est **Revenue Growth** : source `server/agents/revenue-growth.ts`, route `GET /api/v1/agentic/revenue-growth/opportunities`, tests unitaires et tests de sécurité HTTP dans `server/agents/`.
+The app has an optional `VITE_AGENTIC_API_BASE` for a separately hosted authorized API. Never include API keys in `VITE_*` env variables. Production OIDC login and SSO are **not yet implemented in this app**.
 
-## Limitations actuelles
+## Screens
 
-- Revenue Growth est un moteur déterministe **read-only** utilisable avec la base sandbox de développement ; aucun ERP LAI réel n'est encore connecté.
-- Les chiffres de démonstration, notifications, statuts de mission et validations locales **ne constituent pas des preuves d'opérations ERP**.
-- Le conversationnel agentique réel, les trois autres spécialistes, l'AI Director autonome et les APIs des deux dashboards restent à intégrer.
-- Ne jamais activer d'écriture ERP avant contrôles d'autorisation, approbation humaine et idempotence.
+- Vue d'ensemble — command-center executive layout
+- Centre de missions — interactive Kanban and drill-down
+- Mes agents — four specialist profiles and proactive notification **UI preview**
+- Agent detail — conversation panel, follow-up, ranked real sandbox Revenue Growth opportunities
+- AI Director — orchestration design and workflow overview
+- Décisions & approbations — local-only approval simulation and evidence
+- Connexions BI / Data Science — real connection status when available, no fabricated health data
+- Historique & audit — clearly labelled local UI trace; server audit is separate
+- Paramètres — safe local preferences
 
-Voir [README global](../../README.md) et [documentation agent](../../docs/agentic/revenue-growth-mvp.md).
+## Run validation
+
+```bash
+npm run agentic:typecheck
+npm run agentic:build
+npx playwright test --config dashboards/agentic-ai/playwright.config.ts
+```
+
+## Safety and production gap
+
+**All example missions, alerts and decisions are fixtures.** Operations on them are ephemeral interface state, not persistent CRM/ERP actions. The Revenue Growth engine is a deterministic read-only MVP (no calibrated ML probabilities). Other specialist agents, conversational runtimes, AI Director orchestration, BI/Data Science contracts, real LAI ERP API integration, server-persisted case management, approvals, email/push dispatch, production SSO, background workers and observability are not implemented here.
+
+Never claim that clicking Approve, Start or Mark as Read writes to an ERP. Real actions require authenticated server endpoints, isolation, human authorization, signed evidence and idempotency.
+
+## Les deux autres dashboards (conservés)
+
+- [Data Analyse — HTML/CSV](../data-analysis/)
+- [Data Science — prototype HTML](../data-science/)
+
+Ils restent indépendants et accessibles sur un serveur statique (port 8000). Les APIs de synchronisation inter-plateformes ne sont pas encore intégrées.
