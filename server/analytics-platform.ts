@@ -1,4 +1,5 @@
 import crypto from "node:crypto"
+import { buildAnalyticsInsights } from "./analytics-insights.js"
 import {
   ANALYTICS_CONTRACT_VERSION,
   analyticsOverviewSchema,
@@ -74,6 +75,7 @@ export function buildAnalyticsOverview(input: {
       isSynthetic: input.organization.isSynthetic,
     },
     bi: { status: "available", data: bi },
+    insights: buildAnalyticsInsights(input.dataset, { agencies: input.scope, from: input.from, to: input.to }),
     dataScience: {
       status: "not_configured",
       modelServingVerified: false,

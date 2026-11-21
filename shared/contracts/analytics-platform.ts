@@ -66,7 +66,40 @@ const biOverviewSchema = z.object({
   }).passthrough(),
 })
 
+
+export const analyticsInsightsSchema = z.object({
+  currency: z.literal("TND"),
+  basis: z.literal("posted_sales_net_ht"),
+  referenceDate: z.string(),
+  months: z.array(z.object({
+    month: z.string(), revenue: z.number(), documents: z.number().int().nonnegative(),
+    customers: z.number().int().nonnegative(), closed: z.boolean(),
+  })),
+  topCustomers: z.array(z.object({
+    id: z.string(), name: z.string(), revenue: z.number(),
+    documents: z.number().int().nonnegative(), lastPurchase: z.string(),
+    daysSinceLastPurchase: z.number().int().nonnegative(), sharePercent: z.number().nullable(),
+  })),
+  summary: z.object({
+    revenue: z.number(), salesRows: z.number().int().nonnegative(),
+    documentCount: z.number().int().nonnegative(),
+    customerCount: z.number().int().nonnegative(),
+    topFiveSharePercent: z.number().nullable(),
+    monthlyChangePercent: z.number().nullable(), historyTruncated: z.boolean(),
+  }),
+  coverage: z.object({
+    costKnownRows: z.number().int().nonnegative(),
+    costMissingRows: z.number().int().nonnegative(),
+    receivablesAvailable: z.boolean(), inventoryValuationAvailable: z.boolean(),
+    agencyAttributionAvailable: z.boolean(), invoiceItemLinksAvailable: z.boolean(),
+    modelServingVerified: z.literal(false),
+  }),
+  warnings: z.array(z.string()),
+})
+export type AnalyticsInsights = z.infer<typeof analyticsInsightsSchema>
+
 export const analyticsOverviewSchema = z.object({
+  insights: analyticsInsightsSchema.optional(),
   contractVersion: z.literal(ANALYTICS_CONTRACT_VERSION),
   snapshotId: z.string(),
   generatedAt: z.string().datetime(),

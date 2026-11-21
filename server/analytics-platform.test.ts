@@ -53,6 +53,10 @@ describe("analytics platform API", () => {
     expect(analyticsOverviewSchema.safeParse(first.body).success).toBe(true)
     expect(first.body.scope).toEqual(["Sfax"])
     expect(first.body.snapshotId).toBe(second.body.snapshotId)
+    expect(first.body.insights.summary.revenue).toBe(first.body.bi.data.revenue)
+    expect(first.body.insights.summary.documentCount).toBe(first.body.bi.data.recordCount)
+    expect(first.body.insights.currency).toBe("TND")
+    expect(first.body.insights.coverage.modelServingVerified).toBe(false)
     expect(first.body.dataScience).toEqual({
       status: "not_configured",
       modelServingVerified: false,

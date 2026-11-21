@@ -920,7 +920,61 @@ function lineChart(actual,future=[],height=235){if(!actual?.length)return '<div 
 function missing(text){const needs={churn:['24 mois d’achats datés','Périodes de suivi client complètes','Revue commerciale des seuils'],affinity:['Lignes article par panier','Catalogue et compatibilités','Disponibilité des références'],forecast:['Mois clos comparables','Historique de vente multiannuel','Montants ERP rapprochés'],inventory:['Stocks et réservations datés','Délais et réceptions','Unités et dépôts vérifiés'],suppliers:['Commandes fournisseurs','Dates promises et reçues','Historique des écarts'],production:['Nomenclatures produits','Capacités et matières datées','Module de production disponible'],cash:['Échéances des factures','Paiements partiels et litiges','Situation de trésorerie'],impact:['Interventions et coûts','Groupe de comparaison','Périodes avant / après']};const parts=needs[state.page]||['Source ERP validée','Historique complet','Contrôle de qualité'];return `<section class="availability-card" role="status"><div class="availability-visual"><span>${ico(PAGE_ICONS[state.page]||'database',29)}</span><i></i><i></i><i></i></div><div class="availability-content"><span class="availability-label">Analyse non calculable sur ce jeu</span><h3>Données complémentaires nécessaires</h3><p>${html(text)}</p><div class="requirement-list">${parts.map(x=>`<span>${ico('check',14)} ${html(x)}</span>`).join('')}</div><button class="btn primary" data-nav="data">${ico('database',16)} Ouvrir les sources de données ${ico('arrow',14)}</button></div></section>`}
 
 function sourceFoot(suffix=''){return `<p class="chart-foot">Source : ${html(state.source.name)} · arrêté ${html(state.source.asOf)} · ${html(label())}${suffix?' · '+suffix:''}. Les données simulées ne constituent pas un résultat de LAI.</p>`}
-function content(){return firstDesignContent(state.page)}
+
+/** In connected mode, all figures below come from the exact same scoped API snapshot.
+ * Historical local models remain available ONLY after disconnecting the portal.
+ */
+function governedDataSciencePage(){
+ const x=state.platform.overview, i=x?.insights, title=NAV.find(n=>n[1]===state.page)?.[3]||'Data Science';
+ if(!i)return fAll(title,'Source gouvernée · périmètre API', '', fWarning('Données descriptives du serveur indisponibles. Aucun résultat local ne peut remplacer un snapshot filtré.'),false);
+ const summary=i.summary, c=i.coverage, months=i.months, customerRows=i.topCustomers;
+ const metrics=fKpis([
+  {icon:'wallet',label:'CA HT observé',value:amt(summary.revenue),note:'TND · factures/avoirs validés dans le jeu'},
+  {icon:'users',label:'Clients distincts',value:fmt(summary.customerCount),note:'Selon la période et l’agence'},
+  {icon:'file',label:'Documents',value:fmt(summary.documentCount),note:'Comptage unique'},
+  {icon:'trend',label:'Évolution mois clos',value:summary.monthlyChangePercent==null?'N/D':fmt(summary.monthlyChangePercent)+' %',note:'Pas une prévision'},
+  {icon:'shield',label:'Modèles ML validés',value:'Aucun',note:'Calculs descriptifs seulement'}
+ ]);
+ const observed=months.length?table([
+  {label:'Mois',key:'month'},{label:'CA HT · TND',num:true,format:r=>amt(r.revenue)},
+  {label:'Pièces',num:true,format:r=>fmt(r.documents)},
+  {label:'Clients',num:true,format:r=>fmt(r.customers)},
+  {label:'Clôturé',format:r=>r.closed?'Oui':'Partiel'}
+ ],months):'<div class="empty">Aucune vente dans le périmètre sélectionné.</div>';
+ const customers=customerRows.length?table([
+  {label:'Client',key:'name'},{label:'CA HT · TND',num:true,format:r=>amt(r.revenue)},
+  {label:'Documents',num:true,format:r=>fmt(r.documents)},
+  {label:'Dernier achat',key:'lastPurchase'},
+  {label:'Récence (j)',num:true,format:r=>fmt(r.daysSinceLastPurchase)},
+ ],customerRows):'<div class="empty">Aucun client pour ces filtres.</div>';
+ const scope='<div class="callout">Même dataset que BI et Agentic : '+html(x.snapshot.source)+' · snapshot '+html(x.snapshotId)+
+  ' · agence '+html(x.scope==='*'?'Toutes':x.scope.join(', '))+' · période '+html(x.bi.data.filters.from||'début')+
+  ' → '+html(x.bi.data.filters.to||'fin')+' · date de référence '+html(i.referenceDate)+'. Aucun modèle prédictif certifié.</div>';
+ const trace=fCard('Ventes mensuelles observées',observed,{icon:'trend'});
+ const clients=fCard('Portefeuille calculé · top clients',customers,{icon:'users'});
+ const quality=fCard('Disponibilité des sources',table([
+  {label:'Champ',key:'name'},{label:'État',key:'status'}],[
+  {name:'Coût par vente',status:c.costMissingRows?'Manquant sur '+fmt(c.costMissingRows)+' ligne(s)':'Présent sur les lignes sélectionnées'},
+  {name:'Créances détaillées',status:c.receivablesAvailable?'Source fournie':'Non disponible'},
+  {name:'Valorisation stock',status:c.inventoryValuationAvailable?'Source fournie':'Non disponible'},
+  {name:'Dépôt / agence des ventes',status:c.agencyAttributionAvailable?'Présent':'Non disponible'},
+  {name:'Lignes articles par document',status:c.invoiceItemLinksAvailable?'À valider':'Non disponible'},
+  {name:'Modèles ML déployés',status:'Aucun modèle vérifié'},
+ ]),{icon:'shield'});
+ const disclaimer=fWarning(i.warnings.join(' '));
+ if(['home','clients','churn','forecast'].includes(state.page)){
+  const advisory=state.page==='churn'?fWarning('Récence = nombre de jours depuis le dernier document du périmètre. Ce n’est ni une probabilité de churn ni un score validé.') :
+   state.page==='forecast'?fWarning('Courbe historique observée, pas de projection. Forecast/backtests ML désactivés tant que l’historique et un modèle validé ne sont pas disponibles.') : '';
+  return fAll(title,'Analyse descriptive déterministe · même source et mêmes filtres que BI',metrics,
+   scope+advisory+'<div class="f-grid f-halves">'+trace+clients+'</div>'+disclaimer,false);
+ }
+ if(['data','quality','models'].includes(state.page))
+  return fAll(title,'Traçabilité du dataset commun et limites vérifiées',metrics,scope+quality+disclaimer,false);
+ return fAll(title,'Module non déployable sur ce dataset gouverné',metrics,scope+
+  fWarning('Ce module nécessite des champs métier, une validation ou des modèles supplémentaires. Les scénarios fictifs de la maquette locale ne sont pas associés aux données API. Déconnectez la session pour explorer séparément la simulation.')+quality,false);
+}
+
+function content(){return state.platform.status==='connected'?governedDataSciencePage():firstDesignContent(state.page)}
 function oldContent(){switch(state.page){case'home':return home();case'clients':return clients();case'tasks':return tasksPage();case'churn':return churnPage();case'affinity':return affinityPage();case'forecast':return forecastPage();case'inventory':return inventoryPage();case'suppliers':return suppliersPage();case'production':return productionPage();case'cash':return cashPage();case'optim':return optimPage();case'quality':return qualityPage();case'impact':return impactPage();case'models':return modelsPage();case'assistant':return assistantPage();case'data':return dataPage();default:return home()}}
 
 function segmentOverview(clients){
@@ -1031,11 +1085,11 @@ async function clickHandler(e){const nav=e.target.closest('[data-nav]');if(nav){
  const task=e.target.closest('[data-task]');if(task){const t=state.tasks.find(x=>x.id===task.dataset.task&&x.dataset===state.source.id);if(t){const step={approve:['brouillon','approuvée'],start:['approuvée','en cours'],done:['en cours','terminée']}[task.dataset.tcmd];if(step&&t.status===step[0]){t.status=step[1];t.history.push({status:t.status,at:new Date().toISOString(),actor:'Utilisateur local'});storeTasks();toast('État : '+t.status);render()}}return}
  const ques=e.target.closest('[data-question]');if(ques){state.assistant=assistantReply(ques.dataset.question);render();return}
  const action=e.target.closest('[data-action]');if(!action)return;const x=action.dataset.action;
- if(x==='platformConnect'){if(state.platform.status==='connected'){window.AINegocePlatform.disconnect();state.platform={status:'disconnected',context:null};render();return}state.platform.status='loading';render();try{const context=await window.AINegocePlatform.connectLocalDemo();if(context.platforms.dataScience?.modelServingVerified!==false)throw new Error('Statut Data Science non vérifié');state.platform={status:'connected',context,overview:context.permissions.includes('analytics.bi.read')?await window.AINegocePlatform.getAnalyticsOverview():null};toast('Snapshot partagé connecté. Les modèles et tâches restent locaux.')}catch(error){state.platform={status:'error',context:null};toast(error instanceof Error?error.message:'Connexion API impossible')}render();return}
+ if(x==='platformConnect'){if(state.platform.status==='connected'){window.AINegocePlatform.disconnect();state.platform={status:'disconnected',context:null};render();return}state.platform.status='loading';render();try{const context=await window.AINegocePlatform.connectLocalDemo();if(context.platforms.dataScience?.modelServingVerified!==false||!context.permissions.includes('analytics.ds.read'))throw new Error('Accès Data Science non autorisé');state.platform={status:'connected',context,overview:context.permissions.includes('analytics.ds.read')?await window.AINegocePlatform.getAnalyticsOverview():null};toast('Snapshot partagé connecté. Les modèles et tâches restent locaux.')}catch(error){state.platform={status:'error',context:null};toast(error instanceof Error?error.message:'Connexion API impossible')}render();return}
  if(x==='openAdvanced'){const el=document.querySelector('.f-advanced');if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});}return}
  if(x==='newTask'){state.showTaskForm=true;render();return}
  if(x==='cancelTask'){state.showTaskForm=false;render();return}
- if(x==='switchDemo'||x==='switchAudit'){switchSource(x==='switchDemo'?'demo':'audit');return}
+ if(x==='switchDemo'||x==='switchAudit'){if(state.platform.status==='connected'){toast('Les jeux locaux sont séparés du snapshot API. Déconnectez la session pour les explorer.');return}switchSource(x==='switchDemo'?'demo':'audit');return}
  if(x==='searchGlobal'){state.search=$('#globalSearch')?.value?.trim()||'';state.page='clients';state.pageN=0;state.client=null;render();return}
  if(x==='closeClient'){state.client=null;render();return}
  if(x==='prevClients'){state.pageN=Math.max(0,state.pageN-1);$('#client-table').innerHTML=clientTable();const old=$('#legacy-client-table');if(old)old.innerHTML=clientTable();return}
@@ -1269,7 +1323,7 @@ render();
    try {
      const context=await window.AINegocePlatform.getContext();
      if(n!==revision)return;
-     const overview=context.permissions.includes('analytics.bi.read')
+     const overview=context.permissions.includes('analytics.ds.read')
        ?await window.AINegocePlatform.getAnalyticsOverview():null;
      if(n!==revision)return;
      state.platform={status:'connected',context,overview};

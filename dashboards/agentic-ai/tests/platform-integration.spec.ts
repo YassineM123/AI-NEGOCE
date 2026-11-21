@@ -45,6 +45,18 @@ function overviewFixture(params: URLSearchParams) {
       status: "available", executionMode: "read_only",
       availableAgents: ["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"],
     },
+    insights: {
+      currency: "TND", basis: "posted_sales_net_ht", referenceDate: "2026-10-31",
+      months: [{ month: from.slice(0, 7), revenue: seed, documents: 2, customers: 1, closed: true }],
+      topCustomers: [{ id: "qa-customer", name: "Client QA", revenue: seed,
+        documents: 2, lastPurchase: "2026-07-12", daysSinceLastPurchase: 111, sharePercent: 100 }],
+      summary: { revenue: seed, salesRows: 2, documentCount: 2, customerCount: 1,
+        topFiveSharePercent: 100, monthlyChangePercent: null, historyTruncated: false },
+      coverage: { costKnownRows: 2, costMissingRows: 0, receivablesAvailable: true,
+        inventoryValuationAvailable: true, agencyAttributionAvailable: true,
+        invoiceItemLinksAvailable: false, modelServingVerified: false },
+      warnings: ["Données synthétiques de test"],
+    },
     warnings: ["Données synthétiques de test"],
   }
 }
@@ -96,6 +108,8 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("300.000")
   await expect(bi.locator('[data-shared-kpi="revenue"]')).toHaveText("300.000", { timeout: 30000 })
   await expect(bi.locator('[data-shared-kpi="receivables"]')).toHaveText("30.000")
+  await expect(bi.locator('[data-insights-snapshot]')).toHaveAttribute("data-insights-snapshot", "snap-all-2026-10-01")
+  await expect(bi.getByText("Client QA")).toBeVisible()
   await expect(agentic).toHaveAttribute("data-platform-snapshot", "snap-all-2026-10-01")
 
   await page.getByRole("combobox", { name: "Agence" }).selectOption("Sfax")
@@ -108,6 +122,7 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   const ds = page.frameLocator('iframe[title="Data Science"]')
   await expect(ds.locator('[data-shared-kpi="revenue"]')).toHaveText("100.000", { timeout: 45000 })
   await expect(ds.locator('[data-shared-kpi="receivables"]')).toHaveText("10.000")
+  await expect(ds.getByText("Client QA")).toBeVisible()
 
   await page.getByRole("combobox", { name: "Période" }).selectOption("T3 2026")
   await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("1100.000")

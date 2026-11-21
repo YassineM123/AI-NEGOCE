@@ -23,7 +23,9 @@ Le sélecteur central agence + période pilote les trois applications. Périodes
 
 Le backend fournit un snapshot versionné depuis /api/v1/analytics/overview, avec tenant, agence, dates, source et date d'arrêté. Les trois vues affichent le même snapshotId, CA HT et créances en TND à trois décimales dans leur bandeau « Snapshot partagé ».
 
-**Limites** : les graphiques détaillés BI restent des restitutions CSV locales ; Data Science conserve ses propres scénarios locaux et annonce modelServingVerified=false. Les rapports Agentic sont filtrés par agence et calculés à la date d'arrêté, mais leur filtrage historique par période n'est pas encore synchronisé. Les stocks sont des positions à date, pas des séries historiques. Les KPI communs ne doivent pas être confondus avec toutes les vues métier.
+**Mode connecté (BI + Data Science)** : le même appel gouverné /api/v1/analytics/overview renvoie maintenant insights, un agrégat descriptif fondé sur les ventes postées TND, filtrées sur les mêmes agences et dates. Il inclut évolution mensuelle, documents uniques, clients distincts, top clients, récence, concentration, indicateur de variation entre mois clos, couverture des coûts et disponibilité des sources. Les pages BI Ventes, Direction et Clients ainsi que les pages DS Direction, Clients, Risques et Prévisions affichent ces chiffres source-backend ; les pages non calculables affichent N/D avec justification. Aucune source CSV locale n'est substituée en silence en mode connecté.
+
+**Limites restantes** : les maquettes BI / Data Science locales restent accessibles seulement en mode non connecté, et les scénarios fictifs BI restent identifiés comme tels. Pas de modèles ML servis (modelServingVerified=false), donc aucune prévision, churn ou optimisation ne peut être présentée comme validée. Les rapports Agentic sont filtrés par agence et calculés à la date d'arrêté mais la période historique de ces rapports n'est pas encore synchronisée. Les coûts par facture, échéances et PMP demeurent indisponibles sur l'extrait IAINEG. L'API repose sur les datasets injectés/sandbox, sans connecteur officiel ERP LAI.
 
 ## Démarrage
 
