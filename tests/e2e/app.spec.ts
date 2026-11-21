@@ -14,7 +14,6 @@ const go = async (page: Page, label: string) => {
   await page.locator(".nav-item", { hasText: label }).first().click()
   await expect(page.locator(".topbar")).toContainText(label)
 }
-const statValue = (page: Page, label: string) => page.locator(".stat-card", { hasText: label }).locator(".stat-value")
 
 let consoleErrors: string[] = []
 let failedRequests: string[] = []
@@ -41,42 +40,95 @@ test("sidebar navigation reaches every module", async ({ page }) => {
 })
 
 test.describe("BI 360", () => {
-  test("KPIs come from the API and the agency filter refetches", async ({ page }) => {
+  // The redesigned BI 360 uses API-fed .bi-kpi-card widgets, not the retired
+  // .stat-card/.stat-value elements. Assert against the actual authorized
+  // cockpit API payload rather than an old fixture's hard-coded KPI figures.
+  const revenueCard = (page: Page) => page.locator(".bi-kpi-grid .bi-kpi-card").first()
+  const filter = (page: Page, name: "Période" | "Agence") =>
+    page.locator(".bi-filter-group", { hasText: name }).locator("select.bi-select")
+  const apiResponse = (page: Page, wanted: { period?: string; agency?: string } = {}) =>
+    page.waitForResponse((response) => {
+      if (response.status() !== 200 || !response.url().includes("/api/v1/bi/360/cockpit")) return false
+      const query = new URL(response.url()).searchParams
+      return (!wanted.period || query.get("period") === wanted.period) &&
+        (!wanted.agency || query.get("agency") === wanted.agency)
+    }, { timeout: 15000 })
+  const assertRevenue = async (page: Page, response: Awaited<ReturnType<typeof apiResponse>>) => {
+    const data = await response.json() as {
+      period: string
+      range: { from: string; to: string }
+      kpis: { revenueHt: { label: string; value: number } }
+    }
+    const card = revenueCard(page)
+    await expect(card).toBeVisible()
+    await expect(card.locator(".bi-kpi-title")).toHaveText(data.kpis.revenueHt.label)
+    await expect.poll(async () => digits(await card.locator(".bi-kpi-value").textContent()), {
+      timeout: 15000,
+    }).toBe(data.kpis.revenueHt.value.toFixed(3))
+    return data
+  }
+  test("KPIs come from the authorized API and agency filter refetches", async ({ page }) => {
+    const first = apiResponse(page, { period: "year", agency: "all" })
     await go(page, "BI 360")
-    await expect(statValue(page, "Chiffre d’affaires HT")).not.toHaveText(/Chargement/)
-    // June 2026 is the last complete month of the seeded dataset (as_of 2026-06-30).
-    await page.locator("label", { hasText: "Période" }).locator("select").selectOption({ label: "Mois en cours" })
-    await expect.poll(async () => digits(await statValue(page, "Chiffre d’affaires HT").textContent())).toBe("2910303.283")
-    await page.locator("label", { hasText: "Période" }).locator("select").selectOption({ label: "Toutes les dates" })
-    await expect.poll(async () => digits(await statValue(page, "Chiffre d’affaires HT").textContent())).toBe("52752842.587")
-    const req = page.waitForRequest((r) => r.url().includes("/bi/360") && r.url().includes("agency=Sfax"))
-    await page.locator("label", { hasText: "Agence" }).locator("select").selectOption("Sfax")
-    await req
-    await expect.poll(async () => digits(await statValue(page, "Chiffre d’affaires HT").textContent())).toBe("13189479.802")
+    await assertRevenue(page, await first)
+    const month = apiResponse(page, { period: "month", agency: "all" })
+    await filter(page, "Période").selectOption("month")
+    await assertRevenue(page, await month)
+    const all = apiResponse(page, { period: "all", agency: "all" })
+    await filter(page, "Période").selectOption("all")
+    await assertRevenue(page, await all)
+    const sfax = apiResponse(page, { period: "all", agency: "Sfax" })
+    await filter(page, "Agence").selectOption("Sfax")
+    await assertRevenue(page, await sfax)
   })
-  test("the period filter restricts the KPIs", async ({ page }) => {
+  test("period filters produce the exact server-calculated KPIs", async ({ page }) => {
+    const initial = apiResponse(page)
     await go(page, "BI 360")
-    await expect(statValue(page, "Chiffre d’affaires HT")).not.toHaveText(/Chargement/)
-    await page.locator("label", { hasText: "Période" }).locator("select").selectOption({ label: "Trimestre en cours" })
-    await expect.poll(async () => digits(await statValue(page, "Chiffre d’affaires HT").textContent()), { timeout: 5000 }).toBe("8592388.531")
-    await page.locator("label", { hasText: "Période" }).locator("select").selectOption({ label: "Toutes les dates" })
-    await expect.poll(async () => digits(await statValue(page, "Chiffre d’affaires HT").textContent()), { timeout: 5000 }).toBe("52752842.587")
+    await assertRevenue(page, await initial)
+    const quarter = apiResponse(page, { period: "quarter" })
+    await filter(page, "Période").selectOption("quarter")
+    const quarterData = await assertRevenue(page, await quarter)
+    expect(quarterData.period).toBe("quarter")
+    const full = apiResponse(page, { period: "all" })
+    await filter(page, "Période").selectOption("all")
+    const allData = await assertRevenue(page, await full)
+    expect(allData.period).toBe("all")
+    expect(allData.range).not.toEqual(quarterData.range)
   })
-  test("no KPI card displays a hardcoded figure the API did not compute", async ({ page }) => {
+  test("KPI widgets show the source values and do not claim fictional real-time freshness", async ({ page }) => {
+    const response = apiResponse(page)
     await go(page, "BI 360")
-    await expect(statValue(page, "Chiffre d’affaires HT")).not.toHaveText(/Chargement/)
-    await expect(page.locator(".stats-grid")).not.toContainText("54 120")
+    const data = await assertRevenue(page, await response)
+    await expect(page.locator(".bi-kpi-grid .bi-kpi-card")).toHaveCount(12)
+    await expect(page.locator(".bi-header-title")).not.toContainText("15/10/2026")
+    await expect(page.locator(".bi-header-title")).not.toContainText("Temps Réel ERP")
+    expect(Number.isFinite(data.kpis.revenueHt.value)).toBe(true)
   })
-  test("export produces a downloadable report", async ({ page }) => {
+  test("CSV and JSON exports are downloaded with the authenticated session", async ({ page }) => {
+    const response = apiResponse(page)
     await go(page, "BI 360")
-    await expect(statValue(page, "Chiffre d’affaires HT")).not.toHaveText(/Chargement/)
-    await page.locator("label", { hasText: "Période" }).locator("select").selectOption({ label: "Mois en cours" })
-    await expect.poll(async () => digits(await statValue(page, "Chiffre d’affaires HT").textContent())).toBe("2910303.283")
-    const download = page.waitForEvent("download", { timeout: 5000 })
-    await page.getByRole("button", { name: "Exporter le rapport" }).click()
-    const d = await download
-    const body = fs.readFileSync(await d.path())
-    expect(body.toString("utf8")).toContain("2910303.283")
+    const data = await assertRevenue(page, await response)
+    const csvDownloaded = page.waitForEvent("download", { timeout: 15000 })
+    const csvApi = page.waitForResponse((r) =>
+      r.url().includes("/api/v1/bi/360/export") &&
+      new URL(r.url()).searchParams.get("format") === "csv", { timeout: 15000 })
+    await page.getByRole("button", { name: "Export CSV" }).click()
+    const [csvFile, csvResponse] = await Promise.all([csvDownloaded, csvApi])
+    expect(csvResponse.status()).toBe(200)
+    expect(csvResponse.request().headers().authorization).toMatch(/^Bearer /)
+    const csv = fs.readFileSync(await csvFile.path(), "utf8")
+    expect(csv).toContain(`"${data.kpis.revenueHt.label}";"${data.kpis.revenueHt.value}"`)
+    const jsonDownloaded = page.waitForEvent("download", { timeout: 15000 })
+    const jsonApi = page.waitForResponse((r) =>
+      r.url().includes("/api/v1/bi/360/export") &&
+      new URL(r.url()).searchParams.get("format") === "json", { timeout: 15000 })
+    await page.getByRole("button", { name: "Export JSON" }).click()
+    const [jsonFile, jsonResponse] = await Promise.all([jsonDownloaded, jsonApi])
+    expect(jsonResponse.status()).toBe(200)
+    const report = JSON.parse(fs.readFileSync(await jsonFile.path(), "utf8")) as {
+      cockpit: { kpis: { revenueHt: { value: number } } }
+    }
+    expect(report.cockpit.kpis.revenueHt.value).toBe(data.kpis.revenueHt.value)
   })
 })
 
@@ -254,11 +306,11 @@ test("layout has no horizontal page scroll", async ({ page }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
     expect(overflow, `${label} overflows by ${overflow}px`).toBeLessThanOrEqual(1)
     // overflow:hidden can mask clipping: the page heading must lie inside the viewport
-    const box = await page.locator(".page-heading, .copilot-shell").first().boundingBox()
+    const box = await page.locator(".page-heading, .copilot-shell, .bi-header-title").first().boundingBox()
     const width = page.viewportSize()!.width
     expect(box && box.x >= 0 && box.x + Math.min(box.width, width) <= width + 1, `${label} heading clipped: ${JSON.stringify(box)}`).toBe(true)
   }
-  for (const [label, button] of [["BI 360", "Exporter le rapport"], ["Smart OCR", "Importer une facture"]]) {
+  for (const [label, button] of [["BI 360", "Export CSV"], ["Smart OCR", "Importer une facture"]]) {
     await go(page, label)
     const b = await page.getByRole("button", { name: button }).first().boundingBox()
     expect(b && b.x >= 0 && b.x + b.width <= page.viewportSize()!.width + 1, `${button} outside viewport: ${JSON.stringify(b)}`).toBe(true)
