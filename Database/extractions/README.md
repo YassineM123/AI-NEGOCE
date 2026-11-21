@@ -17,3 +17,16 @@ Les fichiers sont séparés par `;`, encodés en UTF‑8 et ne contiennent ni no
 | `recouvrement/creances_agees_demo.csv` | client × tranche | arrêté 20/10/2026 | `View_echeancefact` | SQL à rapprocher |
 
 Les nombres décimaux conservent une précision de trois décimales, correspondant aux montants TND observés dans NÉGOCE.
+
+## Phase 2 — contrôles de confiance (21/11/2026)
+
+Les identifiants sont **pseudonymisés**, et non des identifiants de production à exposer au public. Les 3 158 documents du journal sont répartis en **3 101 TND**, **56 EUR**, **1 USD**. Il est incorrect de les additionner en TND ; les KPI partagés n'utilisent que les documents explicitement en TND.
+
+Le journal n'a pas de colonne agence/dépôt. Il ne fournit pas non plus de coût par facture. Le fichier de stock ne comporte pas de PMP pour **4 618 positions sur 4 619**. Les créances sont agrégées par client et tranche sans date d'échéance par facture. Ces champs ne sont **pas complétés artificiellement**.
+
+Deux scénarios 100 % synthétiques, sans ID commun avec IAINEG, ont été ajoutés :
+
+- `demonstration/fournisseurs_livraisons_demo_synthetique.csv` : 8 commandes hypothétiques ;
+- `demonstration/plan_tresorerie_demo_synthetique.csv` : 6 mois de flux hypothétiques, soldes mathématiquement réconciliés.
+
+Contrôle reproductible : `npm run demo:database:audit`. Mode intégré local : `DEMO_DATA_SOURCE=extractions`. Voir [`docs/PHASE2_DATABASE_DEMO.md`](../../docs/PHASE2_DATABASE_DEMO.md). Les fichiers extraits d'origine restent inchangés.
