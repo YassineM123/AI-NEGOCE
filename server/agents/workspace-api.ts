@@ -8,6 +8,7 @@ import { analyzeRevenueGrowth } from "./revenue-growth.js"
 import { evaluateAgenticForecast } from "./predictive.js"
 import { buildGroundedPrompt,compactHistory,deterministicBrief } from "./context-budget.js"
 import { buildExecutionTrace,type DomainRun } from "./execution-trace.js"
+import { previewMissionPlan } from "./mission-plan.js"
 import { requirePermission } from "../permissions.js"
 import { analyzeFinancialStrategy } from "./financial-strategy.js"
 import { analyzeSupplyChain } from "./supply-chain.js"
@@ -141,6 +142,21 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       await audit(req,"mission.created",mission.id,{agency:mission.agency,agent:mission.agent})
       return res.status(201).json({mission})
     } catch(error){return apiError(res,error)}
+  })
+  app.get(base+"/missions/:id/plan",allAgents,deps.requireErpData,async(req,res)=>{
+    const id=uuid.safeParse(req.params.id)
+    if(!id.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    try{
+      const mission=await workspace.getMission(org(req),actor(req),id.data)
+      if(!agentAllowed(req.principal!.role,mission.agent))
+        return res.status(403).json({error:{code:"FORBIDDEN"}})
+      const s=scope(req,mission.agency)
+      if(!s)return fail(res)
+      const plan=previewMissionPlan({agent:mission.agent,objective:mission.objective,
+        scope:s,dataset:deps.dataset()})
+      res.setHeader("Cache-Control","no-store")
+      return res.json({missionId:mission.id,version:mission.version,plan})
+    }catch(error){return apiError(res,error)}
   })
   app.post(base+"/missions/:id/run",allAgents,deps.requireErpData,async(req,res)=>{
     const params=uuid.safeParse(req.params.id)

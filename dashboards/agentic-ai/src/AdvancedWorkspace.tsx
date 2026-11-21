@@ -25,6 +25,10 @@ type Mission={
       steps:Array<{id:string;agent:string;tool:string;status:string;findings:number;explanation:string}>};
     prediction?:{status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null}}
 }
+type MissionPreview={planVersion:string;status:string;source:string;asOf:string;plannedTools:number;
+  toolCallsBudget:number;estimatedLlmCalls:number;estimatedLlmTokens:number;erpWriteBudget:number;
+  tools:Array<{id:string;agent:AgentDomain;tool:string;goal:string;status:string;
+    availableRecords:number;required:string[];caveats:string[]}>}
 type Approval={
   id:string;missionId:string;agency:string;agent:AgentDomain;requestedBy:string;
   status:"pending"|"approved"|"rejected";version:number;actionType:string;
@@ -60,6 +64,7 @@ function Notice({children}:{children:string}){return <p className="aw-notice" ro
 
 export function AdvancedMissions({token,agency}:{token:string;agency:string}){
   const [missions,setMissions]=useState<Mission[]>([])
+  const [previews,setPreviews]=useState<Record<string,MissionPreview>>({})
   const [error,setError]=useState("")
   const [busy,setBusy]=useState(false)
   const [title,setTitle]=useState("")
@@ -82,6 +87,15 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
       }})
       setTitle("");setObjective("");setDueAt("");await load()
     }catch(e){setError(e instanceof Error?e.message:"Création impossible")}
+    finally{setBusy(false)}
+  }
+  const preview=async(m:Mission)=>{
+    setBusy(true);setError("")
+    try{
+      const response=await api<{missionId:string;plan:MissionPreview}>(token,
+        "/missions/"+m.id+"/plan")
+      setPreviews(old=>({...old,[m.id]:response.plan}))
+    }catch(e){setError(e instanceof Error?e.message:"Plan indisponible")}
     finally{setBusy(false)}
   }
   const run=async(m:Mission)=>{
@@ -120,7 +134,21 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
               {m.steps.map(s=><li className={"aw-step aw-step-"+s.status} key={s.key}>
                 <span>{s.label}</span><b>{s.status==="completed"?"Terminée":s.status==="active"?"En cours":s.status==="blocked"?"Bloquée":"À faire"}</b>
               </li>)}</ol>}
+            {previews[m.id]&&<section className="aw-brief" aria-label={"Plan de mission "+m.title}>
+              <strong>Plan avant exécution · {previews[m.id].status} · {previews[m.id].plannedTools} outil(s)</strong>
+              <small>Source : {previews[m.id].source} · arrêté : {previews[m.id].asOf}</small>
+              <p className="aw-sub">Budget : {previews[m.id].toolCallsBudget} outils max,
+                {previews[m.id].estimatedLlmCalls} appel LLM et {previews[m.id].erpWriteBudget} écriture ERP.</p>
+              {previews[m.id].tools.map(t=><div className="aw-brief-item" key={t.id}>
+                <b>{label(t.agent)} · {t.status==="ready"?"Données présentes":"Données manquantes"}</b>
+                <p>{t.goal}</p>
+                <small>Outil : {t.tool} · lignes : {t.availableRecords}</small>
+                <small>Sources requises : {t.required.join(" / ")}</small>
+                {t.caveats.map((c,i)=><small key={i}>Limite : {c}</small>)}
+              </div>)}
+            </section>}
             <footer><small>Version {m.version} · {m.dueAt?"Échéance : "+when(m.dueAt):"Sans échéance"}</small>
+              <button className="aw-secondary" disabled={busy} onClick={()=>{void preview(m)}}>Voir plan & données</button>
               {["draft","in_progress"].includes(m.status)&&
                 <button className="aw-primary" disabled={busy} onClick={()=>{void run(m)}}>Lancer l'analyse read-only</button>}</footer>
           </article>

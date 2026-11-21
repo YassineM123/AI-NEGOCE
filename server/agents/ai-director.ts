@@ -17,13 +17,19 @@ type DirectorSection = {
   findings:AgentFinding[]
   warnings:string[]
 }
-function chooseAgents(objective: string): DirectorAgent[] {
+export function chooseAgents(objective: string): DirectorAgent[] {
   const q=objective.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
   const selected: DirectorAgent[]=[]
   if (/\b(client|revenu|vente|commercial|croissance|chiffre d.affaire|ca\b|relanc)/.test(q)) selected.push("revenue_growth")
   if (/\b(finance|tresorerie|creance|impaye|cash|recouvrement|paiement|dso)/.test(q)) selected.push("financial_strategy")
   if (/\b(stock|achat|fournisseur|rupture|reapprovisionnement|supply|logistique)/.test(q)) selected.push("supply_chain_intelligence")
   if (/\b(strateg|investissement|compar|agence|scenario|direction|expansion)/.test(q)) selected.push("business_strategy")
+  // A quantified revenue growth goal is cross-functional: financing, product
+  // availability and strategic capacity must be checked, not silently omitted.
+  if (selected.includes("revenue_growth") &&
+      /(?:\d+[\s.,]*%|objectif|cible|target)/.test(q) &&
+      /(?:mois|an(?:nee)?s?|marge|cash|budget|croissance)/.test(q))
+    return [...DIRECTOR_AGENTS]
   return selected.length ? selected : [...DIRECTOR_AGENTS]
 }
 function revenueSection(data: Dataset, scope: AgencyScope, limit: number): DirectorSection {
