@@ -164,7 +164,8 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
     executionMode: "read_only" as const,
     currency: "TND",
     snapshot: {
-      asOf,
+      asOf:input.dataset.metadata.asOf,
+      analysisEnd:asOf,
       source: input.dataset.metadata.source,
       dataUpdatedAt: input.dataset.metadata.lastUpdated,
       current: { from: currentFrom, to: asOf },
