@@ -127,8 +127,9 @@ test("five Agentic screens show scoped findings and each chat uses its own ident
       await expect(page.getByText(needle)).toBeVisible()
       await expect(page.getByText("Aucune écriture ERP",{exact:true})).toBeVisible()
     }
-    await expect(page.getByRole("heading",{name:"Conversation — "+name})).toBeVisible()
-    const draft=page.getByRole("textbox",{name:"Message à "+name})
+    const chatName=key==="supply_chain_intelligence"?"Supply Chain":name
+    await expect(page.getByRole("heading",{name:"Conversation — "+chatName})).toBeVisible()
+    const draft=page.getByRole("textbox",{name:"Message à "+chatName})
     await draft.fill("Explique le risque et les limites de cette analyse")
     await page.getByRole("button",{name:"Envoyer"}).first().click()
     await expect(page.getByText("Réponse IA QA "+key)).toBeVisible()
