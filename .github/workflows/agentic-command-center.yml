@@ -11,5 +11,11 @@ jobs:
       - run: npm ci
       - run: npm run agentic:typecheck
       - run: npm run agentic:build
+      - name: Verify all three platforms bundled
+        run: |
+          test -f dist-agentic/index.html
+          test -f dist-agentic/platform/bi/index.html
+          test -f dist-agentic/platform/ds/index.html
+          test -d dist-agentic/data/extractions
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test --config dashboards/agentic-ai/playwright.config.ts
