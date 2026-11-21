@@ -26,6 +26,7 @@ export type RevenueResult = {
     asOf: string
     source: string
     scope: string[] | "*"
+    period?:{from:string|null;to:string|null}
     current: { from: string; to: string }
     previous: { from: string; to: string }
   }
@@ -89,9 +90,12 @@ export async function fetchRevenueGrowth(
   token: string,
   agency: string,
   signal?: AbortSignal,
+  period?:{from?:string;to?:string},
 ): Promise<RevenueResult> {
   const params = new URLSearchParams({ windowDays: "90", dormantDays: "90", limit: "20" })
   if (agency !== "all") params.set("agency", agency)
+  if(period?.from)params.set("from",period.from)
+  if(period?.to)params.set("to",period.to)
   const res = await fetch(
     API_BASE + "/api/v1/agentic/revenue-growth/opportunities?" + params.toString(),
     { headers: { Authorization: "Bearer " + token }, signal },
@@ -109,7 +113,8 @@ export type SpecialistReport = {
   agent: string
   status: "ok" | "no_data"
   executionMode: "read_only"
-  snapshot: { asOf: string; source: string; scope: string[] | "*"; currency: "TND" }
+  snapshot: { asOf: string; source: string; scope: string[] | "*"; currency: "TND";
+    period?:{from:string|null;to:string|null} }
   metrics: Record<string, number | null>
   findings: Array<{
     id: string
@@ -127,7 +132,8 @@ export type DirectorReport = {
   orchestrationMode: "deterministic_read_only"
   status: "ok" | "no_data"
   objective: string
-  snapshot: { asOf: string; source: string; scope: string[] | "*" }
+  snapshot: { asOf: string; source: string; scope: string[] | "*";
+    period?:{from:string|null;to:string|null} }
   plan: Array<{ step: number; agent: string; action: string; status: string }>
   sections: Array<{
     agent: string; status: string;
@@ -146,9 +152,12 @@ const SPECIALIST_PATHS: Record<SpecialistAgent,string> = {
 }
 export async function fetchSpecialistReport(
   token: string, agent: SpecialistAgent, agency: string, signal?:AbortSignal,
+  period?:{from?:string;to?:string},
 ): Promise<SpecialistReport> {
   const params = new URLSearchParams({limit:"20"})
   if (agency !== "all") params.set("agency",agency)
+  if(period?.from)params.set("from",period.from)
+  if(period?.to)params.set("to",period.to)
   const response = await fetch(API_BASE + SPECIALIST_PATHS[agent] + "?" + params, {
     headers:{Authorization:"Bearer " + token},signal,
   })
@@ -159,11 +168,13 @@ export async function fetchSpecialistReport(
 }
 export async function fetchDirectorReport(
   token: string, objective: string, agency: string, signal?:AbortSignal,
+  period?:{from?:string;to?:string},
 ): Promise<DirectorReport> {
   const response = await fetch(API_BASE + "/api/v1/agentic/ai-director/investigate", {
     method:"POST",
     headers:{Authorization:"Bearer " + token,"Content-Type":"application/json"},
-    body:JSON.stringify({objective,...(agency==="all"?{}:{agency})}),
+    body:JSON.stringify({objective,...(agency==="all"?{}:{agency}),
+      ...(period?.from?{from:period.from}:{}),...(period?.to?{to:period.to}:{})}),
     signal,
   })
   if (!response.ok) throw new Error("AI Director : HTTP " + response.status)
