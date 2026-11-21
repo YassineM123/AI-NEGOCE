@@ -34,6 +34,7 @@ import { analyzeFinancialStrategy } from "./agents/financial-strategy.js"
 import { analyzeSupplyChain } from "./agents/supply-chain.js"
 import { analyzeBusinessStrategy } from "./agents/business-strategy.js"
 import { investigateWithDirector, DIRECTOR_AGENTS } from "./agents/ai-director.js"
+import { registerAgenticWorkspaceRoutes } from "./agents/workspace-api.js"
 import { createLlmProvider, type LlmProvider } from "./llm/index.js"
 import { validateInvoice, type InvoiceInput } from "./invoice-validation.js"
 import {
@@ -364,6 +365,8 @@ export function createApp(deps = defaultDependencies()) {
       : !sandboxTenant(req)
         ? sandboxDenied(res)
         : next()
+  registerAgenticWorkspaceRoutes(app, { store, dataset: data, llm: deps.llm, requireErpData })
+
   app.get("/api/v1/platform/context", async (req, res) => {
     const sourceAvailable =
       !(config.NODE_ENV === "production" && !erp.production) && sandboxTenant(req)
