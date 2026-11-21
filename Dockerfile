@@ -12,10 +12,14 @@ WORKDIR /app
 RUN addgroup -S app && adduser -S -G app -u 10001 app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/server ./server
+# Runtime imports a versioned Zod contract from ../shared, not only type declarations.
+COPY --from=build /app/shared ./shared
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
+# Fail image creation if any backend runtime import is absent (including shared contracts).
+RUN ./node_modules/.bin/tsx -e 'import("./server/app.ts").then(() => console.log("Backend runtime imports verified"))'
 USER app
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3001/api/v1/livez || exit 1
