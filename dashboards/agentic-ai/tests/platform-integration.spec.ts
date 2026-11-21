@@ -95,6 +95,7 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   test.setTimeout(120_000)
   let sessionRequests = 0
   let analyticsRequests: URLSearchParams[] = []
+  const agentRequests:Record<string,URLSearchParams[]>={revenue:[],finance:[],supply:[],strategy:[]}
   await page.route("**/api/v1/auth/dev-session", async (route) => {
     sessionRequests++
     await route.fulfill({
@@ -114,8 +115,9 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
       body: JSON.stringify(overviewFixture(query)),
     })
   })
-  await page.route("**/api/v1/agentic/revenue-growth/opportunities?*", async (route) =>
-    route.fulfill({
+  await page.route("**/api/v1/agentic/revenue-growth/opportunities?*", async (route) => {
+    agentRequests.revenue.push(new URL(route.request().url()).searchParams)
+    return route.fulfill({
       status: 200, contentType: "application/json",
       body: JSON.stringify({
         agent: "revenue_growth", status: "no_data", executionMode: "read_only",
@@ -123,13 +125,20 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
         analysis: { customersAnalyzed: 0, opportunitiesFound: 0, returned: 0 },
         opportunities: [], warnings: [],
       }),
-    }))
-  await page.route("**/api/v1/agentic/financial-strategy/analysis?*", async (route) =>
-    route.fulfill({ status: 503, contentType: "application/json", body: "{}" }))
-  await page.route("**/api/v1/agentic/supply-chain/recommendations?*", async (route) =>
-    route.fulfill({ status: 503, contentType: "application/json", body: "{}" }))
-  await page.route("**/api/v1/agentic/business-strategy/scenarios?*", async (route) =>
-    route.fulfill({ status: 503, contentType: "application/json", body: "{}" }))
+    })
+  })
+  await page.route("**/api/v1/agentic/financial-strategy/analysis?*", async (route) => {
+    agentRequests.finance.push(new URL(route.request().url()).searchParams)
+    return route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
+  })
+  await page.route("**/api/v1/agentic/supply-chain/recommendations?*", async (route) => {
+    agentRequests.supply.push(new URL(route.request().url()).searchParams)
+    return route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
+  })
+  await page.route("**/api/v1/agentic/business-strategy/scenarios?*", async (route) => {
+    agentRequests.strategy.push(new URL(route.request().url()).searchParams)
+    return route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
+  })
 
   await page.goto("/")
   await page.getByRole("button", { name: "Plateformes BI / DS" }).click()
@@ -170,6 +179,10 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(agentic).toHaveAttribute("data-platform-snapshot", "snap-Sfax-2026-07-01")
   expect(sessionRequests).toBe(1) // single sign-in; frames cannot ask for their own dev token
   expect(analyticsRequests.some((x) => x.get("agency") === "Sfax" && x.get("from") === "2026-07-01" && x.get("to") === "2026-09-30")).toBe(true)
+  // All four specialist requests must use the exact same filter after T4→T3.
+  await expect.poll(()=>Object.values(agentRequests).every(requests=>requests.some(q=>
+    q.get("agency")==="Sfax"&&q.get("from")==="2026-07-01"&&q.get("to")==="2026-09-30"
+  ))).toBe(true)
 
   await page.getByRole("button", { name: "Déconnecter les 3 plateformes" }).click()
   await expect(agentic).toHaveCount(0)
