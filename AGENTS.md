@@ -10,7 +10,7 @@
 2. `dashboards/data-science/`: existing standalone HTML-based 16-page Data Science prototype; do not claim it has verified ML model serving.
 3. `dashboards/agentic-ai/`: React + TypeScript + Vite Agentic Command Center, located at `dashboards/agentic-ai/`. Start via `npm run agentic:dev` (port 8444).
 
-All three live in the same branch, while the backend is shared in `server/`; **live BI/DS service-to-service integration is a separate, unfinished task**. No unverified ERP data or model outputs may be presented as genuine.
+All three live in one branch. A shared-origin portal on port 8444 and an allow-listed session broker expose the same scoped BI overview to the three frontends; **BI's detailed CSV charts, Data Science models and historical period filtering of specialist reports remain unfinished**. No unverified ERP data or model outputs may be presented as genuine.
 
 ## Backend & first agent
 
@@ -25,8 +25,12 @@ npm ci
 npm run typecheck
 npm run agentic:typecheck
 npm run agentic:build
-npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts
+npx vitest run server/analytics-platform.test.ts server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts
 npx playwright test --config dashboards/agentic-ai/playwright.config.ts
 ```
 
 Keep all generated files, browser profiles, tokens and company records out of Git. Do not merge automatically when CI fails. Keep write-back functionality disabled until permissions, human approval and real ERP integration are verified.
+
+## Portal integration rules
+
+See [docs/PLATFORM_INTEGRATION.md](docs/PLATFORM_INTEGRATION.md). Keep BI/DS and Agentic behind one origin when testing shared sessions. Never copy bearer tokens into URLs or postMessages, and do not replace the scoped analytics contract with unaudited CSV totals. Use both server API tests and browser filter-change reconciliation tests when editing agency/period behavior.
