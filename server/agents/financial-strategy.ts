@@ -1,4 +1,5 @@
 import type { AgencyScope } from "../auth.js"
+import { analyzeReceivablesAging } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
   amount, daysBetween, ensureLimit, finding, percent, receivablesInScope,
@@ -68,6 +69,7 @@ export function analyzeFinancialStrategy(input: {
     },
     findings,
     scenarios,
+    decisionSupport:{aging:analyzeReceivablesAging(input.dataset,input.scope)},
     warnings:[
       "Les créances sont des soldes documentaires, pas un solde bancaire ni un cash-flow prévisionnel.",
       "Clients regroupés sur libellé + agence : confirmer l'identifiant ERP avant toute action.",

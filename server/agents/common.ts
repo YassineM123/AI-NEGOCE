@@ -28,6 +28,7 @@ export type AgentReport = {
   metrics: Record<string, number | null>
   findings: AgentFinding[]
   scenarios: Array<{ id: string; label: string; assumption: string; valueTnd: number | null }>
+  decisionSupport?: Record<string,unknown>
   warnings: string[]
 }
 export const inScope = (agency: string, scope: AgencyScope) =>

@@ -1,4 +1,5 @@
 import type { AgencyScope } from "../auth.js"
+import { proposeTransferCandidates } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
   amount, ensureLimit, finding, inventoryInScope, snapshot, sumMoney,
@@ -37,6 +38,7 @@ export function analyzeSupplyChain(input: {
         : null,
     },
   ]
+  const transferOptions=proposeTransferCandidates(input.dataset,input.scope)
   const findings = lowStock.slice(0,limit).map((row,index) => {
     const missingQty=Math.max(0,Math.ceil(row.reorderPoint-row.quantity))
     const priority = row.quantity <= 0 ? "high" : row.quantity <= row.reorderPoint/2 ? "high" : "medium"
@@ -50,6 +52,14 @@ export function analyzeSupplyChain(input: {
       "prepare_purchase_request",evidence
     )
   })
+  for(const opt of transferOptions.candidates.slice(0,Math.max(0,limit-findings.length))){
+    findings.push(finding("SCA-TR-"+(findings.length+1),"Transfert candidat à vérifier : "+opt.sku+
+      " ("+opt.fromAgency+" → "+opt.toAgency+")","medium",
+      "Quantité indicative "+opt.proposedUnits+" unités. Vérifier réservations, transit, prix et temps de transfert.",
+      "review_transfer_option",opt.evidence.map(e=>({
+        type:"stock_position" as const,id:e.reference,agency:e.agency,
+      }))))
+  }
   return {
     agent:"supply_chain_intelligence",
     status:rows.length?"ok":"no_data",
@@ -67,6 +77,7 @@ export function analyzeSupplyChain(input: {
     },
     findings,
     scenarios,
+    decisionSupport:{transferCandidates:transferOptions},
     warnings:[
       "Réapprovisionnement calculé sur seuil existant ; pas de prévision de demande, de délai fournisseur ou de disponibilité réservée.",
       "Aucun bon de commande ERP n'est créé : chaque proposition reste un brouillon.",

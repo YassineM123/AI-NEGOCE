@@ -1,4 +1,5 @@
 import type { AgencyScope } from "../auth.js"
+import { compareThreeStrategyScenarios } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
  amount, ensureLimit, finding, inventoryInScope, percent,
@@ -52,6 +53,7 @@ export function analyzeBusinessStrategy(input: {
    "review_strategic_scenario",
    r.invoiceIds.slice(0,20).map((id)=>({type:"invoice" as const,id,agency:r.agency}))
  ))
+ const strategic=compareThreeStrategyScenarios(input.dataset,input.scope)
  const scenarios=[5,10].map((increase)=>({
    id:"REVENUE_UP_"+increase,
    label:"Sensibilité à +"+increase+" % de CA HT",
@@ -71,7 +73,15 @@ export function analyzeBusinessStrategy(input: {
      lowStockPositions:inventory.filter(x=>x.reorderPoint>0&&x.quantity<x.reorderPoint).length,
    },
    findings,
-   scenarios,
+   scenarios:[
+     ...scenarios,
+     ...strategic.scenarios.map(s=>({
+       id:"STRATEGY_"+s.id,label:"Sensibilité "+s.title,
+       assumption:"Hypothèse purement arithmétique sur le CA, non une prévision; cash/CAPEX non vérifiés.",
+       valueTnd:s.revenueTnd,
+     })),
+   ],
+   decisionSupport:{strategicScenarios:strategic},
    warnings:[
      "Scénarios limités à la sensibilité arithmétique du CA ; aucun coût d'investissement, marché ou ROI fiable n'est disponible.",
      "Les comparaisons de marges sont indisponibles dès que les coûts historiques sont incomplets.",

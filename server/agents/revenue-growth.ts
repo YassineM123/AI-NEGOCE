@@ -1,4 +1,5 @@
 import type { AgencyScope } from "../auth.js"
+import { analyzeCustomerConcentration } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import type { Sale } from "../data.js"
 
@@ -175,6 +176,7 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
       returned: Math.min(ordered.length, limit),
     },
     opportunities: ordered.slice(0, limit),
+    decisionSupport:{portfolio:analyzeCustomerConcentration(input.dataset,input.scope)},
     warnings: [
       "Priorités heuristiques non probabilistes : aucune prédiction ML n'a été utilisée",
       "Les actions proposées ne sont pas exécutées dans l'ERP",
