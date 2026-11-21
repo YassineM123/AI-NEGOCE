@@ -5,7 +5,7 @@ import {buildDataScienceAnalysis} from "./data-science-platform.js"
 
 function history():Dataset{
   const base=defaultDataset()
-  const sales=Array.from({length:16},(_,i)=>({
+  const sales:Dataset["sales"]=Array.from({length:16},(_,i)=>({
     id:"qa-sku-"+i,invoiceId:"qa-sku-"+i,
     date:new Date(Date.UTC(2025,6+i,12)).toISOString().slice(0,10),
     agency:"Sfax",customer:"Client QA",customerId:"qa-c",
