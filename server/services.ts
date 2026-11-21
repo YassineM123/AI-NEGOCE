@@ -13,7 +13,7 @@ export type Dataset = {
   sales: Sale[]
   receivables: Receivable[]
   inventory: InventoryItem[]
-  metadata: typeof datasetMetadata
+  metadata: typeof datasetMetadata & {snapshotRevision?:number}
 }
 export const defaultDataset = (): Dataset => ({
   sales,

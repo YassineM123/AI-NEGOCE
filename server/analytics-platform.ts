@@ -66,6 +66,8 @@ export function buildAnalyticsOverview(input: {
     from: input.from ?? null,
     to: input.to ?? null,
     asOf: bi.metadata.asOf,
+    source:bi.metadata.source,lastUpdated:bi.metadata.lastUpdated,
+    snapshotRevision:input.dataset.metadata.snapshotRevision??null,
   })
   return analyticsOverviewSchema.parse({
     contractVersion: ANALYTICS_CONTRACT_VERSION,

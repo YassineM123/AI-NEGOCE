@@ -5,6 +5,8 @@ import helmet from "helmet"
 import rateLimit from "express-rate-limit"
 import multer from "multer"
 import crypto from "node:crypto"
+import {AsyncLocalStorage} from "node:async_hooks"
+import {readAnalyticalDataset} from "./analytics-database.js"
 import fs from "node:fs/promises"
 import path from "node:path"
 import pino from "pino"
@@ -130,8 +132,10 @@ export function defaultDependencies(env = process.env): Dependencies {
 
 export function createApp(deps = defaultDependencies()) {
   const { config, store, ocr, erp } = deps
-  // BI/Copilot read the ERP database when it exists; tests inject their own dataset.
-  const data = () => deps.data ?? (deps.erpDb ? datasetFrom(deps.erpDb) : defaultDataset())
+  // BI, DS and Agentic share one authorized snapshot for each HTTP request.
+  const analyticsContext=new AsyncLocalStorage<Dataset>()
+  const data=()=>analyticsContext.getStore()??
+    deps.data??(deps.erpDb?datasetFrom(deps.erpDb):defaultDataset())
   const isRealDate = (d: string) => {
     const t = Date.parse(`${d}T00:00:00Z`)
     return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === d
@@ -365,12 +369,28 @@ export function createApp(deps = defaultDependencies()) {
     res.status(403).json({
       error: { code: "ERP_SOURCE_UNAVAILABLE", message: "Aucune source ERP configurée pour cette organisation" },
     })
-  const requireErpData: express.RequestHandler = (req, res, next) =>
-    config.NODE_ENV === "production" && !erp.production
-      ? res.status(503).json({ error: { code: "ERP_UNAVAILABLE", message: "Source ERP indisponible" } })
-      : !sandboxTenant(req)
-        ? sandboxDenied(res)
-        : next()
+  const requireErpData:express.RequestHandler=(req,res,next)=>{
+    if(config.NODE_ENV==="production"&&!erp.production){
+      res.status(503).json({error:{code:"ERP_UNAVAILABLE",message:"Source ERP indisponible"}})
+      return
+    }
+    if(!sandboxTenant(req)){sandboxDenied(res);return}
+    if(config.UNIFIED_ANALYTICS_SOURCE!=="postgres"){next();return}
+    const organization=res.locals.organization as Organization
+    if(!organization.isSynthetic){
+      res.status(403).json({error:{code:"ANALYTICS_DEMO_ONLY",message:"Source analytique réservée au tenant synthétique"}})
+      return
+    }
+    // Fail closed: never silently substitute SQLite/CSV for a missing snapshot.
+    void readAnalyticalDataset(tenant(req)).then(snapshot=>{
+      if(!snapshot){
+        res.status(503).json({error:{code:"ANALYTICS_NOT_SEEDED",
+          message:"Dataset PostgreSQL absent. Exécuter npm run analytics:seed après les migrations."}})
+        return
+      }
+      analyticsContext.run(snapshot.dataset,()=>next())
+    }).catch(next)
+  }
   registerAgenticWorkspaceRoutes(app, { store, dataset: data, llm: deps.llm, requireErpData })
 
   // Safe provenance report, never raw client identifiers. Scope remains demo tenant only.
@@ -390,8 +410,11 @@ export function createApp(deps = defaultDependencies()) {
   )
 
   app.get("/api/v1/platform/context", async (req, res) => {
-    const sourceAvailable =
-      !(config.NODE_ENV === "production" && !erp.production) && sandboxTenant(req)
+    const sourceAvailable=!(config.NODE_ENV==="production"&&!erp.production)&&
+      sandboxTenant(req)&&(
+        config.UNIFIED_ANALYTICS_SOURCE!=="postgres"||
+        Boolean(await readAnalyticalDataset(tenant(req)))
+      )
     const result = buildPlatformContext({ principal: req.principal!, sourceAvailable })
     res.setHeader("Cache-Control", "no-store")
     return res.json(result)
@@ -419,8 +442,7 @@ export function createApp(deps = defaultDependencies()) {
         from: parsed.data.from,
         to: parsed.data.to,
         dataset: data(),
-        // The unified analytics endpoint still reads the injected/local dataset.  Never
-        // label that data as ERP merely because the process runs in production.
+        // Shared PostgreSQL demo or legacy fixtures: never claim official LAI ERP data.
         sourceKind: "sandbox",
       })
       await tenant(req).audit({

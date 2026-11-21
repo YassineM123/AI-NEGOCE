@@ -28,6 +28,8 @@ const schema = z.object({
   ERP_SANDBOX_ORGANIZATION: z.string().min(1).default("demo-fictive"),
   // Explicitly opt into pseudonymized client demo CSV extracts; never production.
   DEMO_DATA_SOURCE: z.enum(["synthetic", "extractions"]).default("synthetic"),
+  // Legacy SQLite/CSV remains the default; PostgreSQL is an explicit demo opt-in.
+  UNIFIED_ANALYTICS_SOURCE:z.enum(["legacy","postgres"]).default("legacy"),
   ERP_BASE_URL: z.string().url().optional(),
   ERP_API_TOKEN: z.string().min(16).optional(),
   OCR_PROVIDER: z.enum(["disabled", "http", "local"]).default("disabled"),
@@ -47,6 +49,9 @@ export type AppConfig = Omit<z.infer<typeof schema>, "AUTH_MODE"> & {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const config = schema.parse(env)
+  if(config.UNIFIED_ANALYTICS_SOURCE==="postgres"&&(
+    !config.DATABASE_URL||config.NODE_ENV==="production"||config.AUTH_MODE!=="local-dev"
+  ))throw new Error("UNIFIED_ANALYTICS_SOURCE=postgres requires local-dev and DATABASE_URL (demo only)")
   if (config.NODE_ENV === "production" && config.DEMO_DATA_SOURCE === "extractions")
     throw new Error("DEMO_DATA_SOURCE=extractions is forbidden in production")
   if (config.NODE_ENV === "production") {
