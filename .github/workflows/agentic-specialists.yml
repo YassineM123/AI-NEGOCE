@@ -10,7 +10,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run typecheck
-      - run: npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts server/agents/workspace.api.test.ts
+      - run: npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts server/agents/workspace.api.test.ts server/agents/five-agents-journey.api.test.ts
       - run: npm run agentic:typecheck
       - run: npm run agentic:build
 
