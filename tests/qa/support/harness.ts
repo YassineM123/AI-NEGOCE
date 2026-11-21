@@ -10,6 +10,7 @@ import { loadConfig } from "../../../server/config.js"
 import { MemoryStore } from "../../../server/store.js"
 import { DisabledOcrProvider, type OcrProvider } from "../../../server/ocr.js"
 import { TestErpAdapter } from "../../../server/erp.js"
+import type { LlmProvider } from "../../../server/llm/types.js"
 
 process.env.LOG_LEVEL = "silent"
 
@@ -41,7 +42,7 @@ export async function startIssuer() {
   }
 }
 
-export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Record<string, string>; data?: unknown } = {}) {
+export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Record<string, string>; data?: unknown; llm?: LlmProvider } = {}) {
   const store = opts.store ?? new MemoryStore()
   // Known organizations: the two synthetic development ones plus two "customer" tenants used
   // by cross-tenant tests.
@@ -55,6 +56,7 @@ export function makeApp(opts: { ocr?: OcrProvider; store?: MemoryStore; env?: Re
     ...opts.env,
   })
   const deps: Record<string, unknown> = { config, store, ocr: opts.ocr ?? new DisabledOcrProvider(), erp: new TestErpAdapter() }
+  if (opts.llm) deps.llm = opts.llm
   if (opts.data) deps.data = opts.data
   return { app: createApp(deps as Parameters<typeof createApp>[0]), store, config }
 }
