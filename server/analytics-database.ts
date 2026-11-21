@@ -13,7 +13,7 @@ const finite=z.number().finite()
 const sale=z.object({
   id:z.string().min(1),invoiceId:z.string().min(1),date:iso,
   agency:z.string().min(1),customer:z.string().min(1),customerId:z.string().optional(),
-  product:z.string(),productId:z.string().optional(),family:z.string(),
+  product:z.string(),productId:z.string().optional(),quantity:finite.nullable().optional(),family:z.string(),
   representative:z.string(),revenue:finite,cost:finite.nullable(),
   kind:z.enum(["invoice","credit_note"]).optional(),
   status:z.enum(["posted","cancelled"]).optional(),
