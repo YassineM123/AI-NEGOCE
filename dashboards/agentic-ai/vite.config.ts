@@ -14,6 +14,8 @@ const staticRoutes = [
   { prefix: "/platform/bi/", directory: path.resolve(repoRoot, "dashboards/data-analysis") },
   { prefix: "/platform/ds/", directory: path.resolve(repoRoot, "dashboards/data-science") },
   { prefix: "/data/extractions/", directory: path.resolve(repoRoot, "Database/extractions") },
+  // Historical BI pages resolve ../../Database/extractions/ from /platform/bi/.
+  { prefix: "/Database/extractions/", directory: path.resolve(repoRoot, "Database/extractions") },
 ] as const
 const contentTypes: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -67,6 +69,7 @@ function servePlatforms(): Plugin {
         { src: staticRoutes[0].directory, dest: "platform/bi" },
         { src: staticRoutes[1].directory, dest: "platform/ds" },
         { src: staticRoutes[2].directory, dest: "data/extractions" },
+        { src: staticRoutes[3].directory, dest: "Database/extractions" },
       ]) {
         const dest = path.resolve(target, item.dest)
         mkdirSync(path.dirname(dest), { recursive: true })
