@@ -403,41 +403,79 @@ export default function App() {
   }
   function agentPage() {
     const a = byAgent(selectedAgent)
-    const result = selectedAgent === "revenue" ? revenue : null
-    const opportunities = result?.opportunities ?? []
+    const revenueResult = selectedAgent === "revenue" ? revenue : null
+    const specialist = selectedAgent === "revenue" ? null : specialistReports[selectedAgent]
+    const specialistError = selectedAgent === "revenue" ? null : specialistErrors[selectedAgent]
+    const opportunities = revenueResult?.opportunities ?? []
+    const findings = specialist?.findings ?? []
+    const metricEntries = specialist ? Object.entries(specialist.metrics).slice(0, 4) : []
+    const source = specialist?.snapshot.source ?? revenueResult?.snapshot.source
+    const asOf = specialist?.snapshot.asOf ?? revenueResult?.snapshot.asOf
     return <>
-      <div className="agent-page-head"><Avatar agent={selectedAgent} size="large"/><div><h1>{a.name} Agent</h1><p>{a.description}</p></div><Pill tone={a.implemented ? "green" : "gray"}>{a.implemented ? "MVP développé" : "En attente de développement"}</Pill><Action light icon="layers" onClick={() => navigate("director")}>Voir AI Director</Action><Action icon="plus" onClick={() => { setNewAgent(selectedAgent); setMissionModal(true) }}>Créer une mission</Action></div>
+      <div className="agent-page-head">
+        <Avatar agent={selectedAgent} size="large"/>
+        <div><h1>{a.name} Agent</h1><p>{a.description}</p></div>
+        <Pill tone="green">Moteur read-only</Pill>
+        <Action light icon="layers" onClick={() => navigate("director")}>Voir AI Director</Action>
+        <Action icon="plus" onClick={() => { setNewAgent(selectedAgent); setMissionModal(true) }}>Créer une mission</Action>
+      </div>
       <div className="agent-detail-grid">
-        <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Chat supervisé</Pill>}>
-          <div className="chat-messages">{chats[selectedAgent].map((m, i) => <div key={i} className={"chat-message " + m.role}><div className="chat-avatar">{m.role === "user" ? "VO" : <Icon name={a.icon} size={16}/>}</div><div className="chat-bubble"><div className="chat-byline">{m.role === "user" ? "Vous" : a.name + " · Interface"}<span>{m.time}</span></div><p>{m.content}</p></div></div>)}</div>
-          <form className="chat-input" onSubmit={sendChat}><input value={chatDraft} onChange={(e) => setChatDraft(e.target.value)} placeholder={"Écrivez à " + a.name + "..."} aria-label={"Message à " + a.name} /><button type="submit" aria-label="Envoyer"><Icon name="send" size={18}/></button></form>
-          <div className="chat-disclaimer">Sans orchestrateur conversationnel dédié : seules les données API Revenue Growth connectées sont reprises dans les réponses.</div>
+        <Card className="chat-card" title={"Conversation — " + a.name} action={<Pill tone="gray">Rapport guidé · Non LLM</Pill>}>
+          <div className="chat-messages">{chats[selectedAgent].map((m, i) =>
+            <div key={i} className={"chat-message " + m.role}>
+              <div className="chat-avatar">{m.role === "user" ? "VO" : <Icon name={a.icon} size={16}/>}</div>
+              <div className="chat-bubble"><div className="chat-byline">{m.role === "user" ? "Vous" : a.name + " · Interface"}<span>{m.time}</span></div><p>{m.content}</p></div>
+            </div>
+          )}</div>
+          <form className="chat-input" onSubmit={sendChat}>
+            <input value={chatDraft} onChange={(e) => setChatDraft(e.target.value)} placeholder={"Demandez le dernier rapport à " + a.name + "..."} aria-label={"Message à " + a.name}/>
+            <button type="submit" aria-label="Envoyer"><Icon name="send" size={18}/></button>
+          </form>
+          <div className="chat-disclaimer">Le chat reprend les rapports métier calculés par les APIs : aucune conversation LLM autonome n'est encore active.</div>
         </Card>
         <div className="stack">
-          <Card title={"Analyse — " + a.category} action={<Pill tone={result ? "blue" : "gray"}>{result ? "API sandbox" : "Aperçu UI"}</Pill>}>
+          <Card title={"Analyse — " + a.category} action={<Pill tone={source ? "blue" : "gray"}>{source ? "API sandbox" : "À connecter"}</Pill>}>
             <div className="mini-stats">
               {selectedAgent === "revenue" ? <>
-                <div><span>Clients analysés</span><b>{result?.analysis.customersAnalyzed ?? "—"}</b></div>
-                <div><span>En croissance</span><b>{result ? opportunities.filter((o) => o.state === "growing").length : "—"}</b></div>
-                <div><span>Opportunités</span><b>{result?.analysis.opportunitiesFound ?? "—"}</b></div>
+                <div><span>Clients analysés</span><b>{revenueResult?.analysis.customersAnalyzed ?? "—"}</b></div>
+                <div><span>En croissance</span><b>{revenueResult ? opportunities.filter((o)=>o.state==="growing").length : "—"}</b></div>
+                <div><span>Opportunités</span><b>{revenueResult?.analysis.opportunitiesFound ?? "—"}</b></div>
                 <div><span>Impact validé</span><b>—</b></div>
-              </> : <><div><span>Modèle connecté</span><b>Non</b></div><div><span>Missions ouvertes</span><b>{missions.filter((m) => m.agent === selectedAgent && m.state !== "terminee").length}</b></div><div><span>Prédictions disponibles</span><b>—</b></div><div><span>Actions validées</span><b>—</b></div></>}
+              </> : specialist ? metricEntries.map(([key,value]) =>
+                <div key={key}><span>{key.replace(/([A-Z])/g, " $1")}</span><b>{value === null ? "N/D" : typeof value === "number" ? value.toLocaleString("fr-FR",{maximumFractionDigits:3}) : String(value)}</b></div>
+              ) : <>
+                <div><span>Rapport</span><b>—</b></div><div><span>Mission</span><b>—</b></div>
+                <div><span>Actions</span><b>—</b></div><div><span>Source</span><b>—</b></div>
+              </>}
             </div>
-            {result ? <p className="source-note"><Icon name="database" size={15}/> Source : {result.snapshot.source} · arrêté au {result.snapshot.asOf}</p> : <div className="no-connection"><Icon name="alert" size={18}/> Aucune source métier réelle connectée. Les graphiques et actions affichés restent des maquettes.</div>}
+            {source
+              ? <p className="source-note"><Icon name="database" size={15}/> Source : {source} · arrêté au {asOf} · lecture seule</p>
+              : <div className="no-connection"><Icon name="alert" size={18}/> {specialistError ?? "Connectez le sandbox pour interroger ce spécialiste."}</div>}
           </Card>
           <Card title="Évolution & analyse"><MiniChart /></Card>
-          <Card title={selectedAgent === "revenue" ? "Opportunités calculées" : "Données de l'agent"} action={result && <span className="muted-text small">{result.analysis.returned} résultats</span>}>
-            {result && opportunities.length ? <div className="table-scroll"><table><thead><tr><th>Client</th><th>Situation</th><th>CA période (TND)</th><th>Évolution</th><th>Priorité</th></tr></thead><tbody>{opportunities.slice(0, 10).map((o) => <tr key={o.agency + o.customerId}><td><b>{o.customerName}</b><span className="cell-secondary">{o.agency}</span></td><td><Pill tone={o.state === "growing" ? "green" : o.state === "dormant" ? "amber" : "blue"}>{o.state}</Pill></td><td>{o.metrics.currentRevenueTnd.toLocaleString("fr-FR", { minimumFractionDigits: 3 })}</td><td>{o.metrics.growthPercent === null ? "N/D" : o.metrics.growthPercent + " %"}</td><td><Pill tone="blue">{o.priorityScore}/100</Pill></td></tr>)}</tbody></table></div>
-              : <Empty icon="database" title="Données en attente" text={selectedAgent === "revenue" ? "Connectez le sandbox local pour interroger le moteur Revenue Growth." : "Le service métier de cet agent n'est pas encore disponible."} />}
+          <Card title={selectedAgent === "revenue" ? "Opportunités calculées" : "Recommandations vérifiables"}
+            action={<Pill tone="gray">{selectedAgent === "revenue" ? opportunities.length : findings.length} éléments</Pill>}>
+            {selectedAgent === "revenue" && opportunities.length > 0
+              ? <div className="table-scroll"><table><thead><tr><th>Client</th><th>Situation</th><th>CA période (TND)</th><th>Évolution</th><th>Priorité</th></tr></thead>
+                <tbody>{opportunities.slice(0,10).map((o) => <tr key={o.agency+o.customerId}><td><b>{o.customerName}</b><span className="cell-secondary">{o.agency}</span></td><td><Pill tone={o.state==="growing"?"green":o.state==="dormant"?"amber":"blue"}>{o.state}</Pill></td><td>{o.metrics.currentRevenueTnd.toLocaleString("fr-FR",{minimumFractionDigits:3})}</td><td>{o.metrics.growthPercent===null?"N/D":o.metrics.growthPercent+" %"}</td><td><Pill tone="blue">{o.priorityScore}/100</Pill></td></tr>)}</tbody></table></div>
+              : specialist && findings.length > 0
+                ? <div className="agentic-findings">{findings.map((item)=><article key={item.id} className="recommendation"><div className="recommendation-top"><Icon name="target" size={18}/><b>{item.title}</b><Pill tone={item.priority==="high"?"red":item.priority==="medium"?"amber":"blue"}>{item.priority}</Pill></div><p>{item.explanation}</p><div className="evidence-items">{item.evidence.slice(0,5).map((e,i)=><span key={e.id+i}><Icon name="document" size={14}/>{e.type} · {e.id}</span>)}</div><p className="source-note">Action : {item.action.type} · Brouillon · Validation humaine obligatoire</p></article>)}</div>
+                : <Empty icon="database" title="Aucun résultat exploitable" text={source ? "Aucune recommandation calculée sur cette source et ce périmètre." : "Connectez le sandbox pour lire l'API de cet agent."}/>}
           </Card>
-          <Card title="Missions liées">{missions.filter((m) => m.agent === selectedAgent).map((m) => <div key={m.id} className="related-mission" onClick={() => missionDetail(m)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") missionDetail(m) }}><span><b>{m.id}</b><small>{m.title}</small></span><div><Progress value={m.progress}/><small>{m.progress} %</small></div><Icon name="chevron" size={16}/></div>)}</Card>
+          {specialist && <Card title="Scénarios de sensibilité">{specialist.scenarios.length ? specialist.scenarios.map((scenario)=>
+            <div className="decision-short" key={scenario.id}><Avatar agent={selectedAgent}/><div><b>{scenario.label}</b><small>{scenario.assumption}</small></div><Pill tone="blue">{scenario.valueTnd===null?"N/D":scenario.valueTnd.toLocaleString("fr-FR",{minimumFractionDigits:3})+" TND"}</Pill></div>
+          ) : <Empty title="Aucun scénario" text="Pas d'hypothèse validée pour cette analyse."/>}<p className="muted-text small">Hypothèses de calcul, pas de prévision ni d'engagement financier.</p></Card>}
+          {specialist && <Card title="Réserves et conditions">{specialist.warnings.map((warning,index)=><div key={index} className="governance-row"><Icon name="alert" size={16}/><div><small>{warning}</small></div></div>)}</Card>}
+          <Card title="Missions liées">{missions.filter((m) => m.agent===selectedAgent).map((m)=><div key={m.id} className="related-mission" onClick={() => missionDetail(m)} role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter")missionDetail(m)}}><span><b>{m.id}</b><small>{m.title}</small></span><div><Progress value={m.progress}/><small>{m.progress} %</small></div><Icon name="chevron" size={16}/></div>)}</Card>
         </div>
         <div className="stack">
           <Card title="Actions suggérées" action={<Pill tone="amber">Revue humaine</Pill>}>
-            {alerts.filter((n) => n.agent === selectedAgent).map((n) => <div key={n.id} className="recommendation"><div className="recommendation-top"><Icon name="target" size={18}/><b>{n.title}</b><Pill tone={priorityTone[n.priority]}>{priorityLabel[n.priority]}</Pill></div><p>{n.detail}</p><div className="recommendation-actions"><Action icon="plus" onClick={() => { setNewAgent(selectedAgent); setNewTitle(n.title); setMissionModal(true) }}>Créer une mission</Action><Action light icon="check" onClick={() => setAlerts((prev) => prev.map((x) => x.id === n.id ? { ...x, seen: true } : x))}>Marquer lue</Action></div></div>)}
-            {selectedAgent === "revenue" && result?.opportunities.length ? <div className="recommendation"><b>Opportunités avec preuve disponible</b><p>{result.opportunities.length} client(s) priorisés par heuristique, à vérifier avant toute prise de contact.</p><Action light icon="document" onClick={() => navigate("decisions")}>Examiner les décisions</Action></div> : null}
+            {alerts.filter((n) => n.agent===selectedAgent).map((n)=><div key={n.id} className="recommendation">
+              <div className="recommendation-top"><Icon name="target" size={18}/><b>{n.title}</b><Pill tone={priorityTone[n.priority]}>{priorityLabel[n.priority]}</Pill></div>
+              <p>{n.detail}</p><div className="recommendation-actions"><Action icon="plus" onClick={()=>{setNewAgent(selectedAgent);setNewTitle(n.title);setMissionModal(true)}}>Créer une mission</Action><Action light icon="check" onClick={()=>setAlerts(prev=>prev.map(x=>x.id===n.id?{...x,seen:true}:x))}>Marquer lue</Action></div>
+            </div>)}
           </Card>
-          <Card title="Notification & suivi"><div className="notification-settings"><div><Icon name="bell" size={19}/><b>Alertes de cet agent</b></div><strong>{selectedNotifications.filter((n) => !n.seen).length}</strong></div><p className="muted-text">Des notifications métier réelles nécessitent des tâches serveur planifiées, une base d'événements et des canaux d'envoi configurés.</p><Action light icon="history" onClick={() => navigate("audit")}>Voir l'historique</Action></Card>
+          <Card title="Notification & suivi"><div className="notification-settings"><div><Icon name="bell" size={19}/><b>Alertes de cet agent</b></div><strong>{selectedNotifications.filter((n)=>!n.seen).length}</strong></div><p className="muted-text">Les notifications visibles sont des maquettes. L'envoi réel exige un worker, une persistence et des canaux d'envoi.</p><Action light icon="history" onClick={()=>navigate("audit")}>Voir l'historique</Action></Card>
         </div>
       </div>
     </>
