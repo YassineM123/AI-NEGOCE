@@ -4,6 +4,7 @@ import { z } from "zod"
 import { requireRoles, scopedAgencies, type AgencyScope } from "../auth.js"
 import type { Store } from "../store.js"
 import type { Dataset } from "../services.js"
+import type {ReportPeriod} from "./common.js"
 import type { LlmProvider } from "../llm/types.js"
 import { analyzeRevenueGrowth } from "./revenue-growth.js"
 import { evaluateAgenticForecast } from "./predictive.js"
@@ -25,15 +26,18 @@ import {
 const uuid=z.string().uuid()
 const agentSchema=z.enum(AGENT_KEYS)
 const agencySchema=z.string().trim().min(1).max(80)
+const withPeriod=z.object({from:z.iso.date().optional(),to:z.iso.date().optional()})
+  .refine(p=>!p.from||!p.to||p.from<=p.to)
+const periodOf=(x:{from?:string;to?:string}):ReportPeriod=>({from:x.from,to:x.to})
 const allAgents = requireRoles("admin","manager","commercial","accountant")
 const MAX_MESSAGE = 1500
 
 /** Fingerprint only permitted agency rows; changed source requires a new mission. */
-function scopedFingerprint(dataset:Dataset,scope:AgencyScope){
+function scopedFingerprint(dataset:Dataset,scope:AgencyScope,period:ReportPeriod={}){
   const allowed=(agency:string)=>scope==="*"||scope.includes(agency)
   const hash=crypto.createHash("sha256")
   hash.update(JSON.stringify({source:dataset.metadata.source,asOf:dataset.metadata.asOf,
-    lastUpdated:dataset.metadata.lastUpdated,scope}))
+    lastUpdated:dataset.metadata.lastUpdated,scope,period}))
   for(const r of dataset.sales)if(allowed(r.agency))hash.update(JSON.stringify(r))
   for(const r of dataset.receivables)if(allowed(r.agency))hash.update(JSON.stringify(r))
   for(const r of dataset.inventory)if(allowed(r.agency))hash.update(JSON.stringify(r))
@@ -55,9 +59,9 @@ function apiError(res:express.Response,error:unknown) {
   if(error instanceof WorkspaceBudgetExceeded)return res.status(429).json({error:{code:"MODEL_BUDGET_EXCEEDED",message:error.message}})
   throw error
 }
-function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objective?:string) {
+function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objective?:string,period:ReportPeriod={}) {
   if(agent==="revenue_growth"){
-    const r=analyzeRevenueGrowth({scope,dataset,limit:10})
+    const r=analyzeRevenueGrowth({scope,dataset,limit:10,period})
     const facts=r.opportunities.map((o)=>({
       title:o.customerName+" · "+o.state, explanation:o.reason,
       actionType:o.proposedAction.type, evidence:o.evidence.invoiceIds,
@@ -75,7 +79,7 @@ function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objectiv
   if(agent==="director"){
     const r=investigateWithDirector({
       objective:objective || "Analyser les opportunités, créances, stocks et stratégie",
-      scope,dataset,limit:10,
+      scope,dataset,limit:10,period,
     })
     return {
       asOf:r.snapshot.asOf,source:r.snapshot.source,
@@ -88,10 +92,10 @@ function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objectiv
     }
   }
   const r=agent==="financial_strategy"
-    ?analyzeFinancialStrategy({scope,dataset,limit:10})
+    ?analyzeFinancialStrategy({scope,dataset,limit:10,period})
     :agent==="supply_chain_intelligence"
-      ?analyzeSupplyChain({scope,dataset,limit:10})
-      :analyzeBusinessStrategy({scope,dataset,limit:10})
+      ?analyzeSupplyChain({scope,dataset,limit:10,period})
+      :analyzeBusinessStrategy({scope,dataset,limit:10,period})
   return {
     asOf:r.snapshot.asOf,source:r.snapshot.source,
     facts:r.findings.map((f)=>({title:f.title,explanation:f.explanation,
@@ -158,8 +162,10 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       title:z.string().trim().min(5).max(160),
       objective:z.string().trim().min(5).max(1200),
       dueAt:z.iso.datetime({offset:true}).optional(),
+      from:z.iso.date().optional(),to:z.iso.date().optional(),
     }).strict().safeParse(req.body)
     if(!parse.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    if(!withPeriod.safeParse(parse.data).success)return res.status(400).json({error:{code:"INVALID_REQUEST",message:"Période inversée"}})
     if(!agentAllowed(req.principal!.role,parse.data.agent))
       return res.status(403).json({error:{code:"FORBIDDEN"}})
     if(scope(req,parse.data.agency)===null)return fail(res)
@@ -195,7 +201,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       const s=scope(req,mission.agency)
       if(!s)return fail(res)
       const plan=previewMissionPlan({agent:mission.agent,objective:mission.objective,
-        scope:s,dataset:deps.dataset()})
+        scope:s,dataset:deps.dataset(),period:periodOf(mission)})
       res.setHeader("Cache-Control","no-store")
       return res.json({missionId:mission.id,version:mission.version,plan})
     }catch(error){return apiError(res,error)}
@@ -214,12 +220,12 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       if(!s)return fail(res)
       const dataset=deps.dataset()
       const plan=previewMissionPlan({
-        agent:mission.agent,objective:mission.objective,scope:s,dataset,
+        agent:mission.agent,objective:mission.objective,scope:s,dataset,period:periodOf(mission),
       })
       const session=await workspace.beginExecution(
         org(req),actor(req),mission.id,parsed.data.expectedVersion,{
           source:dataset.metadata.source,asOf:dataset.metadata.asOf,
-          sourceFingerprint:scopedFingerprint(dataset,s),
+          sourceFingerprint:scopedFingerprint(dataset,s,periodOf(mission)),
           tools:plan.tools.map(t=>({id:t.id,agent:t.agent,tool:t.tool})),
         })
       const initial=session.execution
@@ -235,7 +241,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
           continue
         }
         try{
-          const report=extractReport(task.agent,s,dataset,mission.objective)
+          const report=extractReport(task.agent,s,dataset,mission.objective,periodOf(mission))
           await workspace.checkpointExecution(org(req),actor(req),mission.id,initial.id,
             task.id,{
               status:report.facts.length||report.findings?"completed":"no_data",
@@ -269,7 +275,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       const trace=buildExecutionTrace({objective:mission.objective,scope:s,
         startedAt:execution.startedAt,finishedAt:new Date().toISOString(),
         runs,findings,warnings:execution.steps.flatMap(t=>t.warnings)})
-      const prediction=evaluateAgenticForecast(dataset,{agencies:s})
+      const prediction=evaluateAgenticForecast(dataset,{agencies:s,...periodOf(mission)})
       const result=await workspace.submitRun(org(req),actor(req),mission.id,parsed.data.expectedVersion,{
         asOf:dataset.metadata.asOf,source:dataset.metadata.source,
         prediction:{
@@ -315,7 +321,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         if(!allowed)return fail(res)
         const mission=await workspace.getMission(org(req),actor(req),requested.missionId)
         if(!mission.execution?.sourceFingerprint ||
-          mission.execution.sourceFingerprint!==scopedFingerprint(deps.dataset(),allowed))
+          mission.execution.sourceFingerprint!==scopedFingerprint(deps.dataset(),allowed,periodOf(mission)))
           throw new WorkspaceConflict("Source ou données modifiées : relancer une mission avant approbation")
       }
       const approval=await workspace.reviewApproval(
@@ -394,7 +400,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       if(!allowed)return fail(res)
       const mission=await workspace.getMission(org(req),actor(req),action.missionId)
       if(!mission.execution?.sourceFingerprint ||
-        mission.execution.sourceFingerprint!==scopedFingerprint(deps.dataset(),allowed))
+        mission.execution.sourceFingerprint!==scopedFingerprint(deps.dataset(),allowed,periodOf(mission)))
         throw new WorkspaceConflict("Source ou données modifiées : relancer la mission avant l'export")
       await audit(req,"approved_action.exported",id.data,{
         agency:action.agency,approvalId:action.approvalId,erpWrites:0,
@@ -426,24 +432,29 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
   // No LLM call, zero billed tokens; safe fallback when the provider is absent.
   app.get(base+"/brief/:agent",allAgents,deps.requireErpData,(req,res)=>{
     const agent=agentSchema.safeParse(req.params.agent)
-    const parsed=z.object({agency:agencySchema.default("all")}).safeParse(req.query)
-    if(!agent.success||!parsed.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    const parsed=z.object({agency:agencySchema.default("all"),
+      from:z.iso.date().optional(),to:z.iso.date().optional()}).safeParse(req.query)
+    if(!agent.success||!parsed.success||!withPeriod.safeParse(parsed.data).success)
+      return res.status(400).json({error:{code:"INVALID_REQUEST"}})
     if(!agentAllowed(req.principal!.role,agent.data))return res.status(403).json({error:{code:"FORBIDDEN"}})
     const s=scope(req,parsed.data.agency)
     if(!s)return fail(res)
-    const report=extractReport(agent.data,s,deps.dataset())
+    const report=extractReport(agent.data,s,deps.dataset(),undefined,periodOf(parsed.data))
     res.setHeader("Cache-Control","no-store")
     return res.json({...deterministicBrief({agent:agent.data,source:report.source,asOf:report.asOf,
-      facts:report.facts,findings:report.findings}),decisionSupport:report.decisionSupport})
+      facts:report.facts,findings:report.findings}),decisionSupport:report.decisionSupport,
+      period:{from:parsed.data.from??null,to:parsed.data.to??null},scope:s})
   })
 
   app.get(base+"/chat/:agent",allAgents,async(req,res)=>{
     const agent=agentSchema.safeParse(req.params.agent)
-    const parsed=z.object({agency:agencySchema.default("all")}).safeParse(req.query)
-    if(!agent.success||!parsed.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    const parsed=z.object({agency:agencySchema.default("all"),
+      from:z.iso.date().optional(),to:z.iso.date().optional()}).safeParse(req.query)
+    if(!agent.success||!parsed.success||!withPeriod.safeParse(parsed.data).success)
+      return res.status(400).json({error:{code:"INVALID_REQUEST"}})
     if(!agentAllowed(req.principal!.role,agent.data))return res.status(403).json({error:{code:"FORBIDDEN"}})
     if(!scope(req,parsed.data.agency))return fail(res)
-    const messages=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency)
+    const messages=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency,periodOf(parsed.data))
     res.setHeader("Cache-Control","no-store")
     return res.json({agent:agent.data,messages})
   })
@@ -452,19 +463,22 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     const parsed=z.object({
       agency:agencySchema.default("all"),
       turnId:uuid, message:z.string().trim().min(2).max(MAX_MESSAGE),
+      from:z.iso.date().optional(),to:z.iso.date().optional(),
     }).strict().safeParse(req.body)
-    if(!agent.success||!parsed.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    if(!agent.success||!parsed.success||!withPeriod.safeParse(parsed.data).success)
+      return res.status(400).json({error:{code:"INVALID_REQUEST"}})
     if(!agentAllowed(req.principal!.role,agent.data))return res.status(403).json({error:{code:"FORBIDDEN"}})
     const s=scope(req,parsed.data.agency)
     if(!s)return fail(res)
     let previous
     try{
       previous=await workspace.getTurn(org(req),actor(req),agent.data,
-        parsed.data.agency,parsed.data.turnId,parsed.data.message)
+        parsed.data.agency,parsed.data.turnId,parsed.data.message,periodOf(parsed.data))
     }catch(error){return apiError(res,error)}
     if(previous)return res.json({message:previous,reused:true})
     const direct=routeAnalyticalQuestion({
       agent:agent.data,question:parsed.data.message,scope:s,dataset:deps.dataset(),
+      ...periodOf(parsed.data),
     })
     if(direct){
       const saved=await workspace.saveChat(org(req),actor(req),agent.data,
@@ -472,7 +486,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         direct.content,direct.sources,"rules-engine-v1",{
           promptTokens:0,completionTokens:0,totalTokens:0,
           estimatedContextTokens:0,maxOutputTokens:0,
-        })
+        },periodOf(parsed.data))
       await audit(req,"agent.chat.deterministic",saved.id,{
         agent:agent.data,agency:parsed.data.agency,rule:direct.rule,
         modelCalls:0,tokens:0,erpWrites:0,
@@ -486,9 +500,10 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         code:"AGENT_LLM_UNCONFIGURED",
         message:"Modèle conversationnel non configuré ; consultez le résumé factuel gratuit ou configurez GEMINI_API_KEY.",
       }})
-    const history=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency)
-    const report=extractReport(agent.data,s,deps.dataset(),parsed.data.message)
-    const compact=buildGroundedPrompt({agent:agent.data,question:parsed.data.message,
+    const history=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency,periodOf(parsed.data))
+    const report=extractReport(agent.data,s,deps.dataset(),parsed.data.message,periodOf(parsed.data))
+    const compact=buildGroundedPrompt({agent:agent.data,question:parsed.data.message+
+      " [Période : "+(parsed.data.from??"début")+" → "+(parsed.data.to??"fin")+"]",
       source:report.source,asOf:report.asOf,facts:report.facts,warnings:report.warnings})
     // Security/trace: prompt budget is capped, history is bounded and selected
     // citations are only those actually supplied to the model.
@@ -527,7 +542,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
           totalTokens:response.usage?.totalTokens??null,
           estimatedContextTokens:estimatedPromptTokens,
           maxOutputTokens:compact.maxOutputTokens,
-        })
+        },periodOf(parsed.data))
       await audit(req,"agent.chat",saved.id,{
         agent:agent.data,agency:parsed.data.agency,source:report.source,
         asOf:report.asOf,model:response.model,evidence:compact.references.length,
