@@ -403,6 +403,22 @@ export class AgenticWorkspace {
    * concurrent requests. Counts attempted provider calls, not estimated costs.
    * A failed call remains counted so a faulty provider cannot be hammered.
    */
+  getLlmUsage(org:string,actor:Actor,at=now()){
+    return this.visit(org,false,(w)=>{
+      const date=at.slice(0,10)
+      const replies=w.messages.filter(m=>m.userId===actor.id&&m.role==="assistant"&&m.createdAt.startsWith(date))
+      const measured=replies.filter(m=>m.usage?.totalTokens!=null)
+      return {
+        date,callsToday:w.llmQuota?.[date+":"+actor.id]?.calls??0,
+        successfulReplies:replies.length,measuredReplies:measured.length,
+        promptTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.promptTokens??0),0),
+        completionTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.completionTokens??0),0),
+        totalTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.totalTokens??0),0),
+        unreportedReplies:replies.length-measured.length,
+        measurement:"actual_if_provided_else_unknown" as const,
+      }
+    })
+  }
   reserveLlmCall(org:string,actor:Actor,dailyLimit:number,at=now()) {
     return this.visit(org,true,(w)=>{
       const date=at.slice(0,10)

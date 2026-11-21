@@ -80,6 +80,13 @@ describe("Agentic governed efficiency and transparent tool plans",()=>{
     expect(response.body.message.usage.completionTokens).toBe(9)
     expect(response.body.context.factsIncluded).toBeLessThanOrEqual(4)
     expect(response.body.budget.callsToday).toBe(1)
+    const stats=await request(app).get(base+"/usage").set(bearer("dev-admin"))
+    expect(stats.status).toBe(200)
+    expect(stats.body.callsToday).toBe(1)
+    expect(stats.body.totalTokensMeasured).toBe(237)
+    expect(stats.body.measuredReplies).toBe(1)
+    expect((await request(app).get(base+"/usage").set(bearer("dev-admin-org-b")))
+      .body.callsToday).toBe(0)
     const repeat=await request(app).post(base+"/chat/financial_strategy")
       .set(bearer("dev-admin")).send({agency:"Sfax",turnId:id,
         message:"Explique les retards de paiement et les pièces associées."})

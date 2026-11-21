@@ -110,6 +110,14 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
   })
   const base="/api/v1/agentic/workspace"
 
+  app.get(base+"/usage",allAgents,async(req,res)=>{
+    const usage=await workspace.getLlmUsage(org(req),actor(req))
+    const configured=Number(process.env.AGENTIC_DAILY_LLM_CALL_LIMIT||"40")
+    const dailyLimit=Number.isInteger(configured)&&configured>=1&&configured<=100?configured:40
+    res.setHeader("Cache-Control","no-store")
+    return res.json({...usage,dailyLimit,
+      warning:"Les tokens non reportés par le fournisseur et les appels échoués ne sont pas estimés comme coût réel."})
+  })
   app.get(base+"/status",allAgents,(req,res)=>{
     res.setHeader("Cache-Control","no-store")
     return res.json({

@@ -8,6 +8,9 @@ type Forecast = {status:"backtested_pilot"|"insufficient_history"|"rejected_back
   predictions:Array<{month:string;revenueTnd:number;lowerTnd:number;upperTnd:number}>}
 type Signal = {id:string;agency:string;title:string;explanation:string;severity:string;
   acknowledgedAt:string|null;source:string;asOf:string}
+type DailyUsage={date:string;callsToday:number;dailyLimit:number;
+  successfulReplies:number;measuredReplies:number;unreportedReplies:number;
+  totalTokensMeasured:number;measurement:string}
 type Action = {id:string;agency:string;actionType:string;summary:string;approvedBy:string;
   source:string;status:"approved_for_manual_handoff";erpWriteExecuted:false}
 async function getJson<T>(token:string,path:string,method="GET"):Promise<T>{
@@ -18,6 +21,7 @@ async function getJson<T>(token:string,path:string,method="GET"):Promise<T>{
 }
 export default function AgenticV2Panel({token,agency,role,from,to}:{token:string;agency:string;role:string;from?:string;to?:string}){
   const [forecast,setForecast]=useState<Forecast|null>(null)
+  const [dailyUsage,setDailyUsage]=useState<DailyUsage|null>(null)
   const [signals,setSignals]=useState<Signal[]>([])
   const [actions,setActions]=useState<Action[]>([])
   const [error,setError]=useState("")
@@ -31,10 +35,12 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
       getJson<Forecast>(token,"/predictions"+(query.size?"?"+query:"")),
       getJson<{signals:Signal[]}>(token,"/signals"),
       getJson<{actions:Action[]}>(token,"/actions"),
+      getJson<DailyUsage>(token,"/usage"),
     ])
     setForecast(result[0].status==="fulfilled"?result[0].value:null)
     setSignals(result[1].status==="fulfilled"?result[1].value.signals:[])
     setActions(result[2].status==="fulfilled"?result[2].value.actions:[])
+    setDailyUsage(result[3].status==="fulfilled"?result[3].value:null)
   },[token,agency,from,to])
   useEffect(()=>{
     void reload()
@@ -61,6 +67,14 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
   const visibleActions=actions.filter(a=>agency==="all"||a.agency===agency)
   return <div className="aw-v2-section">
     <div className="aw-v2-grid">
+      <section className="aw-panel" data-agentic-v2="usage">
+        <h3>Consommation IA de votre session</h3>
+        {dailyUsage?<><p><strong>{dailyUsage.callsToday} / {dailyUsage.dailyLimit}</strong> appels LLM aujourd'hui</p>
+          <p><strong>{dailyUsage.totalTokensMeasured.toLocaleString("fr-FR")}</strong> tokens réellement reportés</p>
+          <p className="aw-sub">{dailyUsage.measuredReplies} réponse(s) avec comptage connu · {dailyUsage.unreportedReplies} sans comptage fournisseur</p>
+          <p className="aw-sub">Les réponses déterministes / briefs n'utilisent aucun token. Les appels échoués sont inclus dans le quota, mais pas dans les tokens mesurés.</p>
+        </>:<p className="aw-sub">Statistiques de consommation indisponibles.</p>}
+      </section>
       <section className="aw-panel" data-agentic-v2="forecast">
         <h3>Prévisions ML · pilote contrôlé</h3>
         {forecast?<><p className="aw-sub">Modèle {forecast.model.version} · {forecast.trainingMonths} mois · arrêté {forecast.asOf}</p>
