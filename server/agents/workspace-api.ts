@@ -34,7 +34,7 @@ function apiError(res:express.Response,error:unknown) {
   if(error instanceof WorkspaceFull)return res.status(409).json({error:{code:"WORKSPACE_LIMIT",message:"Capacité du dossier atteinte"}})
   throw error
 }
-function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset) {
+function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset,objective?:string) {
   if(agent==="revenue_growth"){
     const r=analyzeRevenueGrowth({scope,dataset,limit:10})
     const facts=r.opportunities.map((o)=>({
@@ -50,7 +50,7 @@ function extractReport(agent:AgentKey,scope:AgencyScope,dataset:Dataset) {
   }
   if(agent==="director"){
     const r=investigateWithDirector({
-      objective:"Analyser les opportunités, créances, stocks et stratégie",
+      objective:objective || "Analyser les opportunités, créances, stocks et stratégie",
       scope,dataset,limit:10,
     })
     return {
@@ -128,7 +128,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         return res.status(403).json({error:{code:"FORBIDDEN"}})
       const s=scope(req,mission.agency)
       if(!s)return fail(res)
-      const report=extractReport(mission.agent,s,deps.dataset())
+      const report=extractReport(mission.agent,s,deps.dataset(),mission.objective)
       const result=await workspace.submitRun(org(req),actor(req),mission.id,parsed.data.expectedVersion,{
         asOf:report.asOf,source:report.source,
         summary:"Analyse read-only : "+report.findings+" constat(s) pour "+mission.title,
@@ -212,7 +212,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     const previous=await workspace.getTurn(org(req),actor(req),agent.data,parsed.data.agency,parsed.data.turnId)
     if(previous)return res.json({message:previous,reused:true})
     const history=await workspace.listChat(org(req),actor(req),agent.data,parsed.data.agency)
-    const report=extractReport(agent.data,s,deps.dataset())
+    const report=extractReport(agent.data,s,deps.dataset(),parsed.data.message)
     const refs=[...new Set(report.facts.flatMap((f)=>f.evidence))].slice(0,35)
     const system=[
       "Tu es un conseiller ERP spécialisé "+agent.data+".",
