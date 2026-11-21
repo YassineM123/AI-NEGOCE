@@ -86,3 +86,38 @@ npx playwright test --config dashboards/agentic-ai/playwright.config.ts
 Les tests API couvrent les organisations, les agences, la concurrence des versions, le double contrôle humain, la lecture des notifications et le refus de fausse IA. Le test chat injecte un modèle **stub** (ne démontre pas qu'un appel Gemini réel fonctionne). Les tests navigateur simulent explicitement la réponse API pour vérifier que les pages React utilisent le backend et non l'état de démonstration.
 
 La CI générale OCR / Copilot doit toujours être réparée indépendamment.
+
+
+## Agentic v2 — intégration contrôlée
+
+Les vues Agentic v2 réutilisent la même source de données et le périmètre agence que les API
+BI/Data Science. Endpoints ajoutés :
+
+- GET /api/v1/agentic/workspace/predictions?agency=Sfax : prévisions pilotes issues du modèle
+  ridge-trend-v1.0.0, uniquement si 10 mois complets consécutifs et quatre validations
+  chronologiques réussissent (WAPE <= 35 %, biais <= 30 %). Le résultat porte sa version,
+  la date de clôture et son statut. NON CERTIFIÉ POUR PRODUCTION.
+- GET /api/v1/agentic/workspace/signals : alertes métier pour les reviewers, avec agence,
+  source, date d'arrêté et acquittement. POST /signals/scan est réservé à l'admin et
+  n'utilise que les sources locales autorisées. POST /signals/:id/acknowledge trace l'accusé.
+- GET /api/v1/agentic/workspace/actions : paquets d'actions issus d'une recommandation
+  réellement approuvée par un autre acteur autorisé. GET /actions/:id/export fournit un
+  dossier JSON de transmission manuelle et trace l'export. Aucun ERP write-back.
+- Missions quatre étapes persistantes : cadrage, analyse, validation humaine, préparation
+  du paquet approuvé, avec statut par étape. Les anciennes missions JSONB restent lisibles.
+
+Pour activer le scanner automatique uniquement sur l'organisation de démonstration hors
+production, définir AGENTIC_PROACTIVE_DEMO=1 sur le processus agentic:worker.
+La source peut être DEMO_DATA_SOURCE=extractions; les fichiers historiques restent non
+rapprochés ERP. En production, il faut encore un connecteur ERP LAI validé par tenant,
+un scheduler surveillé, de l'observabilité, et l'homologation des modèles et des droits.
+
+Exécution QA :
+  npm run typecheck
+  npm run agentic:typecheck
+  npm run agentic:build
+  npx vitest run server/agents/predictive.test.ts server/agents/agentic-v2.api.test.ts server/agents/workspace.api.test.ts
+
+Les prédictions expérimentales ne sont jamais des autorisations d'action et ne créent
+pas de demandes d'approbation. Les alertes et dossiers restent read-only, aucun email,
+WhatsApp, règlement, mouvement de stock ou commande ne sont envoyés automatiquement.
