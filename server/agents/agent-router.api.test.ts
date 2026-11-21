@@ -16,6 +16,17 @@ describe("Cost-aware factual routing",()=>{
     const ambiguous=routeAnalyticalQuestion({agent:"director",
       question:"Pourquoi le CA baisse et comment augmenter la marge ?",scope:["Sfax"],dataset:data})
     expect(ambiguous).toBeNull()
+    expect(routeAnalyticalQuestion({agent:"director",
+      question:"Quel était le CA en octobre 2025 ?",scope:"*",dataset:data})).toBeNull()
+    expect(routeAnalyticalQuestion({agent:"director",
+      question:"Quel est le CA et le stock ?",scope:"*",dataset:data})).toBeNull()
+    expect(routeAnalyticalQuestion({agent:"director",
+      question:"Quel est le CA de Tunis Centre ?",scope:["Sfax"],dataset:data})).toBeNull()
+    const scoped=routeAnalyticalQuestion({agent:"director",
+      question:"Quel est le CA de Sfax ?",scope:"*",dataset:data})
+    const sfax=routeAnalyticalQuestion({agent:"director",
+      question:"Quel est le CA ?",scope:["Sfax"],dataset:data})
+    expect(scoped?.content).toEqual(sfax?.content)
   })
   it("provides zero-token answers without any configured LLM",async()=>{
     const {app}=makeApp()
