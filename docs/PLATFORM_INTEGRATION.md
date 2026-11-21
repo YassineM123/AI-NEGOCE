@@ -27,6 +27,10 @@ Le backend fournit un snapshot versionné depuis /api/v1/analytics/overview, ave
 
 **Limites restantes** : les simulations locales BI et Data Science restent accessibles seulement en mode non connecté. La version connectée Data Science reçoit les calculs serveur du même dataset et des mêmes filtres (portefeuille, récence, tendances, pilote CA si backtest admissible, stocks, créances et scénarios). modelServingVerified=false : aucun modèle n'est homologué en production. Les modules sans données complètes affichent N/D. Les rapports des quatre spécialistes Agentic et d'AI Director utilisent désormais les mêmes agences et les mêmes dates from/to que BI/DS. La date d'arrêté du dataset reste distincte de la période sélectionnée ; aucune série historique de stock n'est reconstruite. Les coûts par facture, échéances et PMP demeurent indisponibles sur l'extrait IAINEG. L'API repose sur les datasets injectés/sandbox, sans connecteur officiel ERP LAI.
 
+## PostgreSQL commun (local-dev)
+
+L'option `UNIFIED_ANALYTICS_SOURCE=postgres` relie BI, Data Science et les cinq agents à un snapshot versionné dans le même PostgreSQL qui stocke les missions. Voir [guide de démarrage](UNIFIED_POSTGRES_DEMO.md).
+
 ## Démarrage
 
 Depuis la racine du dépôt :

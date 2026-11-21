@@ -2,6 +2,10 @@
 
 Cette branche regroupe **trois espaces distincts** dans un seul dépôt Git : Data Analyse (BI), Data Science et Agentic AI, ainsi que le backend ERP/Copilot existant. Les deux premiers espaces sont conservés en prototypes HTML/JavaScript et le troisième est une application **React 19 + TypeScript + Vite**. Les trois plateformes partagent désormais une session sandbox et des KPI gouvernés (CA, créances, période et agence) depuis un backend commun. Les calculs détaillés historiques BI/DS restent locaux et aucune connexion à l'ERP LAI réel n'est déclarée.
 
+## Base de données commune pour trois dashboards
+
+Le mode `UNIFIED_ANALYTICS_SOURCE=postgres` utilise un snapshot PostgreSQL versionné et les mêmes filtres dans BI, DS et Agentic, sans ERP LAI connecté. Consulter [le guide PostgreSQL](docs/UNIFIED_POSTGRES_DEMO.md) pour initialiser les données et tester les cinq agents.
+
 ## Démonstration client Phase 2 — sources IAINEG pseudonymisées
 
 Mode optionnel : `DEMO_DATA_SOURCE=extractions` (uniquement local-dev ou test). Le backend utilise alors le journal de `Database/extractions/` pour les KPI partagés BI / Data Science / Agentic, **exclusivement en TND**. Le journal contient aussi EUR et USD, **jamais additionnés** au TND. Les coûts par facture, échéances individuelles et PMP sont absents : aucune marge ou valorisation fictive n'est inventée dans la source gouvernée.
