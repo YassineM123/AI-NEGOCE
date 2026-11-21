@@ -363,6 +363,12 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     if(!id.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
     try{
       const action=await workspace.getApprovedAction(org(req),actor(req),id.data)
+      const allowed=scope(req,action.agency)
+      if(!allowed)return fail(res)
+      const mission=await workspace.getMission(org(req),actor(req),action.missionId)
+      if(!mission.execution?.sourceFingerprint ||
+        mission.execution.sourceFingerprint!==scopedFingerprint(deps.dataset(),allowed))
+        throw new WorkspaceConflict("Source ou données modifiées : relancer la mission avant l'export")
       await audit(req,"approved_action.exported",id.data,{
         agency:action.agency,approvalId:action.approvalId,erpWrites:0,
       })

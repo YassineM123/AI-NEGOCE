@@ -444,6 +444,8 @@ export class AgenticWorkspace {
       const action=w.actions.find(a=>a.id===id && visibleAgency(a.agency,actor) &&
         (reviewer(actor)||w.missions.some(m=>m.id===a.missionId && m.createdBy===actor.id)))
       if(!action)throw new WorkspaceMissing()
+      if(!action.approvedUntil||action.approvedUntil<now())
+        throw new WorkspaceConflict("Dossier approuvé expiré : nouvelle revue nécessaire")
       return action
     })
   }

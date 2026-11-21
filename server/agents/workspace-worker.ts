@@ -28,6 +28,7 @@ const demoData=proactiveDemo
   : null
 let running=false
 let stopping=false
+let lastRetentionDay:string|null=null
 async function cycle() {
   if(running || stopping)return
   running=true
@@ -39,6 +40,19 @@ async function cycle() {
       catch(error) { console.error("[agentic-worker] tenant job failed",row.id,error) }
     }
     if(emitted)console.log("[agentic-worker] in-app due notifications created:",emitted)
+    // Nightly retention. Do not churn every tenant JSONB payload on each minute.
+    const today=new Date().toISOString().slice(0,10)
+    if(lastRetentionDay!==today){
+      const retention=Number(process.env.AGENTIC_CHAT_RETENTION_DAYS||"90")
+      const days=Number.isInteger(retention)&&retention>=7&&retention<=365?retention:90
+      let removed=0
+      for(const row of q.rows as {id:string}[]){
+        try{removed+=await workspace.pruneChat(row.id,new Date().toISOString(),days)}
+        catch(error){console.error("[agentic-worker] retention failed",row.id,error)}
+      }
+      lastRetentionDay=today
+      if(removed)console.log("[agentic-worker] expired chat records pruned:",removed)
+    }
     if(demoData && (q.rows as {id:string}[]).some(x=>x.id===sandboxOrg)){
       try{
         const result=await workspace.scanSignals(sandboxOrg,demoData)
