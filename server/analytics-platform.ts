@@ -79,6 +79,8 @@ export function buildAnalyticsOverview(input: {
       source: bi.metadata.source,
       sourceKind: input.sourceKind,
       isSynthetic: input.organization.isSynthetic,
+      storage:input.dataset.metadata.snapshotRevision?"postgres" as const:"local_fixture" as const,
+      revision:input.dataset.metadata.snapshotRevision??null,
     },
     bi: { status: "available", data: bi },
     insights,

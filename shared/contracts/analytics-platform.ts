@@ -175,6 +175,8 @@ export const analyticsOverviewSchema = z.object({
     source: z.string(),
     sourceKind: z.enum(["sandbox", "erp"]),
     isSynthetic: z.boolean(),
+    storage:z.enum(["postgres","local_fixture"]).optional(),
+    revision:z.number().int().positive().nullable().optional(),
   }),
   bi: z.object({ status: z.literal("available"), data: biOverviewSchema }),
   dataScience: z.object({
