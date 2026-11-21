@@ -303,7 +303,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     res.setHeader("Cache-Control","no-store")
     return res.json({approvals:await workspace.listApprovals(org(req),actor(req))})
   })
-  app.post(base+"/approvals/:id/review",requireRoles("admin","manager"),async(req,res)=>{
+  app.post(base+"/approvals/:id/review",requireRoles("admin","manager"),deps.requireErpData,async(req,res)=>{
     const id=uuid.safeParse(req.params.id)
     const parsed=z.object({
       expectedVersion:z.number().int().positive(),
@@ -393,7 +393,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     res.setHeader("Cache-Control","no-store")
     return res.json({actions:await workspace.listActions(org(req),actor(req))})
   })
-  app.get(base+"/actions/:id/export",allAgents,async(req,res)=>{
+  app.get(base+"/actions/:id/export",allAgents,deps.requireErpData,async(req,res)=>{
     const id=uuid.safeParse(req.params.id)
     if(!id.success)return res.status(400).json({error:{code:"INVALID_REQUEST"}})
     try{
