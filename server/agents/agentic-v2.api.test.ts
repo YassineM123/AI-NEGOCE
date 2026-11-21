@@ -65,7 +65,7 @@ describe("Agentic v2 — prediction, proactive detection and approved handoff",(
     expect((await request(app).get(base+"/actions").set(bearer("dev-admin-org-b")))
       .body.actions).toEqual([])
     expect((await request(app).get(base+"/actions/"+packet.id+"/export")
-      .set(bearer("dev-admin-org-b"))).status).toBe(404)
+      .set(bearer("dev-admin-org-b"))).status).toBe(403)
     const retry=await request(app).post(base+"/approvals/"+packet.approvalId+"/review")
       .set(bearer("dev-manager-sfax")).send({expectedVersion:1,decision:"approved"})
     expect(retry.status).toBe(409)
