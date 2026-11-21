@@ -549,3 +549,29 @@ td b { font-weight: 690; color: #173050; }
 .aw-brief-item:first-of-type{border-top:0}
 .aw-brief-item p{margin:4px 0 3px}
 .aw-brief-item small{display:block;color:var(--muted);overflow-wrap:anywhere}
+
+
+/* Unified platform UX — same visible provenance, colors, density and exports. */
+.ux-panel{background:#fff;border:1px solid #dfe8f2;border-radius:14px;padding:19px 20px;margin-bottom:18px;box-shadow:0 6px 24px rgba(24,47,81,.045);color:#1d324d}
+.ux-head,.ux-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ux-head strong{font-size:16px;font-weight:750}.ux-head p{font-size:12px;margin:5px 0 0;color:#61738c}
+.ux-status{display:inline-flex;padding:6px 11px;border:1px solid #d7e1ed;border-radius:30px;font-size:11px;font-weight:700}
+.ux-status.ux-ok{background:#e9f7f1;color:#17694e;border-color:#c6e8d7}
+.ux-status.ux-idle{background:#f0f4f8;color:#64758a}
+.ux-links{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.ux-links button,.ux-actions button{cursor:pointer;border:1px solid #cadbed;background:#f6faff;color:#205ca7;border-radius:8px;padding:9px 13px;font-size:12px;font-weight:700}
+.ux-links button:hover,.ux-actions button:hover{background:#e8f2ff;border-color:#74a8eb}
+.ux-links button:focus-visible,.ux-actions button:focus-visible{outline:3px solid #8bb8f7;outline-offset:2px}
+.ux-meta{display:flex;flex-wrap:wrap;gap:9px 20px;padding:13px 0;margin-top:12px;border-top:1px solid #ecf1f6;border-bottom:1px solid #ecf1f6;font-size:11px;color:#59718c}
+.ux-meta b{color:#203b57}.ux-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:15px}
+.ux-kpis article{display:flex;flex-direction:column;gap:8px;min-width:0;background:#f7faff;border:1px solid #e1eaf4;border-radius:11px;padding:14px}
+.ux-kpis small{font-size:11px;color:#61758d}.ux-kpis strong{font-size:21px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:#193b6e}
+.ux-kpis span,.ux-card>small{font-size:10px;color:#667d97}.ux-sections{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;margin-top:13px}
+.ux-card{min-width:0;background:#fff;border:1px solid #e0e8f2;border-radius:11px;padding:14px}
+.ux-card h3{font-size:13px;margin:0 0 13px}.ux-card svg{display:block;width:100%;max-width:100%}
+.ux-evidence{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px;font-size:11px;line-height:1.4}
+.ux-evidence dt{color:#667b93}.ux-evidence dd{margin:0;overflow-wrap:anywhere;font-weight:650}
+.ux-actions{border-top:1px solid #edf1f6;padding-top:13px;margin-top:13px}.ux-actions span{font-size:11px;color:#64768c}
+.ux-empty{margin:15px 0 0;color:#718198;font-size:12px}
+@media(max-width:1000px){.ux-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ux-sections{grid-template-columns:1fr}}
+@media(max-width:600px){.ux-panel{padding:14px}.ux-kpis{grid-template-columns:1fr}.ux-evidence{grid-template-columns:100px minmax(0,1fr)}}
