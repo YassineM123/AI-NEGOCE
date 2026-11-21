@@ -41,3 +41,34 @@ describe("Gemini-backed Copilot planning", () => {
     expect(result.sources).toEqual([])
   })
 })
+
+describe("Deterministic invoice intent safety without a configured LLM", () => {
+  const llm: LlmProvider = {
+    name: "mock",
+    isConfigured: () => false,
+    chat: async () => { throw new Error("Must not call a mock LLM") },
+  }
+
+  it.each([
+    "Liste des factures fournisseurs en attente",
+    "Montre les factures d'achat",
+    "List supplier invoices",
+  ])("does not misclassify supplier invoices as sales: %s", async (question) => {
+    const result = await processConversationalQuery(question, {
+      scope: "*", dataset: defaultDataset(), llm,
+    })
+    // Without a real procurement ERP database, abstain rather than invent supplier invoices.
+    expect(result.status).toBe("unsupported")
+    expect(result.tool).toBe("get_supplier_purchases")
+    expect(result.sources).toEqual([])
+  })
+
+  it("retains read-only sales invoice support when no supplier is mentioned", async () => {
+    const result = await processConversationalQuery("Donne-moi les factures de vente de 2026", {
+      scope: "*", dataset: defaultDataset(), llm,
+    })
+    expect(result.status).toBe("ok")
+    expect(result.tool).toBe("list_sales_invoices")
+    expect(result.filters.from).toBe("2026-01-01")
+  })
+})
