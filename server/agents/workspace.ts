@@ -612,15 +612,18 @@ export class AgenticWorkspace {
     return this.visit(org,false,(w)=>{
       const date=at.slice(0,10)
       const replies=w.messages.filter(m=>m.userId===actor.id&&m.role==="assistant"&&m.createdAt.startsWith(date))
-      const measured=replies.filter(m=>m.usage?.totalTokens!=null)
+      const llmReplies=replies.filter(m=>m.model!=="rules-engine-v1")
+      const measured=llmReplies.filter(m=>m.usage?.totalTokens!=null)
       return {
         date,callsToday:w.llmQuota?.[date+":"+actor.id]?.calls??0,
         organizationCallsToday:w.llmQuota?.[date+":__organization__"]?.calls??0,
-        successfulReplies:replies.length,measuredReplies:measured.length,
+        successfulReplies:llmReplies.length,
+        deterministicReplies:replies.length-llmReplies.length,
+        measuredReplies:measured.length,
         promptTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.promptTokens??0),0),
         completionTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.completionTokens??0),0),
         totalTokensMeasured:measured.reduce((n,m)=>n+(m.usage?.totalTokens??0),0),
-        unreportedReplies:replies.length-measured.length,
+        unreportedReplies:llmReplies.length-measured.length,
         measurement:"actual_if_provided_else_unknown" as const,
       }
     })

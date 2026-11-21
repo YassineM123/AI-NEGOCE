@@ -10,7 +10,7 @@ type Signal = {id:string;agency:string;title:string;explanation:string;severity:
   acknowledgedAt:string|null;source:string;asOf:string}
 type DailyUsage={date:string;callsToday:number;dailyLimit:number;
   organizationCallsToday:number;
-  successfulReplies:number;measuredReplies:number;unreportedReplies:number;
+  successfulReplies:number;deterministicReplies:number;measuredReplies:number;unreportedReplies:number;
   totalTokensMeasured:number;measurement:string}
 type Action = {id:string;agency:string;actionType:string;summary:string;approvedBy:string;
   source:string;status:"approved_for_manual_handoff";erpWriteExecuted:false}
@@ -88,7 +88,7 @@ export default function AgenticV2Panel({token,agency,role,from,to}:{token:string
         {dailyUsage?<><p><strong>{dailyUsage.callsToday} / {dailyUsage.dailyLimit}</strong> appels LLM aujourd'hui
           <small>Organisation : {dailyUsage.organizationCallsToday} appels aujourd'hui</small></p>
           <p><strong>{dailyUsage.totalTokensMeasured.toLocaleString("fr-FR")}</strong> tokens réellement reportés</p>
-          <p className="aw-sub">{dailyUsage.measuredReplies} réponse(s) avec comptage connu · {dailyUsage.unreportedReplies} sans comptage fournisseur</p>
+          <p className="aw-sub">{dailyUsage.deterministicReplies} réponse(s) à 0 token · {dailyUsage.measuredReplies} réponse(s) LLM mesurée(s) · {dailyUsage.unreportedReplies} sans comptage fournisseur</p>
           <p className="aw-sub">Les réponses déterministes / briefs n'utilisent aucun token. Les appels échoués sont inclus dans le quota, mais pas dans les tokens mesurés.</p>
         </>:<p className="aw-sub">Statistiques de consommation indisponibles.</p>}
       </section>

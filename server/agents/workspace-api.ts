@@ -477,6 +477,9 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     // Security/trace: prompt budget is capped, history is bounded and selected
     // citations are only those actually supplied to the model.
     const system=compact.prompt
+    const shortHistory=compactHistory(history.map(m=>({role:m.role,content:m.content})))
+    const estimatedPromptTokens=Math.ceil((system.length+parsed.data.message.length+
+      shortHistory.reduce((n,m)=>n+m.content.length,0))/4)
     let quota:{callsToday:number;dailyLimit:number;
       organizationCallsToday:number;organizationDailyLimit:number}
     try{
@@ -494,7 +497,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     try {
       const response=await llm.chat([
         {role:"system",content:system},
-        ...compactHistory(history.map(m=>({role:m.role,content:m.content}))),
+        ...shortHistory,
         {role:"user",content:parsed.data.message},
       ],{temperature:0.2,maxTokens:compact.maxOutputTokens,timeoutMs:15000})
       const answer=response.content.trim().slice(0,4500)
@@ -506,7 +509,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
           promptTokens:response.usage?.promptTokens??null,
           completionTokens:response.usage?.completionTokens??null,
           totalTokens:response.usage?.totalTokens??null,
-          estimatedContextTokens:compact.approximatePromptTokens,
+          estimatedContextTokens:estimatedPromptTokens,
           maxOutputTokens:compact.maxOutputTokens,
         })
       await audit(req,"agent.chat",saved.id,{
@@ -514,7 +517,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         asOf:report.asOf,model:response.model,evidence:compact.references.length,
         promptTokens:response.usage?.promptTokens??null,
         completionTokens:response.usage?.completionTokens??null,
-        estimatedContextTokens:compact.approximatePromptTokens,
+        estimatedContextTokens:estimatedPromptTokens,
       })
       res.setHeader("Cache-Control","no-store")
       return res.json({message:saved,mode:"llm_grounded",erpWrites:0,
@@ -522,7 +525,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
           organizationCallsToday:quota.organizationCallsToday,
           organizationDailyLimit:quota.organizationDailyLimit},
         context:{factsIncluded:compact.selected.length,characters:compact.contextChars,
-          estimatedTokens:compact.approximatePromptTokens}})
+          estimatedTokens:estimatedPromptTokens}})
     }catch(error){
       await workspace.releaseLlmTurn(org(req),actor(req),parsed.data.turnId)
       if(error instanceof WorkspaceForbidden||error instanceof WorkspaceConflict)return apiError(res,error)

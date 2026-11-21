@@ -33,6 +33,8 @@ export function routeAnalyticalQuestion(input:{
   if(["director","revenue_growth","business_strategy"].includes(input.agent)){
     if(/\b(ca|chiffre d'affaires|revenus? (total|net)|montant des ventes)\b/.test(q)){
       const x=buildAnalyticsInsights(dataset,{agencies:scope})
+      if(x.summary.salesRows===0)return answer("revenue_unavailable",
+        "Aucune vente documentée dans ce périmètre : CA non calculable, pas zéro certifié.")
       return answer("revenue_ht_total",
         "Chiffre d'affaires HT net observé : "+money(x.summary.revenue)+
         " ; "+x.summary.documentCount+" document(s) et "+x.summary.customerCount+
