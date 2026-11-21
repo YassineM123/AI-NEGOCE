@@ -23,7 +23,29 @@ export function routeAnalyticalQuestion(input:{
     return null
   if(/\b(pourquoi|comment|faut.il|recommand|optimis|prevoi|prevision|si on|scenario personnalise|strategie pour)\b/.test(q))
     return null
-  const dataset=input.dataset,scope=input.scope,asOf=dataset.metadata.asOf
+  // An unspecified period or requested breakdown must never be silently
+  // answered as an all-time aggregate. Ask for filters in the BI/DS portal.
+  if(/\b(20[12][0-9]|janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre|trimestre|semaine|mois dernier|mois prochain|cette annee|annee derniere|par (mois|produit|famille|client|commercial))\b/.test(q))
+    return null
+  const dataset=input.dataset,asOf=dataset.metadata.asOf
+  const agencyLabels=[...new Set([
+    ...dataset.sales.map(r=>r.agency),
+    ...dataset.receivables.map(r=>r.agency),
+    ...dataset.inventory.map(r=>r.agency),
+  ])]
+  const mentioned=agencyLabels.filter(a=>q.includes(normalize(a)))
+  if(mentioned.length>1)return null
+  if(mentioned.length===1&&input.scope!=="*"&&!input.scope.includes(mentioned[0]))return null
+  const scope:AgencyScope=mentioned.length===1?[mentioned[0]]:input.scope
+  // Multi-domain questions need synthesis; do not return a partial CA figure
+  // when the user explicitly requested finance and stock in the same question.
+  const domains=[
+    /\b(ca|chiffre d'affaires|vente|revenu|clients?)\b/,
+    /\b(creance|facture en retard|paiement|tresorerie|cash)\b/,
+    /\b(stock|rupture|reapprovisionnement|fournisseur)\b/,
+    /\b(strategie|scenario|investissement|capex)\b/,
+  ]
+  if(domains.filter(r=>r.test(q)).length>1)return null
   const prefix="Source : "+dataset.metadata.source+" ; arrêté : "+asOf+
     " ; montant TND ; périmètre autorisé."
   const answer=(rule:string,description:string,sources:string[]=[]):RoutedAnswer=>({
