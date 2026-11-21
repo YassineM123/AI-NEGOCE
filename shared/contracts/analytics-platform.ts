@@ -133,6 +133,24 @@ export const governedDataScienceSchema=z.object({
     })),
     verifiedProduction:z.literal(false),warnings:z.array(z.string()),
   }),
+  skuDemand:z.object({
+    status:z.literal("pilot_not_certified"),eligibleForAutonomousActions:z.literal(false),
+    quantityCoverage:z.object({salesRows:z.number().int().nonnegative(),withQuantity:z.number().int().nonnegative()}),
+    evaluated:z.number().int().nonnegative(),backtested:z.number().int().nonnegative(),
+    results:z.array(z.object({
+      status:z.enum(["backtested_pilot","insufficient_history","rejected_backtest"]),
+      agency:z.string(),productId:z.string(),product:z.string(),modelVersion:z.string(),
+      model:z.enum(["last_observation","moving_average_3","seasonal_12"]).nullable(),
+      trainedThrough:z.string().nullable(),historyMonths:z.number().int().nonnegative(),
+      backtest:z.object({
+        holdoutMonths:z.number().int().nonnegative(),wape:z.number().nullable(),
+        baselineWape:z.number().nullable(),bias:z.number().nullable(),
+      }),
+      forecast:z.object({month:z.string(),quantity:z.number()}).nullable(),
+      reason:z.string(),
+    })),
+    warnings:z.array(z.string()),
+  }),
   inventory:z.object({
     status:z.enum(["observed_current_snapshot","not_available"]),
     periodApplicable:z.literal(false),
