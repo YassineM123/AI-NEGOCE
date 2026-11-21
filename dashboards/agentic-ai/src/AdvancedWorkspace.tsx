@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react"
+import AgenticV2Panel from "./AgenticV2Panel"
 
 const ROOT=(import.meta.env.VITE_AGENTIC_API_BASE || "").replace(/\/$/, "")+"/api/v1/agentic/workspace"
 export const AGENT_DOMAIN={
@@ -18,7 +19,9 @@ type Mission={
   id:string;agency:string;agent:AgentDomain;title:string;objective:string;
   createdBy:string;status:"draft"|"in_progress"|"awaiting_approval"|"reviewed"|"cancelled";
   dueAt:string|null;version:number;createdAt:string;updatedAt:string;
-  lastRun:null|{asOf:string;source:string;summary:string;findings:number;evidence:string[]}
+  steps?:Array<{key:string;label:string;status:"completed"|"active"|"pending"|"blocked"}>;
+  lastRun:null|{asOf:string;source:string;summary:string;findings:number;evidence:string[];
+    prediction?:{status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null}}
 }
 type Approval={
   id:string;missionId:string;agency:string;agent:AgentDomain;requestedBy:string;
@@ -101,7 +104,12 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
             <p>{m.objective}</p>
             {m.lastRun&&<div className="aw-result"><strong>{m.lastRun.summary}</strong>
               <span>Source : {m.lastRun.source} · arrêté au {m.lastRun.asOf}</span>
-              {m.lastRun.evidence.length>0&&<small>Preuves : {m.lastRun.evidence.slice(0,7).join(", ")}</small>}</div>}
+              {m.lastRun.evidence.length>0&&<small>Preuves : {m.lastRun.evidence.slice(0,7).join(", ")}</small>}
+              {m.lastRun.prediction&&<small>Prévision : {m.lastRun.prediction.status} · modèle {m.lastRun.prediction.modelVersion} · sans action autonome</small>}</div>}
+            {m.steps&&<ol className="aw-steps" aria-label={"Étapes de "+m.title}>
+              {m.steps.map(s=><li className={"aw-step aw-step-"+s.status} key={s.key}>
+                <span>{s.label}</span><b>{s.status==="completed"?"Terminée":s.status==="active"?"En cours":s.status==="blocked"?"Bloquée":"À faire"}</b>
+              </li>)}</ol>
             <footer><small>Version {m.version} · {m.dueAt?"Échéance : "+when(m.dueAt):"Sans échéance"}</small>
               {["draft","in_progress"].includes(m.status)&&
                 <button className="aw-primary" disabled={busy} onClick={()=>{void run(m)}}>Lancer l'analyse read-only</button>}</footer>
@@ -259,8 +267,8 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
 }
 
 
-export function AdvancedOverview({token,agency,onNavigate}:{
-  token:string;agency:string;onNavigate:(page:"missions"|"decisions"|"notifications")=>void
+export function AdvancedOverview({token,agency,role,onNavigate}:{
+  token:string;agency:string;role?:string;onNavigate:(page:"missions"|"decisions"|"notifications")=>void
 }){
   const [missions,setMissions]=useState<Mission[]>([])
   const [approvals,setApprovals]=useState<Approval[]>([])
@@ -312,5 +320,6 @@ export function AdvancedOverview({token,agency,onNavigate}:{
         <button className="aw-primary" onClick={()=>onNavigate("decisions")}>Ouvrir les approbations</button>
       </section>
     </div>
+    <AgenticV2Panel token={token} agency={agency} role={role||"unknown"}/>
   </div>
 }

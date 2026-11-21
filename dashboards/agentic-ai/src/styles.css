@@ -529,3 +529,16 @@ td b { font-weight: 690; color: #173050; }
 .aw-env{border:1px solid #bfcfe5;background:#f1f6fd;border-radius:8px;padding:11px 14px;font-size:11px;line-height:1.6;color:#365577;margin:0}.aw-env strong{color:#224c83}
 
 .aw-identity{display:inline-flex;align-items:center;gap:9px;margin:9px 0;color:#59718e;font-size:11px;font-weight:700}.aw-identity select{border:1px solid #c9d8ec;background:#fff;border-radius:7px;padding:8px 10px;font-size:11px;min-width:220px;color:#23456d}
+
+
+.aw-steps{display:grid;gap:5px;margin:12px 0;padding:0;list-style:none}
+.aw-step{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--border);border-radius:8px;padding:8px 11px;background:#f8fafd;color:#5a6c83;font-size:12px}
+.aw-step b{font-size:11px;white-space:nowrap}
+.aw-step-completed{border-color:#bcdecf;background:#f2fbf6;color:#0c6548}
+.aw-step-active{border-color:#b7cdfd;background:#f0f5ff;color:#1b4fb0}
+.aw-step-blocked{border-color:#efdbdb;background:#fff8f8;color:#9d3f47}
+.aw-v2-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-top:17px}
+.aw-v2-grid .aw-panel{min-width:0}
+.aw-v2-grid .aw-notification{gap:12px}
+.aw-v2-grid .aw-notification small{overflow-wrap:anywhere;display:block}
+@media(max-width:1300px){.aw-v2-grid{grid-template-columns:1fr}}

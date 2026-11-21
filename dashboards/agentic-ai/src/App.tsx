@@ -439,7 +439,7 @@ export default function App() {
   }
   function overview() {
     if (token) return <>
-      <AdvancedOverview token={token} agency={agency} onNavigate={(dest) => navigate(dest)}/>
+      <AdvancedOverview token={token} agency={agency} role={platform?.principal.role} onNavigate={(dest) => navigate(dest)}/>
       <Card title="AI Director — Coordination read-only" action={<Pill tone="blue">4 moteurs métier</Pill>}>
         <p className="card-sub">Les dossiers et événements en haut proviennent du backend. Aucune action ERP automatique.</p>
         {orchestrator()}
