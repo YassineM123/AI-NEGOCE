@@ -30,7 +30,7 @@ function revenueSection(data: Dataset, scope: AgencyScope, limit: number): Direc
   const result=analyzeRevenueGrowth({dataset:data,scope,limit})
   return {
     agent:"revenue_growth",
-    status:result.status,
+    status:result.status === "ok" ? "ok" : "no_data",
     metrics:{
       customersAnalyzed:result.analysis.customersAnalyzed,
       opportunitiesFound:result.analysis.opportunitiesFound,
@@ -41,7 +41,7 @@ function revenueSection(data: Dataset, scope: AgencyScope, limit: number): Direc
       priority:op.state==="dormant"||op.state==="declining"?"high":"medium",
       explanation:op.reason+" ; score heuristique "+op.priorityScore+"/100",
       evidence:op.evidence.invoiceIds.map((id)=>({type:"invoice" as const,id,agency:op.agency})),
-      action:op.proposedAction,
+      action:{ ...op.proposedAction, requiresHumanApproval:true as const },
     })),
     warnings:result.warnings,
   }
