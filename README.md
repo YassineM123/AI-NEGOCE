@@ -54,6 +54,14 @@ La session locale n'est pas un SSO production ; Data Science n'a aucun modèle s
 
 Voir [le guide d'intégration technique](docs/PLATFORM_INTEGRATION.md) et [les Agents read-only](docs/agentic/ai-director-specialists-mvp.md).
 
+## Agentic avancé — missions, notifications, approbations et vrai chat
+
+**En session connectée**, les pages Agentic utilisent le backend au lieu des données de maquette. Les missions, messages et approbations sont durables **avec PostgreSQL uniquement** ; sans DATABASE_URL, l'état est provisoire et la plateforme le signale.
+
+Pour activer cette partie en local, appliquer la nouvelle migration 008 avec `npm run migrate`, lancer `npm run dev:api`, `npm run agentic:dev`, et démarrer **`npm run agentic:worker`** pour les rappels d'échéance en application. Le chat conversationnel nécessite une **clé GEMINI_API_KEY réelle côté serveur** et un modèle disponible. Sans clé, le service répond explicitement 503, sans inventer une réponse. Les approbations ne déclenchent **aucune** écriture ERP.
+
+Documentation de déploiement et de sécurité : [Agentic avancé — workflows et conversations](docs/agentic/ADVANCED_WORKFLOWS.md).
+
 ## Règles de développement — branche canonique
 
 - Branche de travail : `feature/unified-ai-analytics-platform` ; ne pas travailler sur `main` par défaut.
