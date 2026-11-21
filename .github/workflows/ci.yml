@@ -12,6 +12,14 @@ jobs:
       - run: npm run typecheck
       - run: npm run dataset:generate
       - run: npm run db:seed
+      # GitHub stores OCR fixture binaries in LFS. A normal checkout only returns
+      # tiny pointers, which must NEVER be treated as uploadable PDF/image bytes.
+      - name: Materialize adverse OCR/upload fixture binaries
+        run: |
+          git lfs install --local
+          git lfs pull --include="fixtures/adverse/ocr/**,fixtures/adverse/upload/**" --exclude=""
+      - name: Verify real fixture signatures and reject LFS pointers
+        run: node scripts/check-qa-fixtures.mjs
       - run: npm test
       - run: npx playwright install --with-deps chrome
       - run: npm run test:e2e -- --project=desktop
