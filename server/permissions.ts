@@ -3,6 +3,9 @@ import type { Role } from "./auth.js"
 
 /** Smart OCR permissions, checked on the server for every protected route. */
 export type Permission =
+  | "analytics.bi.read"
+  | "analytics.ds.read"
+  | "agentic.read"
   | "documents.read"
   | "documents.upload"
   | "invoice.correct"
@@ -17,6 +20,9 @@ export type Permission =
 // (organization financial rules) is reserved to administrators.
 const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   admin: [
+    "analytics.bi.read",
+    "analytics.ds.read",
+    "agentic.read",
     "documents.read",
     "documents.upload",
     "invoice.correct",
@@ -25,13 +31,16 @@ const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
     "erp.integrate",
     "settings.manage",
   ],
-  accountant: ["documents.read", "documents.upload", "invoice.correct", "invoice.approve"],
-  manager: ["documents.read", "documents.upload", "invoice.correct"],
-  commercial: [],
+  accountant: ["analytics.bi.read", "analytics.ds.read", "documents.read", "documents.upload", "invoice.correct", "invoice.approve"],
+  manager: ["analytics.bi.read", "analytics.ds.read", "agentic.read", "documents.read", "documents.upload", "invoice.correct"],
+  commercial: ["analytics.bi.read", "agentic.read"],
 }
 
+export const permissionsForRole = (role: Role | undefined): readonly Permission[] =>
+  role ? ROLE_PERMISSIONS[role] ?? [] : []
+
 export const hasPermission = (role: Role | undefined, permission: Permission) =>
-  !!role && (ROLE_PERMISSIONS[role] ?? []).includes(permission)
+  permissionsForRole(role).includes(permission)
 
 export function requirePermission(permission: Permission) {
   return (req: Request, res: Response, next: NextFunction) =>

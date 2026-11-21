@@ -6,7 +6,7 @@ import {
   type AgentKey, type Alert, type Audit, type Decision,
   type DecisionState, type Mission, type MissionState, type Priority,
 } from "./data"
-import { createLocalDemoSession, fetchRevenueGrowth, type RevenueResult } from "./api"
+import { createLocalDemoSession, fetchPlatformContext, fetchRevenueGrowth, type PlatformContext, type RevenueResult } from "./api"
 
 type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "connections" | "audit" | "settings"
 type ChatMessage = { role: "user" | "assistant"; content: string; time: string }
@@ -105,6 +105,7 @@ export default function App() {
     strategy: [{ role: "assistant", content: "Espace Business Strategy prêt. Les simulations et le service conversationnel sont en attente d'intégration.", time: "—" }],
   })
   const [token, setToken] = useState<string | null>(null)
+  const [platform, setPlatform] = useState<PlatformContext | null>(null)
   const [revenue, setRevenue] = useState<RevenueResult | null>(null)
   const [backendStatus, setBackendStatus] = useState<"disconnected" | "loading" | "connected" | "error">("disconnected")
   const [apiError, setApiError] = useState("")
@@ -120,16 +121,26 @@ export default function App() {
     if (!token) return
     const controller = new AbortController()
     setBackendStatus("loading")
-    fetchRevenueGrowth(token, agency, controller.signal).then((res) => {
-      setRevenue(res)
-      setBackendStatus("connected")
-      setApiError("")
-    }).catch((err: unknown) => {
-      if (controller.signal.aborted) return
-      setRevenue(null)
-      setBackendStatus("error")
-      setApiError(err instanceof Error ? err.message : "Erreur API")
-    })
+    void (async () => {
+      try {
+        const context = await fetchPlatformContext(token, controller.signal)
+        if (controller.signal.aborted) return
+        setPlatform(context)
+        const result = context.permissions.includes("agentic.read")
+          ? await fetchRevenueGrowth(token, agency, controller.signal)
+          : null
+        if (controller.signal.aborted) return
+        setRevenue(result)
+        setBackendStatus("connected")
+        setApiError(context.permissions.includes("agentic.read") ? "" : "Accès Revenue Growth non autorisé")
+      } catch (err: unknown) {
+        if (controller.signal.aborted) return
+        setRevenue(null)
+        setPlatform(null)
+        setBackendStatus("error")
+        setApiError(err instanceof Error ? err.message : "Erreur API")
+      }
+    })()
     return () => controller.abort()
   }, [token, agency])
 
@@ -178,10 +189,15 @@ export default function App() {
   }
   const disconnectSandbox = () => {
     setToken(null)
+    setPlatform(null)
     setRevenue(null)
     setBackendStatus("disconnected")
     setApiError("")
   }
+  const platformStatus = (key: "bi" | "dataScience" | "agentic") => platform?.platforms[key].status ?? "unavailable"
+  const hasPlatformPermission = (permission: PlatformContext["permissions"][number]) => platform?.permissions.includes(permission) ?? false
+  const platformLabel = (key: "bi" | "dataScience", permission: PlatformContext["permissions"][number]) =>
+    !platform ? "Non connectée" : hasPlatformPermission(permission) ? platformStatus(key) : "Accès refusé"
   const addMission = () => {
     const title = newTitle.trim()
     if (title.length < 5) {
@@ -440,8 +456,8 @@ export default function App() {
         <Stat icon="layers" label="Modèles DS validés" value="—" detail="Catalogue non connecté" />
       </div>
       <div className="connections-grid">
-        <Card title="Data Analyse (BI)" icon="chart"><div className="integration-header"><Avatar agent="revenue" size="large"/><div><b>Dashboard Data Analyse</b><p>Tableaux de bord et métriques métier</p></div><Pill tone="gray">Non connectée</Pill></div><div className="health-grid"><div><span>API</span><b>Non configurée</b></div><div><span>Synchronisation</span><b>—</b></div><div><span>Fraîcheur</span><b>Inconnue</b></div><div><span>Sources</span><b>À mapper</b></div></div><p className="muted-text">Prévoir un contrat KPI partagé, filtres agence/période et traçabilité par source.</p></Card>
-        <Card title="Data Science" icon="spark"><div className="integration-header"><Icon name="spark" size={36}/><div><b>Dashboard Data Science</b><p>Prédictions, modèles et validation</p></div><Pill tone="gray">Non connectée</Pill></div><div className="health-grid"><div><span>API</span><b>Non configurée</b></div><div><span>Modèles</span><b>Non inventoriés</b></div><div><span>Backtests</span><b>À valider</b></div><div><span>Versioning</span><b>À brancher</b></div></div><p className="muted-text">N'utiliser les scores et probabilités qu'avec modèles validés, versionnés et évalués temporellement.</p></Card>
+        <Card title="Data Analyse (BI)" icon="chart"><div className="integration-header"><Avatar agent="revenue" size="large"/><div><b>Dashboard Data Analyse</b><p>Tableaux de bord et métriques métier</p></div><Pill tone={platformStatus("bi") === "available" ? "green" : "gray"}>{platformLabel("bi", "analytics.bi.read")}</Pill></div><div className="health-grid"><div><span>Contrat</span><b>{platform?.contractVersion ?? "—"}</b></div><div><span>Périmètre</span><b>{platform?.principal.agencies === "*" ? "Toutes agences" : platform?.principal.agencies.join(", ") || "—"}</b></div><div><span>Statut</span><b>{platform ? platformStatus("bi") : "Non connectée"}</b></div><div><span>Permission</span><b>{platform ? hasPlatformPermission("analytics.bi.read") ? "Lecture" : "Absente" : "—"}</b></div></div><p className="muted-text">Les données restent soumises au tenant et au périmètre agence vérifiés par le serveur.</p></Card>
+        <Card title="Data Science" icon="spark"><div className="integration-header"><Icon name="spark" size={36}/><div><b>Dashboard Data Science</b><p>Analyses locales et validation</p></div><Pill tone="gray">{platformLabel("dataScience", "analytics.ds.read")}</Pill></div><div className="health-grid"><div><span>API</span><b>{platform ? platformStatus("dataScience") : "Non connectée"}</b></div><div><span>Modèles servis</span><b>{platform?.platforms.dataScience.modelServingVerified ? "Vérifiés" : "Aucun"}</b></div><div><span>Backtests</span><b>Locaux uniquement</b></div><div><span>Prédictions API</span><b>Désactivées</b></div></div><p className="muted-text">Aucun modèle serveur n'est vérifié. Le prototype Data Science conserve ses calculs locaux explicitement étiquetés.</p></Card>
         <Card title="Agentic Backend — Revenue Growth" icon="layers"><div className="integration-header"><Avatar agent="revenue" size="large"/><div><b>API gouvernée de démonstration</b><p>Express · RBAC · Isolation agence</p></div><Pill tone={backendStatus === "connected" ? "green" : backendStatus === "error" ? "red" : "gray"}>{backendStatus === "connected" ? "Connectée" : backendStatus === "loading" ? "Connexion..." : "Déconnectée"}</Pill></div><p className="muted-text">Testez la connexion uniquement sur votre poste local, avec AUTH_MODE=local-dev. Aucune clé n'est stockée dans le navigateur.</p>{apiError && <div className="error-banner">{apiError}</div>}<div className="horizontal-actions">{backendStatus === "connected" ? <Action icon="close" light onClick={disconnectSandbox}>Déconnecter</Action> : <Action icon="link" onClick={connectSandbox} disabled={backendStatus === "loading"}>Connecter sandbox local</Action>}<Action light icon="chart" onClick={() => navigate("agent", "revenue")}>Ouvrir Revenue Growth</Action></div></Card>
         <Card title="Qualité et gouvernance" icon="shield"><div className="governance-row"><Icon name="check" size={18}/><div><b>Données de démonstration identifiées</b><small>Jamais présentées comme données de production</small></div></div><div className="governance-row"><Icon name="check" size={18}/><div><b>Approbation humaine obligatoire</b><small>Les écritures ERP sont désactivées depuis ce dashboard</small></div></div><div className="governance-row"><Icon name="clock" size={18}/><div><b>Connexions inter-plateformes</b><small>Auth SSO, APIs, erreurs et métriques à implémenter</small></div></div></Card>
       </div>

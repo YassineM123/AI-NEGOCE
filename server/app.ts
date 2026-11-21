@@ -20,6 +20,7 @@ import {
   scopedAgencies,
 } from "./auth.js"
 import { hasPermission, requirePermission } from "./permissions.js"
+import { buildAnalyticsOverview, buildPlatformContext } from "./analytics-platform.js"
 import { loadConfig, type AppConfig } from "./config.js"
 import {
   defaultDataset,
@@ -359,9 +360,54 @@ export function createApp(deps = defaultDependencies()) {
       : !sandboxTenant(req)
         ? sandboxDenied(res)
         : next()
+  app.get("/api/v1/platform/context", async (req, res) => {
+    const sourceAvailable =
+      !(config.NODE_ENV === "production" && !erp.production) && sandboxTenant(req)
+    const result = buildPlatformContext({ principal: req.principal!, sourceAvailable })
+    res.setHeader("Cache-Control", "no-store")
+    return res.json(result)
+  })
+
+  app.get(
+    "/api/v1/analytics/overview",
+    requirePermission("analytics.bi.read"),
+    requireErpData,
+    async (req, res) => {
+      const parsed = z.object({ agency: z.string().max(80).optional() }).and(periodSchema).safeParse(req.query)
+      if (!parsed.success)
+        return res.status(400).json({
+          error: { code: "INVALID_REQUEST", message: "Filtres invalides", details: parsed.error.flatten() },
+        })
+      const scope = scopedAgencies(req, parsed.data.agency || "all")
+      if (scope === null)
+        return res.status(403).json({
+          error: { code: "AGENCY_FORBIDDEN", message: "Agence hors pÃ©rimÃ¨tre" },
+        })
+      const result = buildAnalyticsOverview({
+        principal: req.principal!,
+        organization: res.locals.organization as Organization,
+        scope,
+        from: parsed.data.from,
+        to: parsed.data.to,
+        dataset: data(),
+        // The unified analytics endpoint still reads the injected/local dataset.  Never
+        // label that data as ERP merely because the process runs in production.
+        sourceKind: "sandbox",
+      })
+      await tenant(req).audit({
+        actorId: req.principal!.id,
+        action: "analytics.overview.viewed",
+        resourceType: "analytics",
+        resourceId: result.snapshotId,
+        metadata: { scope, asOf: result.snapshot.asOf },
+      })
+      res.setHeader("Cache-Control", "no-store")
+      return res.json(result)
+    },
+  )
   app.get(
     "/api/v1/bi/overview",
-    requireRoles("admin", "manager", "accountant", "commercial"),
+    requirePermission("analytics.bi.read"),
     requireErpData,
     (req, res) => {
       const parsed = z
@@ -854,7 +900,7 @@ export function createApp(deps = defaultDependencies()) {
   // Revenue Growth Agent pilot: deterministic, scoped, read-only, no CRM or ERP writes.
   app.get(
     "/api/v1/agentic/revenue-growth/opportunities",
-    requireRoles("admin", "manager", "commercial"),
+    requirePermission("agentic.read"),
     requireErpData,
     async (req, res) => {
       const parsed = z.object({

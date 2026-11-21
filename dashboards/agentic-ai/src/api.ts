@@ -1,3 +1,5 @@
+import { platformContextSchema, type PlatformContext } from "../../../shared/contracts/analytics-platform"
+
 export type RevenueOpportunity = {
   customerId: string
   customerName: string
@@ -53,6 +55,19 @@ export async function createLocalDemoSession(signal?: AbortSignal): Promise<stri
   if (!token) throw new Error("Aucun jeton dans la réponse de session")
   return token
 }
+
+export async function fetchPlatformContext(token: string, signal?: AbortSignal): Promise<PlatformContext> {
+  const res = await fetch(API_BASE + "/api/v1/platform/context", {
+    headers: { Authorization: "Bearer " + token },
+    signal,
+  })
+  if (!res.ok) throw new Error("Contexte plateforme : HTTP " + res.status)
+  const parsed = platformContextSchema.safeParse(await res.json())
+  if (!parsed.success) throw new Error("Contrat du contexte plateforme invalide")
+  return parsed.data
+}
+
+export type { PlatformContext }
 
 export async function fetchRevenueGrowth(
   token: string,
