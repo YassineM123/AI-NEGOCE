@@ -6,7 +6,7 @@ COPY . .
 # The BI integration tests require a deterministic seeded SQLite sandbox.
 # .dockerignore intentionally excludes var/ so seed it inside the build stage;
 # never copy this test-only database to the production runtime image.
-RUN npm run db:seed && npm run typecheck && npm test && npm run build
+RUN npm run dataset:generate && npm run db:seed && npm run typecheck && npm test && npm run build
 
 FROM node:22-alpine AS runtime
 # A container must accept traffic on its interface, which is only allowed with the identity provider.
