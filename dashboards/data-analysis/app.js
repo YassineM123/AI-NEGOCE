@@ -1,4 +1,4 @@
-const ROOT='../data/extractions/';
+const ROOT='../../data/extractions/';
 const pages=[['overview','Synthese','Pilotage'],['direction','Vue consolidee','Pilotage'],['sales','Ventes & CA','Analyse commerciale'],['clients','Clients','Analyse commerciale'],['articles','Articles','Analyse commerciale'],['stock','Stock','Finance & operations'],['debts','Creances','Finance & operations'],['margin','Marges','Finance & operations'],['cash','Encaissements','Finance & operations'],['quality','Qualite des donnees','Validation'],['coverage','Couverture','Validation'],['orders','Commandes & devis','Maquettes - donnees simulees'],['promos','Promotions & prix','Maquettes - donnees simulees'],['scoring','Scoring','Maquettes - donnees simulees'],['packages','Paquets','Maquettes - donnees simulees'],['decisions','Centre des decisions','Maquettes - donnees simulees'],['extensions','Roadmap','Maquettes - donnees simulees']];
 const sources={
 overview:{path:'Restitutions > Journal des ventes',file:'ventes/ventes_quotidiennes_2026.csv',scope:'01/01/2026 - 20/10/2026',status:'Calcul SQL a rapprocher',proof:'PREUVES_NEGOCE/audit_journal_ventes_reouvert.png'},
