@@ -19,7 +19,7 @@ describe("Durable bounded missions — concurrency, resumption and tenant isolat
     expect(execution.status).toBe("completed")
     expect(execution.maxToolCalls).toBe(4)
     expect(execution.steps.map((s:{agent:string})=>s.agent))
-      .toEqual(["financial_strategy","supply_chain_intelligence"])
+      .toEqual(["financial_strategy","supply_chain_intelligence","business_strategy"])
     expect(execution.steps.every((s:{status:string})=>["completed","no_data"].includes(s.status)))
       .toBe(true)
     expect(execution.steps.every((s:{attemptedAt:string})=>Boolean(s.attemptedAt))).toBe(true)

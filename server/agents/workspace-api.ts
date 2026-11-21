@@ -241,7 +241,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
           failedTools:execution.steps.filter(t=>t.status==="failed").length,erpWrites:0,
         })
         return res.json({mission:paused,approval:null,partial:true,
-          executionMode:"durable_read_only",erpWrites:0})
+          executionMode:"read_only",persistenceMode:"checkpointed",resumeSupported:true,erpWrites:0})
       }
       const findings=execution.steps.reduce((n,t)=>n+t.findings,0)
       const facts=execution.steps.flatMap(t=>t.facts)
@@ -271,7 +271,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         toolCalls:execution.steps.length,attempts:execution.attempts,
         durationMs:trace.durationMs,modelCalls:0,
       })
-      return res.json({...result,executionMode:"durable_read_only",erpWrites:0})
+      return res.json({...result,executionMode:"read_only",persistenceMode:"checkpointed",resumeSupported:true,erpWrites:0})
     }catch(error){return apiError(res,error)}
   })
   app.get(base+"/approvals",requireRoles("admin","manager"),async(req,res)=>{
