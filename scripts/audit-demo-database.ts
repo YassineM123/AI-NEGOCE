@@ -1,6 +1,6 @@
 // Fails fast if IAINEG demo extraction headers, IDs, currency separation or
 // numeric precision are broken. Gaps in the extracts are reported, NOT filled.
-import { loadExtractedDemo } from "../server/demo-database.js"
+import { loadExtractedDemo, verifySyntheticComplements } from "../server/demo-database.js"
 
 const { dataset, quality } = loadExtractedDemo()
 if (quality.sales.distinctDocuments !== quality.sales.totalDocuments)
@@ -14,3 +14,4 @@ if (dataset.receivables.length || dataset.inventory.length)
 
 console.log("PHASE 2 · IAINEG pseudonymized extractions — DEMO ONLY")
 console.log(JSON.stringify(quality, null, 2))
+console.log("Synthetic scenario checks (SEPARATE from source KPIs):", JSON.stringify(verifySyntheticComplements()))
