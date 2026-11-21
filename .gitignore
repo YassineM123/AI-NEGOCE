@@ -6,3 +6,15 @@ dist/
 *.log
 Thumbs.db
 .DS_Store
+
+# Outputs locaux / profil navigateur (ne plus ajouter au dépôt)
+dist-agentic/
+tmp/
+test-results/
+playwright-report/
+.cache/
+var/
+*.sqlite
+*.sqlite3
+*.db
+datasets/synthetic/
