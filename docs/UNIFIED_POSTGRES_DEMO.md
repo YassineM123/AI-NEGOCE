@@ -8,7 +8,11 @@ Portail : http://127.0.0.1:8444 → backend : http://127.0.0.1:3001 → PostgreS
 ## Démarrage Windows / PowerShell
 - Mettre à jour la branche `feature/unified-ai-analytics-platform` et exécuter `npm ci`.
 - Dans `.env` (non commité), définir `NODE_ENV=development`, `AUTH_MODE=local-dev`, `HOST=127.0.0.1`, `UNIFIED_ANALYTICS_SOURCE=postgres` et `DATABASE_URL=postgresql://ai_negoce:<password>@127.0.0.1:5432/ai_negoce`. Définir aussi `POSTGRES_PASSWORD` pour Docker (même valeur). Changer le mot de passe d'exemple.
-- Dans le terminal 1, exécuter successivement : `npm run db:dev:up`, `npm run migrate`, `npm run dataset:generate`, `npm run db:seed`, `npm run analytics:seed -- --source=synthetic` et `npm run dev:api`.
+- Terminal 1 : `npm run db:dev:up`, puis `npm run migrate`.
+- Pour que la démo propose des ventes en **T3 et T4 2026** (le générateur standard s'arrête au 30 juin), utiliser PowerShell :
+  `$env:SYNTHETIC_PERIOD_END = "2026-10-20"` puis `npm run dataset:generate` puis `Remove-Item Env:SYNTHETIC_PERIOD_END`.
+  Ce scénario est **entièrement fictif** et ne modifie pas les exports IAINEG.
+- Ensuite : `npm run db:seed`, `npm run analytics:seed -- --source=synthetic` et `npm run dev:api`.
 - Terminal 2 : `npm run agentic:dev`. Terminal 3 facultatif pour rappels : `npm run agentic:worker`.
 - Ouvrir `http://127.0.0.1:8444` → « Plateformes BI / DS » → « Connecter la session sandbox ».
 
