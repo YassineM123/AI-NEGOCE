@@ -482,6 +482,44 @@ export default function App() {
   }
   function directorPage() {
     return <>
+      <Card title="Lancer une investigation multi-agents" icon="layers" action={<Pill tone={directorReport ? "green" : "blue"}>{directorReport ? "Rapport calculé" : "Mode read-only"}</Pill>}>
+        <div className="director-investigation">
+          <label htmlFor="director-objective">Objectif métier</label>
+          <textarea id="director-objective" className="director-objective" rows={2} maxLength={500}
+            value={directorObjective} onChange={(e)=>setDirectorObjective(e.target.value)}
+            placeholder="Ex. Analyse les clients à relancer, les créances et les ruptures de stock"/>
+          <div className="horizontal-actions">
+            <Action icon="play" disabled={!token || directorBusy} onClick={runDirector}>{directorBusy ? "Analyse en cours..." : "Analyser avec AI Director"}</Action>
+            {!token && <Action icon="database" light onClick={()=>navigate("connections")}>Connecter le sandbox</Action>}
+            <Pill tone="gray">Lecture seule · 4 spécialistes · aucune action ERP</Pill>
+          </div>
+        </div>
+        {directorError && <div className="error-banner">{directorError}</div>}
+        {directorReport && <>
+          <p className="source-note"><Icon name="database" size={15}/> Source : {directorReport.snapshot.source} · arrêté au {directorReport.snapshot.asOf} · périmètre : {directorReport.snapshot.scope === "*" ? "toutes les agences" : directorReport.snapshot.scope.join(", ")}</p>
+          <div className="stats-row stats-four director-result-stats">
+            <Stat icon="layers" label="Agents sollicités" value={directorReport.summary.agentsInvoked}/>
+            <Stat icon="target" label="Constats" value={directorReport.summary.totalFindings}/>
+            <Stat icon="shield" label="Revues humaines" value={directorReport.summary.requiresHumanReview ? "Requises" : "—"}/>
+            <Stat icon="check" label="Écritures ERP" value="0" detail="Read-only"/>
+          </div>
+          <div className="director-result-grid">
+            <div className="stack">
+              <Card title="Plan de délégation confirmé">
+                <div className="table-scroll"><table><thead><tr><th>Étape</th><th>Agent</th><th>Exécution</th><th>Résultat</th></tr></thead><tbody>{directorReport.plan.map((step)=><tr key={step.agent}><td>{step.step}</td><td>{step.agent.replace(/_/g," ")}</td><td><Pill tone="green">Read-only</Pill></td><td>{directorReport.sections.find((r)=>r.agent===step.agent)?.status==="ok"?"Analysé":"Données absentes"}</td></tr>)}</tbody></table></div>
+              </Card>
+              <Card title="Constats priorisés">
+                {directorReport.highlights.length ? directorReport.highlights.map((item)=><div className="recommendation" key={item.agent+item.id}><div className="recommendation-top"><Icon name="target" size={18}/><b>{item.title}</b><Pill tone={item.priority==="high"?"red":item.priority==="medium"?"amber":"blue"}>{item.priority}</Pill></div><p>{item.explanation}</p><div className="evidence-items">{item.evidence.slice(0,4).map((e,i)=><span key={e.id+i}><Icon name="document" size={14}/>{e.agency} · {e.id}</span>)}</div><p className="source-note">Spécialiste : {item.agent.replace(/_/g," ")} · Brouillon / validation humaine</p></div>)
+                : <Empty title="Aucun constat" text="Les données disponibles ne permettent pas de prioriser une action."/>}
+              </Card>
+            </div>
+            <Card title="Contrôles & limites">
+              {directorReport.warnings.map((w,i)=><div className="governance-row" key={i}><Icon name="alert" size={17}/><div><small>{w}</small></div></div>)}
+              <p className="muted-text">Les chiffres des autres dashboards BI/DS ne sont pas encore consommés en temps réel. Un dossier persistant et un modèle de conversation autonome restent à implémenter.</p>
+            </Card>
+          </div>
+        </>}
+      </Card>
       <div className="stats-row stats-four">
         <Stat icon="layers" label="Agents coordonnables" value="4" detail="4 moteurs déterministes read-only" />
         <Stat icon="calendar" label="Missions enregistrées" value={missions.length} />
@@ -490,15 +528,15 @@ export default function App() {
       </div>
       <div className="director-grid">
         <div className="stack">
-          <Card title="Orchestration des agents — Délégation et coordination" action={<Pill tone="gray">Prototype de visualisation</Pill>}>{orchestrator()}</Card>
+          <Card title="Orchestration des agents — Délégation et coordination" action={<Pill tone="blue">Moteur API disponible</Pill>}>{orchestrator()}</Card>
           <Card title="Planification de mission" action={<Action light icon="plus" onClick={() => setMissionModal(true)}>Nouvelle mission</Action>}>
-            <p className="muted-text">Répartition prévue des sous-tâches. Le plan multi-agents n'est pas encore exécuté automatiquement.</p>
+            <p className="muted-text">Les missions ci-dessous sont des exemples visuels. Le plan API confirmé apparaît en haut après exécution.</p>
             <div className="director-work"><div><Icon name="target" /><span><b>{activeMission.id} — {activeMission.title}</b><small>Priorité : {priorityLabel[activeMission.priority]} · Progression : {activeMission.progress} %</small></span></div><Progress value={activeMission.progress}/></div>
             <div className="table-scroll"><table><thead><tr><th>Étape</th><th>Agent</th><th>Statut</th><th>Avancement</th></tr></thead><tbody>{agents.map((a, i) => <tr key={a.id}><td>{["Analyse clients", "Projection financière", "Évaluation stocks", "Arbitrage stratégique"][i]}</td><td><AgentLabel agent={a.id}/></td><td><Pill tone={a.implemented ? "green" : "gray"}>{a.implemented ? "MVP" : "À intégrer"}</Pill></td><td>{a.implemented ? "API disponible" : "Non exécutée"}</td></tr>)}</tbody></table></div>
           </Card>
         </div>
         <div className="stack">
-          <Card title="Synthèse du Director" action={<Pill tone="amber">Moteur à développer</Pill>}><div className="detail-highlight"><Icon name="target" size={22}/><div><b>Prochaine action recommandée</b><p>Finaliser les contrats d'API BI/Data Science et le workflow d'approbation avant l'orchestration autonome.</p></div></div><div className="check-list"><p><Icon name="check" size={17}/> Revenue Growth : première API spécialisée présente</p><p><Icon name="check" size={17}/> Interface de pilotage React créée</p><p><Icon name="clock" size={17}/> AI Director : planificateur à construire</p><p><Icon name="clock" size={17}/> 3 autres agents : non intégrés</p></div><div className="horizontal-actions"><Action icon="plus" onClick={() => setMissionModal(true)}>Créer un plan</Action><Action light icon="document" onClick={() => navigate("decisions")}>Décisions</Action></div></Card>
+          <Card title="Synthèse du Director" action={<Pill tone="blue">Orchestration read-only</Pill>}><div className="detail-highlight"><Icon name="target" size={22}/><div><b>Prochaine action recommandée</b><p>Les quatre Agents calculent des constats en lecture seule. Les validations et actions ERP exigent encore un backend de décisions persistant.</p></div></div><div className="check-list"><p><Icon name="check" size={17}/> Revenue Growth, Financial, Supply Chain, Business : API disponibles</p><p><Icon name="check" size={17}/> Interface de pilotage React créée</p><p><Icon name="clock" size={17}/> AI Director : orchestration read-only implémentée</p><p><Icon name="clock" size={17}/> Actions métier et notifications persistantes à développer</p></div><div className="horizontal-actions"><Action icon="plus" onClick={() => setMissionModal(true)}>Créer un plan</Action><Action light icon="document" onClick={() => navigate("decisions")}>Décisions</Action></div></Card>
           <Card title="Arbitrages en attente">{pendingDecisions.slice(0, 3).map((d) => <button key={d.id} type="button" className="alert-inline" onClick={() => { setDecisionId(d.id); navigate("decisions") }}><span className="alert-marker marker-amber"><Icon name="alert" size={17}/></span><span><b>{d.title}</b><small>{d.risk} · {byAgent(d.agent).name}</small></span><Icon name="chevron" size={16}/></button>)}</Card>
           <Card title="Demandes à traiter"><button className="director-request" onClick={() => setMissionModal(true)}><Icon name="target"/><span><b>Lancer une investigation</b><small>Créer une mission pour l'agent adapté</small></span><Icon name="chevron"/></button></Card>
         </div>
