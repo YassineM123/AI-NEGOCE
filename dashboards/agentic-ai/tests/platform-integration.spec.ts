@@ -54,6 +54,7 @@ function overviewFixture(params: URLSearchParams) {
           trainedThrough:null,trainingMonths:1,
           backtest:{holdoutMonths:0,wape:null,bias:null,thresholdWape:0.35},
           predictions:[],verifiedProduction:false,warnings:["historique insuffisant"]},
+        skuDemand:{status:"pilot_not_certified",eligibleForAutonomousActions:false,quantityCoverage:{salesRows:2,withQuantity:0},evaluated:0,backtested:0,results:[],warnings:["Aucune quantité source"]},
         inventory:{status:"not_available",periodApplicable:false,positions:0,positionsWithThreshold:0,
           belowReorder:0,topBelow:[]},
         cash:{status:"not_available",asOf:"2026-10-31",
