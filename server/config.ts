@@ -26,6 +26,8 @@ const schema = z.object({
   OIDC_ORGANIZATION_CLAIM: z.string().min(1).default("org_id"),
   // Organization allowed to read the synthetic SQLite ERP sandbox (never used in production).
   ERP_SANDBOX_ORGANIZATION: z.string().min(1).default("demo-fictive"),
+  // Explicitly opt into pseudonymized client demo CSV extracts; never production.
+  DEMO_DATA_SOURCE: z.enum(["synthetic", "extractions"]).default("synthetic"),
   ERP_BASE_URL: z.string().url().optional(),
   ERP_API_TOKEN: z.string().min(16).optional(),
   OCR_PROVIDER: z.enum(["disabled", "http", "local"]).default("disabled"),
@@ -45,6 +47,8 @@ export type AppConfig = Omit<z.infer<typeof schema>, "AUTH_MODE"> & {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const config = schema.parse(env)
+  if (config.NODE_ENV === "production" && config.DEMO_DATA_SOURCE === "extractions")
+    throw new Error("DEMO_DATA_SOURCE=extractions is forbidden in production")
   if (config.NODE_ENV === "production") {
     const missing = [
       "AUTH_MODE",
