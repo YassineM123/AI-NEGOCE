@@ -375,6 +375,52 @@ export default function App() {
     navigate("missions")
   }
 
+
+  function sharedSnapshotPanel() {
+    if (!sharedOverview) return token && sharedError
+      ? <div className="no-connection" role="status">API analytique : {sharedError}</div>
+      : null
+    const x = sharedOverview
+    return <section className="shared-global-kpis" data-platform-app="agentic"
+      data-platform-snapshot={x.snapshotId} aria-label="Snapshot analytique commun">
+      <div><strong>Snapshot partagé — BI / Data Science / Agentic</strong>
+        <span>{x.snapshot.source} · arrêté au {x.snapshot.asOf} · {x.snapshot.isSynthetic ? "Données synthétiques" : "Source à vérifier"}</span></div>
+      <div><small>CA HT · TND</small><b data-shared-kpi="revenue">{x.bi.data.revenue.toFixed(3)}</b></div>
+      <div><small>Créances · TND</small><b data-shared-kpi="receivables">{x.bi.data.receivables.toFixed(3)}</b></div>
+      <div><small>Agence / Période</small><b>{x.scope === "*" ? "Toutes" : x.scope.join(", ")} · {period}</b></div>
+    </section>
+  }
+  function platformsPage() {
+    const src = portalTab === "bi" ? "/platform/bi/" : "/platform/ds/"
+    return <>
+      <Card title="Accès unifié aux trois applications" action={<Pill tone={token ? "green" : "amber"}>{token ? "Session centrale ouverte" : "Session déconnectée"}</Pill>}>
+        <p className="muted-text">Même origine, même identité et même période / agence. Les cartes API partagées ont la même source, tandis que les anciens graphiques locaux BI/DS restent clairement distincts et non certifiés ERP.</p>
+        <div className="horizontal-actions">
+          {token ? <Action light icon="close" onClick={disconnectSandbox}>Déconnecter les 3 plateformes</Action>
+            : <Action icon="link" onClick={connectSandbox}>Connecter la session sandbox</Action>}
+          <Pill tone="gray">Jeton conservé dans le Command Center seulement</Pill>
+        </div>
+      </Card>
+      <div className="platform-tabs" role="tablist" aria-label="Choisir la plateforme">
+        <button type="button" role="tab" aria-selected={portalTab === "bi"}
+          onClick={() => setPortalTab("bi")}>Data Analyse · BI</button>
+        <button type="button" role="tab" aria-selected={portalTab === "ds"}
+          onClick={() => setPortalTab("ds")}>Data Science · Studio</button>
+      </div>
+      <div className="platform-frame-wrap">
+        <iframe key={src} ref={iframeRef} src={src}
+          title={portalTab === "bi" ? "Data Analyse" : "Data Science"}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-downloads"
+          onLoad={() => iframeRef.current?.contentWindow?.postMessage({
+            type: "AI_NEGOCE_BRIDGE_STATE",
+            revision: bridgeVersion.current,
+            connected: Boolean(token),
+            filters: sharedFilters,
+          }, window.location.origin)}
+        />
+      </div>
+    </>
+  }
   function overview() {
     return <>
       <div className="stats-row stats-five">
