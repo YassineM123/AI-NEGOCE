@@ -285,6 +285,7 @@ export default function App() {
   const disconnectSandbox = () => {
     setToken(null)
     setPlatform(null)
+    setSharedOverview(null)
     setRevenue(null)
     setSpecialistReports({})
     setSpecialistErrors({})
@@ -747,12 +748,13 @@ export default function App() {
     </>
   }
 
-  const title = page === "overview" ? "Centre de commandement — Agentic AI" : page === "missions" ? "Centre de missions" : page === "agents" ? "Mes agents" : page === "director" ? "AI Director — Orchestration centrale" : page === "decisions" ? "Décisions et approbations" : page === "connections" ? "Connexions BI / Data Science" : page === "audit" ? "Historique & audit" : page === "settings" ? "Paramètres" : byAgent(selectedAgent).name + " Agent"
+  const title = page === "overview" ? "Centre de commandement — Agentic AI" : page === "missions" ? "Centre de missions" : page === "agents" ? "Mes agents" : page === "director" ? "AI Director — Orchestration centrale" : page === "decisions" ? "Décisions et approbations" : page === "connections" ? "Connexions BI / Data Science" : page === "platforms" ? "Plateformes — BI et Data Science" : page === "audit" ? "Historique & audit" : page === "settings" ? "Paramètres" : byAgent(selectedAgent).name + " Agent"
   const subtitle = page === "overview" ? "Orchestration des agents IA, suivi des missions, décisions et impact business sur l'ERP."
     : page === "missions" ? "Suivez les missions de l'ensemble des agents et contrôlez les étapes de validation."
     : page === "agents" ? "Parlez à chaque agent et suivez les recommandations, notifications et analyses."
     : page === "director" ? "Pilotage central, délégation des missions et arbitrage métier."
     : page === "decisions" ? "Revue et validation humaine des recommandations proposées par les agents."
+    : page === "platforms" ? "Les applications utilisent la même session et le même snapshot analytique."
     : page === "connections" ? "Suivi des connexions, synchronisations et contrats d'API."
     : page === "audit" ? "Traçabilité de l'activité, des décisions et des opérations."
     : page === "settings" ? "Personnalisez les préférences et supervisez la configuration." : ""
@@ -768,7 +770,8 @@ export default function App() {
       <main className="main-content">
         {page !== "agent" && <div className="page-heading"><div><div className="breadcrumb">AI-NÉGOCE / AGENTIC INTELLIGENCE</div><h1>{title}</h1><p>{subtitle}</p></div><div className="heading-actions"><Action light icon="refresh" onClick={() => { if (token) { setToken(null); setRevenue(null); setBackendStatus("disconnected"); setToast("Session API fermée. Reconnectez le sandbox pour actualiser."); } else setToast("Aucune source connectée à rafraîchir.") }}>Rafraîchir</Action>{(page === "overview" || page === "missions" || page === "director") && <Action icon="play" onClick={() => setMissionModal(true)}>Lancer une mission</Action>}</div></div>}
         <div className="demo-banner"><Icon name="alert" size={17}/><span><strong>Mode démonstration.</strong> Les missions, notifications et décisions sont illustratives. Seul Revenue Growth peut lire l'API sandbox après connexion ; aucune action ERP n'est exécutée.</span><SmallLink onClick={() => navigate("connections")}>Connexions</SmallLink></div>
-        {page === "overview" ? overview() : page === "missions" ? missionsPage() : page === "agents" ? agentsPage() : page === "agent" ? agentPage() : page === "director" ? directorPage() : page === "decisions" ? decisionsPage() : page === "connections" ? connectionsPage() : page === "audit" ? auditPage() : settingsPage()}
+        {sharedSnapshotPanel()}
+        {page === "overview" ? overview() : page === "missions" ? missionsPage() : page === "agents" ? agentsPage() : page === "agent" ? agentPage() : page === "director" ? directorPage() : page === "decisions" ? decisionsPage() : page === "platforms" ? platformsPage() : page === "connections" ? connectionsPage() : page === "audit" ? auditPage() : settingsPage()}
       </main>
     </div>
     {notificationOpen && <div className="notifications-popover"><div className="popover-head"><b>Notifications ({unread})</b><button aria-label="Fermer" className="icon-button" onClick={() => setNotificationOpen(false)}><Icon name="close"/></button></div>{alerts.map((n) => <button type="button" key={n.id} className={"popover-notice " + (!n.seen ? "unread" : "")} onClick={() => readAlert(n)}><span className={"alert-marker marker-" + priorityTone[n.priority]}><Icon name="bell" size={17}/></span><span><b>{n.title}</b><small>{n.detail}</small><em>{n.timestamp}</em></span></button>)}</div>}
