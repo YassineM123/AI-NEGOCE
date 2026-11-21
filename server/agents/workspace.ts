@@ -66,6 +66,7 @@ export type MissionExecution={
 
 export type WorkspaceMission = {
   id: string; agency: string; agent: AgentKey; objective: string; title: string
+  from?:string;to?:string
   createdBy: string; status: MissionStatus; dueAt: string | null
   version: number; createdAt: string; updatedAt: string
   steps?: WorkspaceStep[]
@@ -90,6 +91,7 @@ export type WorkspaceNotification = {
 }
 export type WorkspaceMessage = {
   id: string; turnId: string; userId: string; agency: string
+  from?:string;to?:string
   agent: AgentKey; role: "user" | "assistant"; content: string
   sources: string[]; model: string | null; createdAt: string
   usage?: {promptTokens:number|null;completionTokens:number|null;totalTokens:number|null;
@@ -196,7 +198,8 @@ export class AgenticWorkspace {
       .sort((a,b) => b.createdAt.localeCompare(a.createdAt)))
   }
   createMission(org: string, actor: Actor, input: {
-    agency: string; agent: AgentKey; title: string; objective: string; dueAt?: string
+    agency: string; agent: AgentKey; title: string; objective: string; dueAt?: string;
+    from?:string;to?:string
   }) {
     if (!visibleAgency(input.agency,actor)) throw new WorkspaceForbidden()
     return this.visit(org, true, (w) => {
@@ -204,7 +207,7 @@ export class AgenticWorkspace {
       const at=now()
       const mission:WorkspaceMission={
         id:uuid(), agency:input.agency, agent:input.agent,
-        title:input.title, objective:input.objective,
+        title:input.title, objective:input.objective,from:input.from,to:input.to,
         createdBy:actor.id, status:"draft", dueAt:input.dueAt ?? null,
         version:1, createdAt:at, updatedAt:at, lastRun:null,
         steps:createSteps(at,actor.id),
@@ -586,10 +589,11 @@ export class AgenticWorkspace {
       return item
     })
   }
-  listChat(org:string,actor:Actor,agent:AgentKey,agency:string) {
+  listChat(org:string,actor:Actor,agent:AgentKey,agency:string,period:{from?:string;to?:string}={}) {
     if (agency!=="all" && !visibleAgency(agency,actor)) throw new WorkspaceForbidden()
     return this.visit(org,false,(w)=>w.messages.filter((m)=>
-      m.userId===actor.id && m.agent===agent && m.agency===agency).slice(-30))
+      m.userId===actor.id && m.agent===agent && m.agency===agency&&
+      m.from===period.from&&m.to===period.to).slice(-30))
   }
   releaseLlmTurn(org:string,actor:Actor,turnId:string){
     return this.visit(org,true,w=>{
@@ -608,23 +612,25 @@ export class AgenticWorkspace {
     })
   }
   saveChat(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string,
-    question:string,answer:string,sources:string[],model:string,usage?:WorkspaceMessage["usage"]) {
+    question:string,answer:string,sources:string[],model:string,usage?:WorkspaceMessage["usage"],
+    period:{from?:string;to?:string}={}) {
     if(agency!=="all" && !visibleAgency(agency,actor)) throw new WorkspaceForbidden()
     return this.visit(org,true,(w)=>{
       const existing=w.messages.find((m)=>m.turnId===turnId&&m.role==="assistant"&&m.userId===actor.id)
       if(existing){
         const user=w.messages.find(m=>m.turnId===turnId&&m.role==="user"&&m.userId===actor.id)
-        if(existing.agent!==agent||existing.agency!==agency||user?.content!==question)
+        if(existing.agent!==agent||existing.agency!==agency||user?.content!==question||
+          existing.from!==period.from||existing.to!==period.to)
           throw new WorkspaceConflict("Identifiant de conversation déjà utilisé pour un autre contenu")
         return existing
       }
       const createdAt=now()
       w.messages.push({
-        id:uuid(),turnId,userId:actor.id,agency,agent,role:"user",
+        id:uuid(),turnId,userId:actor.id,agency,from:period.from,to:period.to,agent,role:"user",
         content:question,sources:[],model:null,createdAt,
       })
       const assistant:WorkspaceMessage={
-        id:uuid(),turnId,userId:actor.id,agency,agent,role:"assistant",
+        id:uuid(),turnId,userId:actor.id,agency,from:period.from,to:period.to,agent,role:"assistant",
         content:answer,sources:sources.slice(0,40),model,createdAt:now(),
         ...(usage?{usage}:{}),
       }
@@ -688,13 +694,17 @@ export class AgenticWorkspace {
         organizationCallsToday:orgPrevious+1,organizationDailyLimit:tenantDailyLimit}
     })
   }
-  getTurn(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string,question?:string) {
+  getTurn(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string,question?:string,
+    period:{from?:string;to?:string}={}) {
     return this.visit(org,false,w=>{
       const assistant=w.messages.find(m=>m.turnId===turnId&&m.userId===actor.id&&
         m.agent===agent&&m.agency===agency&&m.role==="assistant")
+      if(assistant&&(assistant.from!==period.from||assistant.to!==period.to))
+        throw new WorkspaceConflict("Tour déjà associé à une autre période")
       if(assistant&&question!==undefined){
         const user=w.messages.find(m=>m.turnId===turnId&&m.userId===actor.id&&
-          m.agent===agent&&m.agency===agency&&m.role==="user")
+          m.agent===agent&&m.agency===agency&&m.role==="user"&&
+          m.from===period.from&&m.to===period.to)
         if(!user||user.content!==question)throw new WorkspaceConflict("Tour de conversation réutilisé avec une question différente")
       }
       return assistant
