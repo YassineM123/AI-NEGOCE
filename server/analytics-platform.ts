@@ -54,6 +54,7 @@ export function buildAnalyticsOverview(input: {
   sourceKind: "sandbox" | "erp"
 }): AnalyticsOverview {
   const bi = overview({ agencies: input.scope, from: input.from, to: input.to }, input.dataset)
+  const pseudonymizedExtract = input.dataset.metadata.source.includes("Database/extractions")
   const snapshotKey = JSON.stringify({
     organizationId: input.principal.organizationId,
     scope: input.scope,
@@ -84,6 +85,13 @@ export function buildAnalyticsOverview(input: {
       availableAgents: hasPermission(input.principal.role, "agentic.read")
         ? ["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"] : [],
     },
-    warnings: ["Aucun service de modeles Data Science n'est configure ou verifie."],
+    warnings: [
+      "Aucun service de modeles Data Science n'est configure ou verifie.",
+      ...(pseudonymizedExtract ? [
+        "DEMONSTRATION : extraits IAINEG pseudonymises, non rapproches avec les editions officielles.",
+        "KPI CA en TND uniquement. EUR/USD exclus des sommes ; aucune conversion FX implicite.",
+        "Ventes sans agence, couts non fournis, creances sans echeances detaillees, PMP manquant : ces KPI ne sont pas disponibles.",
+      ] : []),
+    ],
   })
 }
