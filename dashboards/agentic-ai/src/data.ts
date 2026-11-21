@@ -58,9 +58,9 @@ export type Audit = {
 
 export const agents: AgentInfo[] = [
   { id: "revenue", name: "Revenue Growth", subtitle: "Développement commercial", icon: "chart", accent: "#075bf1", category: "Croissance", implemented: true, description: "Identification des clients à relancer, évolution du chiffre d'affaires et opportunités de croissance." },
-  { id: "finance", name: "Financial Strategy", subtitle: "Finance et trésorerie", icon: "coins", accent: "#0c7bca", category: "Finance", implemented: false, description: "Analyse des créances, gestion de trésorerie et simulations de scénarios financiers." },
-  { id: "supply", name: "Supply Chain Intelligence", subtitle: "Stocks et achats", icon: "cube", accent: "#1465e9", category: "Opérations", implemented: false, description: "Anticipation des ruptures, couverture de stocks et aide au réapprovisionnement." },
-  { id: "strategy", name: "Business Strategy", subtitle: "Décisions stratégiques", icon: "layers", accent: "#304ac2", category: "Stratégie", implemented: false, description: "Évaluation des scénarios d'investissement et pilotage des orientations commerciales." },
+  { id: "finance", name: "Financial Strategy", subtitle: "Finance et trésorerie", icon: "coins", accent: "#0c7bca", category: "Finance", implemented: true, description: "Analyse des créances, gestion de trésorerie et simulations de scénarios financiers." },
+  { id: "supply", name: "Supply Chain Intelligence", subtitle: "Stocks et achats", icon: "cube", accent: "#1465e9", category: "Opérations", implemented: true, description: "Anticipation des ruptures, couverture de stocks et aide au réapprovisionnement." },
+  { id: "strategy", name: "Business Strategy", subtitle: "Décisions stratégiques", icon: "layers", accent: "#304ac2", category: "Stratégie", implemented: true, description: "Évaluation des scénarios d'investissement et pilotage des orientations commerciales." },
 ]
 export const byAgent = (id: AgentKey) => agents.find((agent) => agent.id === id)!
 

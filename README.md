@@ -9,7 +9,7 @@ Cette branche regroupe **trois espaces distincts** dans un seul dépôt Git : Da
 - [`dashboards/data-science/`](dashboards/data-science/) — prototype autonome
   d’analyse, de simulation et de suivi des actions commerciales.
 - [`dashboards/agentic-ai/`](dashboards/agentic-ai/) — **troisième dashboard React**, Centre de commandement Agentic AI (missions, agents, conversation, Director, décisions, alertes, audit et connexions).
-- [`server/agents/revenue-growth.ts`](server/agents/revenue-growth.ts) — **premier agent Revenue Growth** (classement explicable, lecture seule). Route API et tests associés dans `server/app.ts` et `server/agents/`.
+- [`server/agents/revenue-growth.ts`](server/agents/revenue-growth.ts) — premier moteur Revenue Growth ; autres moteurs métier et AI Director dans `server/agents/`, avec APIs gouvernées dans `server/app.ts`.
 - [`server/`](server/) et [`migrations/`](migrations/) — backend Express, règles d'authentification, stockage et routes API.
 - [`docs/`](docs/) — audit, rapport, plans fonctionnels et plan de l’application.
 - [`data/`](data/) — dictionnaires, catalogues, mappings et extractions.
@@ -60,16 +60,18 @@ npm run agentic:dev
 - Agentic AI : http://127.0.0.1:8444/
 - Code : [dashboards/agentic-ai](dashboards/agentic-ai/)
 
-**Premier agent — backend sandbox facultatif** : configurer `.env` en local selon [le guide backend](dashboards/agentic-ai/README.md), puis démarrer `npm run dev:api` (API sur 127.0.0.1:3001). Dans le Dashboard Agentic, ouvrir « Connexions BI / Data Science », puis « Connecter sandbox local ».
+**Agents métier et AI Director — backend sandbox facultatif** : configurer `.env` en local selon [le guide backend](dashboards/agentic-ai/README.md), puis démarrer `npm run dev:api` (API sur 127.0.0.1:3001). Dans le Dashboard Agentic, ouvrir « Connexions BI / Data Science », puis « Connecter sandbox local ».
 
 ```bash
 npm run agentic:typecheck
 npm run agentic:build
-npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts
+npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts
 npx playwright test --config dashboards/agentic-ai/playwright.config.ts
 ```
 
-Le mode sandbox utilise des fixtures de test, pas des chiffres de l'entreprise. **Les opérations d'approbation et les notifications sont des simulations UI, sans écriture dans l'ERP**. Les autres agents, AI Director autonome, et le lien API BI/Data Science restent à développer.
+Le mode sandbox utilise des fixtures de test, pas des chiffres de l'entreprise. **Les opérations d'approbation et les notifications sont des simulations UI, sans écriture dans l'ERP**. Les quatre moteurs métier et le Director read-only sont développés ; leur orchestration LLM autonome, la persistance des missions/approbations, et les APIs BI/Data Science restent à développer.
+
+Documentation détaillée : [AI Director et quatre Agents — MVP](docs/agentic/ai-director-specialists-mvp.md).
 
 ## Règles de développement — branche canonique
 
