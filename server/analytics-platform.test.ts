@@ -35,7 +35,7 @@ describe("analytics platform API", () => {
     expect(platformContextSchema.safeParse(response.body).success).toBe(true)
     expect(response.body.principal.agencies).toEqual(["Sfax"])
     expect(response.body.platforms.dataScience).toEqual({
-      status: "not_configured",
+      status: "available",
       modelServingVerified: false,
     })
   })
@@ -57,11 +57,13 @@ describe("analytics platform API", () => {
     expect(first.body.insights.summary.documentCount).toBe(first.body.bi.data.recordCount)
     expect(first.body.insights.currency).toBe("TND")
     expect(first.body.insights.coverage.modelServingVerified).toBe(false)
-    expect(first.body.dataScience).toEqual({
-      status: "not_configured",
-      modelServingVerified: false,
-      predictions: [],
-    })
+    expect(first.body.dataScience.status).toBe("available")
+    expect(first.body.dataScience.modelServingVerified).toBe(false)
+    expect(first.body.dataScience.predictions).toEqual([])
+    expect(first.body.dataScience.analysis.version).toBe("ds-scoped-v1")
+    expect(first.body.dataScience.analysis.scenarios.basisRevenueTnd).toBe(first.body.bi.data.revenue)
+    expect(first.body.dataScience.analysis.portfolio.customers).toBe(first.body.insights.summary.customerCount)
+    expect(first.body.dataScience.analysis.forecast.verifiedProduction).toBe(false)
     expect(store.audits.some((event) => event.action === "analytics.overview.viewed")).toBe(true)
   })
 
@@ -104,6 +106,8 @@ describe("analytics platform API", () => {
         computeBiOverview({ agencies: ["Sfax"], ...period }, defaultDataset()).receivables,
       )
       expect(response.body.dataScience.modelServingVerified).toBe(false)
+      expect(response.body.dataScience.analysis.scenarios.basisRevenueTnd).toBe(response.body.bi.data.revenue)
+      expect(response.body.dataScience.analysis.trend.months).toEqual(response.body.insights.months)
       expect(response.body.agentic.availableAgents).toHaveLength(4)
       snapshots.push(response.body.snapshotId)
     }
@@ -112,6 +116,11 @@ describe("analytics platform API", () => {
       .query({ agency: "Tunis Centre", ...periods[0] })
       .set(bearer("dev-manager-sfax"))
     expect(denied.status).toBe(403)
+    const commercial=await request(app).get("/api/v1/analytics/overview?agency=Tunis%20Centre")
+      .set(bearer("dev-commercial-tunis"))
+    expect(commercial.status).toBe(200)
+    expect(commercial.body.dataScience.status).toBe("forbidden")
+    expect(commercial.body.dataScience.analysis).toBeUndefined()
   })
 
   it("rejects invalid periods", async () => {
