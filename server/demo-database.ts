@@ -221,3 +221,44 @@ export function loadExtractedDemo(root = DEMO_EXTRACT_ROOT): {
   }
   return { dataset, quality }
 }
+
+/** Independently validate fictional purchasing/cash-flow scenarios.
+ * They are deliberately NOT merged into the IAINEG analytics Dataset. */
+export function verifySyntheticComplements(root = DEMO_EXTRACT_ROOT) {
+  const deliveries = readTable(root,
+    "demonstration/fournisseurs_livraisons_demo_synthetique.csv",
+    ["commande_id", "quantite_commandee", "quantite_recue", "date_reception", "etat"])
+  const treasury = readTable(root,
+    "demonstration/plan_tresorerie_demo_synthetique.csv",
+    ["mois", "scenario", "solde_initial_tnd", "encaissements_prevus_tnd",
+      "decaissements_prevus_tnd", "solde_final_tnd"])
+  const orders = new Set<string>()
+  for (const row of deliveries) {
+    if (orders.has(row.commande_id)) throw new Error("Duplicate fictional purchase order")
+    orders.add(row.commande_id)
+    const ordered = milli(row.quantite_commandee, "ordered quantity")
+    const received = milli(row.quantite_recue, "received quantity")
+    if (received < 0 || ordered < received) throw new Error("Invalid fictional delivery quantities")
+    if (row.etat === "attente" && (received !== 0 || row.date_reception))
+      throw new Error("Pending fictional delivery has already been received")
+    if (row.etat !== "attente" && !row.date_reception)
+      throw new Error("Fictional delivery has no receipt date")
+  }
+  let priorMonth = ""
+  let priorClose: number | null = null
+  for (const row of treasury) {
+    if (row.scenario !== "hypothese_base" || row.mois <= priorMonth)
+      throw new Error("Fictional cash plan must be sorted and isolated to one scenario")
+    const opening = milli(row.solde_initial_tnd, "opening cash")
+    const inflows = milli(row.encaissements_prevus_tnd, "cash inflows")
+    const outflows = milli(row.decaissements_prevus_tnd, "cash outflows")
+    const closing = milli(row.solde_final_tnd, "closing cash")
+    if (opening + inflows - outflows !== closing ||
+      (priorClose !== null && opening !== priorClose))
+      throw new Error("Fictional cash plan does not reconcile")
+    priorMonth = row.mois
+    priorClose = closing
+  }
+  return { demoOnly: true as const, source: "synthetic_scenarios" as const,
+    supplierDeliveries: deliveries.length, cashPlanMonths: treasury.length }
+}
