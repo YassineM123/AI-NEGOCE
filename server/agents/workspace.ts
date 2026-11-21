@@ -234,9 +234,10 @@ export class AgenticWorkspace {
       return assistant
     })
   }
-  getTurn(org:string,actor:Actor,turnId:string) {
+  getTurn(org:string,actor:Actor,agent:AgentKey,agency:string,turnId:string) {
     return this.visit(org,false,(w)=>w.messages.find((m)=>
-      m.turnId===turnId&&m.userId===actor.id&&m.role==="assistant"))
+      m.turnId===turnId&&m.userId===actor.id&&m.agent===agent
+      &&m.agency===agency&&m.role==="assistant"))
   }
   /**
    * Worker process: due reminders are deduplicated by mission and calendar date.
