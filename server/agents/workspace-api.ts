@@ -171,7 +171,8 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     if(scope(req,parse.data.agency)===null)return fail(res)
     try {
       const mission=await workspace.createMission(org(req),actor(req),parse.data)
-      await audit(req,"mission.created",mission.id,{agency:mission.agency,agent:mission.agent})
+      await audit(req,"mission.created",mission.id,{agency:mission.agency,agent:mission.agent,
+        from:mission.from??null,to:mission.to??null})
       return res.status(201).json({mission})
     } catch(error){return apiError(res,error)}
   })
@@ -272,7 +273,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         agent:t.agent,tool:t.tool,findings:t.findings,
         status:t.status==="no_data"?"no_data":"ok",
       }))
-      const trace=buildExecutionTrace({objective:mission.objective,scope:s,
+      const trace=buildExecutionTrace({objective:mission.objective,scope:s,period:periodOf(mission),
         startedAt:execution.startedAt,finishedAt:new Date().toISOString(),
         runs,findings,warnings:execution.steps.flatMap(t=>t.warnings)})
       const prediction=evaluateAgenticForecast(dataset,{agencies:s,...periodOf(mission)})
@@ -290,6 +291,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
       },execution.id)
       await audit(req,"mission.investigated",mission.id,{
         agency:mission.agency,agent:mission.agent,findings,
+        from:mission.from??null,to:mission.to??null,
         approvalId:result.approval?.id,erpWrites:0,
         toolCalls:execution.steps.length,attempts:execution.attempts,
         durationMs:trace.durationMs,modelCalls:0,
@@ -489,6 +491,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         },periodOf(parsed.data))
       await audit(req,"agent.chat.deterministic",saved.id,{
         agent:agent.data,agency:parsed.data.agency,rule:direct.rule,
+        from:parsed.data.from??null,to:parsed.data.to??null,
         modelCalls:0,tokens:0,erpWrites:0,
       })
       res.setHeader("Cache-Control","no-store")
@@ -545,6 +548,7 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
         },periodOf(parsed.data))
       await audit(req,"agent.chat",saved.id,{
         agent:agent.data,agency:parsed.data.agency,source:report.source,
+        from:parsed.data.from??null,to:parsed.data.to??null,
         asOf:report.asOf,model:response.model,evidence:compact.references.length,
         promptTokens:response.usage?.promptTokens??null,
         completionTokens:response.usage?.completionTokens??null,

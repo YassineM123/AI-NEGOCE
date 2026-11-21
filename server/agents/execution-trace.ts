@@ -11,6 +11,7 @@ export type ExecutionTrace={
   planType:"read_only_bounded"
   objective:string
   scope:AgencyScope
+  period?:{from:string|null;to:string|null}
   startedAt:string
   finishedAt:string
   durationMs:number
@@ -36,6 +37,7 @@ const TOOLS:Record<Exclude<AgentKey,"director">,string>={
 }
 export function buildExecutionTrace(input:{
   objective:string;scope:AgencyScope;startedAt:string;finishedAt:string;
+  period?:{from?:string;to?:string};
   runs:DomainRun[];findings:number;warnings?:string[]
 }):ExecutionTrace{
   const steps:ExecutionTrace["steps"]=[
@@ -56,7 +58,9 @@ export function buildExecutionTrace(input:{
         "Aucune recommandation exploitable ; aucun ordre envoyé."},
   ]
   return {version:"agentic-trace-v1",planType:"read_only_bounded",objective:input.objective,
-    scope:input.scope,startedAt:input.startedAt,finishedAt:input.finishedAt,
+    scope:input.scope,
+    ...(input.period?{period:{from:input.period.from??null,to:input.period.to??null}}:{}),
+    startedAt:input.startedAt,finishedAt:input.finishedAt,
     durationMs:Math.max(0,Date.parse(input.finishedAt)-Date.parse(input.startedAt)),
     modelCalls:0,estimatedModelTokens:0,erpWrites:0,maxToolCalls:4,
     toolsInvoked:input.runs.length,steps,warnings:input.warnings?.slice(0,10)??[]}
