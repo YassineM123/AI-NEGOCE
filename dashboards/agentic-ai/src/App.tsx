@@ -101,6 +101,7 @@ export default function App() {
   const [decisionId, setDecisionId] = useState("DEC-2026-041")
   const [agency, setAgency] = useState("all")
   const [period, setPeriod] = useState("T4 2026")
+  const [refreshSeq, setRefreshSeq] = useState(0)
   const [portalTab, setPortalTab] = useState<"bi" | "ds">("bi")
   const [sharedOverview, setSharedOverview] = useState<AnalyticsOverview | null>(null)
   const [sharedError, setSharedError] = useState("")
@@ -168,7 +169,7 @@ export default function App() {
       }
     })()
     return () => controller.abort()
-  }, [token, agency])
+  }, [token, agency, refreshSeq])
   useEffect(() => {
     setSpecialistReports({})
     setSpecialistErrors({})
@@ -187,7 +188,7 @@ export default function App() {
         })
     }
     return () => controller.abort()
-  }, [token, agency])
+  }, [token, agency, refreshSeq])
 
 
   // Single contract-validated snapshot for BI, Data Science and Agentic.
@@ -203,7 +204,7 @@ export default function App() {
       setSharedError(error instanceof Error ? error.message : "Source indisponible")
     })
     return () => controller.abort()
-  }, [token, sharedFilters])
+  }, [token, sharedFilters, refreshSeq])
 
   // Child apps never receive tokens. A strict origin/source allow-list limits bridge requests.
   useEffect(() => {
@@ -237,7 +238,7 @@ export default function App() {
     window.addEventListener("message", handleMessage)
     sendState()
     return () => window.removeEventListener("message", handleMessage)
-  }, [token, sharedFilters, page, portalTab])
+  }, [token, sharedFilters, page, portalTab, refreshSeq])
 
   const activeMission = missions.find((item) => item.id === missionId) ?? missions[0]
   const activeDecision = decisions.find((item) => item.id === decisionId) ?? decisions[0]
@@ -768,7 +769,7 @@ export default function App() {
     <div className="workspace">
       <header className="topbar"><div className="header-filter"><label>Entreprise : <b>AI-NÉGOCE Distribution</b><Icon name="down" size={15}/></label><label>Agence : <select aria-label="Agence" value={agency} onChange={(e) => setAgency(e.target.value)}><option value="all">Toutes les agences</option>{["Tunis Centre", "Sfax", "Sousse", "Bizerte", "Nabeul"].map((a) => <option key={a} value={a}>{a}</option>)}</select></label><label>Période : <select aria-label="Période" value={period} onChange={(e) => setPeriod(e.target.value)}><option>T4 2026</option><option>T3 2026</option><option>2026</option></select></label></div><div className="topbar-right"><button aria-label="Notifications" className="bell-button" onClick={() => setNotificationOpen((p) => !p)}><Icon name="bell" size={21}/>{unread > 0 && <i/>}</button><div className="user-avatar">AD</div><div className="user-info"><b>Administrateur</b><span>Environnement démo</span></div><Icon name="down" size={15}/></div></header>
       <main className="main-content">
-        {page !== "agent" && <div className="page-heading"><div><div className="breadcrumb">AI-NÉGOCE / AGENTIC INTELLIGENCE</div><h1>{title}</h1><p>{subtitle}</p></div><div className="heading-actions"><Action light icon="refresh" onClick={() => { if (token) { setToken(null); setRevenue(null); setBackendStatus("disconnected"); setToast("Session API fermée. Reconnectez le sandbox pour actualiser."); } else setToast("Aucune source connectée à rafraîchir.") }}>Rafraîchir</Action>{(page === "overview" || page === "missions" || page === "director") && <Action icon="play" onClick={() => setMissionModal(true)}>Lancer une mission</Action>}</div></div>}
+        {page !== "agent" && <div className="page-heading"><div><div className="breadcrumb">AI-NÉGOCE / AGENTIC INTELLIGENCE</div><h1>{title}</h1><p>{subtitle}</p></div><div className="heading-actions"><Action light icon="refresh" onClick={() => { if (token) { setRefreshSeq((n) => n + 1); setToast("Actualisation de la session et des rapports en cours."); } else setToast("Connectez la session centrale pour actualiser."); }}>Rafraîchir</Action>{(page === "overview" || page === "missions" || page === "director") && <Action icon="play" onClick={() => setMissionModal(true)}>Lancer une mission</Action>}</div></div>}
         <div className="demo-banner"><Icon name="alert" size={17}/><span><strong>Mode démonstration.</strong> Les missions, notifications et décisions sont illustratives. Seul Revenue Growth peut lire l'API sandbox après connexion ; aucune action ERP n'est exécutée.</span><SmallLink onClick={() => navigate("connections")}>Connexions</SmallLink></div>
         {sharedSnapshotPanel()}
         {page === "overview" ? overview() : page === "missions" ? missionsPage() : page === "agents" ? agentsPage() : page === "agent" ? agentPage() : page === "director" ? directorPage() : page === "decisions" ? decisionsPage() : page === "platforms" ? platformsPage() : page === "connections" ? connectionsPage() : page === "audit" ? auditPage() : settingsPage()}
