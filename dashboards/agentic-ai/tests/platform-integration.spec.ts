@@ -171,12 +171,25 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(bi.locator('[data-insights-snapshot]')).toHaveAttribute("data-insights-snapshot", "snap-all-2026-10-01")
   await expect(bi.getByText("Client QA")).toBeVisible()
   await expect(agentic).toHaveAttribute("data-platform-snapshot", "snap-all-2026-10-01")
+  await expect(page.getByRole("region",{name:"Pilotage transversal des trois plateformes"})).toBeVisible()
+  await expect(page.getByText("Vue transversale · même source de vérité")).toBeVisible()
+  const unifiedExport=page.waitForEvent("download")
+  await page.getByRole("button",{name:"Exporter rapport & preuves · JSON"}).click()
+  expect((await unifiedExport).suggestedFilename()).toBe("ai-negoce-snap-all-2026-10-01.json")
+
 
   await page.getByRole("combobox", { name: "Agence" }).selectOption("Sfax")
   await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("100.000")
   await expect(bi.locator('[data-shared-kpi="revenue"]')).toHaveText("100.000")
   await expect(bi.locator('[data-shared-kpi="receivables"]')).toHaveText("10.000")
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveAttribute("data-platform-snapshot", "snap-Sfax-2026-10-01")
+  await bi.getByRole("button",{name:"Sources & statut"}).click()
+  await expect(bi.getByText("Provenance du snapshot API partagé")).toBeVisible()
+  await bi.getByRole("button",{name:"Fermer",exact:false}).first().click()
+  const biExport=page.waitForEvent("download")
+  await bi.getByRole("button",{name:"Exporter rapport & preuves"}).click()
+  expect((await biExport).suggestedFilename()).toBe("ai-negoce-bi-snap-Sfax-2026-10-01.json")
+
 
   await page.getByRole("tab", { name: "Data Science · Studio" }).click()
   const ds = page.frameLocator('iframe[title="Data Science"]')
@@ -186,6 +199,10 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(ds.locator('[data-ds-version="ds-scoped-v1"]')).toHaveCount(1)
   await expect(ds.locator('[data-ds-snapshot]')).toHaveAttribute("data-ds-snapshot","snap-Sfax-2026-10-01")
   await expect(ds.getByText("Prudent",{exact:true})).toBeVisible()
+  const dsExport=page.waitForEvent("download")
+  await ds.getByRole("button",{name:"Exporter preuves Data Science JSON"}).click()
+  expect((await dsExport).suggestedFilename()).toBe("ai-negoce-ds-snap-Sfax-2026-10-01.json")
+
 
   await page.getByRole("combobox", { name: "Période" }).selectOption("T3 2026")
   await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("1100.000")
