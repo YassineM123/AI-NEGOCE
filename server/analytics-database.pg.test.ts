@@ -161,6 +161,46 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect(two.body.dataScience.analysis.scenarios.basisRevenueTnd).toBe(230)
     expect(two.body.snapshotId).not.toBe(one.body.snapshotId)
     expect(two.body.bi.data.metadata.snapshotRevision).toBe(2)
+    // The refreshed snapshot drives a NEW persistent decision dossier.
+    // No old approval is reused, even though the mission's agency/period match.
+    const refreshedDirector=await request(app).post("/api/v1/agentic/ai-director/investigate")
+      .set(bearer("dev-admin")).send({...allPeriod,
+        objective:"Réévaluer ventes, finance, stock et stratégie après actualisation"})
+    expect(refreshedDirector.status).toBe(200)
+    expect(refreshedDirector.body.sections).toHaveLength(4)
+    expect(refreshedDirector.body.summary.erpWrites).toBe(0)
+
+    const newMission=await request(app).post("/api/v1/agentic/workspace/missions")
+      .set(bearer("dev-admin")).send({...allPeriod,agent:"director",
+        title:"Décision après révision PostgreSQL 2",
+        objective:"Réévaluer ventes, finance, stock et stratégie après actualisation"})
+    expect(newMission.status).toBe(201)
+    expect(newMission.body.mission.id).not.toBe(mission.body.mission.id)
+    const rerun=await request(app)
+      .post("/api/v1/agentic/workspace/missions/"+newMission.body.mission.id+"/run")
+      .set(bearer("dev-admin")).send({expectedVersion:newMission.body.mission.version})
+    expect(rerun.status).toBe(200)
+    expect(rerun.body.mission.execution.status).toBe("completed")
+    expect(rerun.body.mission.lastRun.findings).toBeGreaterThan(0)
+    expect(rerun.body.mission.lastRun.trace.period).toEqual({
+      from:allPeriod.from,to:allPeriod.to,
+    })
+    expect(rerun.body.mission.execution.sourceFingerprint)
+      .not.toBe(run.body.mission.execution.sourceFingerprint)
+    expect(rerun.body.mission.lastRun.trace.erpWrites).toBe(0)
+    expect(rerun.body.approval?.id).toBeTruthy()
+    expect(rerun.body.approval?.id).not.toBe(approvalId)
+    const newDecision=await request(app)
+      .post("/api/v1/agentic/workspace/approvals/"+rerun.body.approval.id+"/review")
+      .set(bearer("dev-manager-sfax"))
+      .send({expectedVersion:1,decision:"approved",comment:"Nouvelles preuves revues"})
+    expect(newDecision.status).toBe(200)
+    expect(newDecision.body.erpWriteExecuted).toBe(false)
+    const handoffs=await request(app).get("/api/v1/agentic/workspace/actions")
+      .set(bearer("dev-admin"))
+    expect(handoffs.body.actions).toHaveLength(1)
+    expect(handoffs.body.actions[0].missionId).toBe(newMission.body.mission.id)
+    expect(JSON.stringify(handoffs.body)).not.toContain("Client Tunis")
     const blocked=await request(app).get("/api/v1/analytics/overview")
       .set(bearer("dev-admin-org-b"))
     expect(blocked.status).toBe(403)
