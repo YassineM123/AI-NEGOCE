@@ -1,13 +1,32 @@
-# Agentic AI
+# Plateforme 3 — Agentic AI Command Center (React)
 
-Ce dossier accueillera l'orchestrateur Agentic AI qui reliera les dashboards
-Data Analysis et Data Science.
+Le **troisième dashboard** existe et son code React est maintenu dans [../../apps/agentic-ai/](../../apps/agentic-ai/). Ce dossier sert de point de repère pour les trois plateformes sans créer une copie désynchronisée de l'application.
 
-## Responsabilités prévues
+## Démarrage
 
-- exposer des outils contrôlés pour consulter les indicateurs et prédictions ;
-- orchestrer les appels entre les services d'analyse et de Data Science ;
-- appliquer la validation, les autorisations et les demandes d'approbation ;
-- journaliser les actions et conserver la provenance des résultats.
+À la racine du dépôt :
 
-Le code de l'agent sera ajouté lors de la prochaine étape.
+```bash
+npm ci
+npm run agentic:dev
+```
+
+Ouvrir **http://127.0.0.1:8444/**. Les deux autres espaces peuvent être lancés séparément avec `python -m http.server 8000` :
+
+- [Data Analyse](../data-analysis/)
+- [Data Science](../data-science/)
+
+## Fonctionnalités
+
+L'application React comporte les pages **Vue d'ensemble**, **Centre de missions**, **Mes agents**, **AI Director**, **Décisions et approbations**, **Connexions BI / Data Science**, **Historique & audit** et **Paramètres** ; chaque agent possède un espace dédié pour suivre des missions et un panneau de conversation.
+
+Le premier spécialiste est **Revenue Growth** : source `server/agents/revenue-growth.ts`, route `GET /api/v1/agentic/revenue-growth/opportunities`, tests unitaires et tests de sécurité HTTP dans `server/agents/`.
+
+## Limitations actuelles
+
+- Revenue Growth est un moteur déterministe **read-only** utilisable avec la base sandbox de développement ; aucun ERP LAI réel n'est encore connecté.
+- Les chiffres de démonstration, notifications, statuts de mission et validations locales **ne constituent pas des preuves d'opérations ERP**.
+- Le conversationnel agentique réel, les trois autres spécialistes, l'AI Director autonome et les APIs des deux dashboards restent à intégrer.
+- Ne jamais activer d'écriture ERP avant contrôles d'autorisation, approbation humaine et idempotence.
+
+Voir [README global](../../README.md) et [documentation agent](../../docs/agentic/revenue-growth-mvp.md).
