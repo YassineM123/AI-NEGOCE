@@ -16,19 +16,19 @@ function contextFixture() {
     },
   }
 }
-function overviewFixture(params: URLSearchParams) {
+function overviewFixture(params: URLSearchParams,revision=1) {
   const agency = params.get("agency") ?? "all"
   const from = params.get("from") ?? ""
   const to = params.get("to") ?? ""
-  const seed = (agency === "Sfax" ? 100 : agency === "Tunis Centre" ? 200 : 300) +
-    (from === "2026-07-01" ? 1000 : from === "2026-01-01" ? 2000 : 0)
+  const seed = ((agency === "Sfax" ? 100 : agency === "Tunis Centre" ? 200 : 300) +
+    (from === "2026-07-01" ? 1000 : from === "2026-01-01" ? 2000 : 0))*revision
   const filters = { agencies: agency === "all" ? "*" : [agency], from, to }
   return {
     contractVersion: "1.0",
-    snapshotId: "snap-" + agency.replace(/\s/g, "-") + "-" + from,
+    snapshotId: "snap-" + agency.replace(/\s/g, "-") + "-" + from + (revision>1?"-rev-"+revision:""),
     generatedAt: "2026-11-21T12:00:00.000Z",
     scope: filters.agencies,
-    snapshot: { asOf: "2026-10-31", source: "Synthetic QA", sourceKind: "sandbox", isSynthetic: true },
+    snapshot: { asOf: "2026-10-31", source: "Synthetic QA", sourceKind: "sandbox", isSynthetic: true, storage:"postgres",revision },
     bi: {
       status: "available",
       data: {
@@ -95,6 +95,9 @@ function overviewFixture(params: URLSearchParams) {
 test("three apps reuse one session and reconcile exact agency/period KPI snapshot", async ({ page }) => {
   test.setTimeout(120_000)
   let sessionRequests = 0
+  let datasetRevision = 1
+  let createdMissions = 0
+  let executedMissions = 0
   let analyticsRequests: URLSearchParams[] = []
   const agentRequests:Record<string,URLSearchParams[]>={revenue:[],finance:[],supply:[],strategy:[]}
   await page.route("**/api/v1/auth/dev-session", async (route) => {
@@ -113,7 +116,7 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
     analyticsRequests.push(new URLSearchParams(query))
     await route.fulfill({
       status: 200, contentType: "application/json",
-      body: JSON.stringify(overviewFixture(query)),
+      body: JSON.stringify(overviewFixture(query,datasetRevision)),
     })
   })
   await page.route("**/api/v1/agentic/revenue-growth/opportunities?*", async (route) => {
@@ -141,6 +144,22 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
     return route.fulfill({ status: 503, contentType: "application/json", body: "{}" })
   })
 
+  await page.route("**/api/v1/agentic/workspace/missions", async route=>{
+    if(route.request().method()==="GET"){
+      return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({missions:[]})})
+    }
+    const body=route.request().postDataJSON() as {agent:string;agency:string;from:string;to:string}
+    expect(body).toMatchObject({agent:"director",agency:"Sfax",from:"2026-07-01",to:"2026-09-30"})
+    createdMissions++
+    return route.fulfill({status:201,contentType:"application/json",
+      body:JSON.stringify({mission:{id:"00000000-0000-4000-8000-000000000011",version:1}})})
+  })
+  await page.route("**/api/v1/agentic/workspace/missions/*/run",async route=>{
+    executedMissions++
+    expect(route.request().postDataJSON()).toEqual({expectedVersion:1})
+    return route.fulfill({status:200,contentType:"application/json",
+      body:JSON.stringify({mission:{lastRun:{findings:3}},approval:{id:"approval-revision-2"}})})
+  })
   await page.goto("/")
   await page.getByRole("button", { name: "Plateformes BI / DS" }).click()
   await page.getByRole("button", { name: "Connecter la session sandbox" }).click()
@@ -185,6 +204,16 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
     q.get("agency")==="Sfax"&&q.get("from")==="2026-07-01"&&q.get("to")==="2026-09-30"
   ))).toBe(true)
 
+  // The same filter now reads a new PostgreSQL revision. The portal must
+  // rebuild shared BI/DS metrics and offer a new persisted Director dossier.
+  datasetRevision = 2
+  await page.getByRole("button", { name: "Rafraîchir" }).click()
+  await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("2200.000")
+  await expect(bi.locator('[data-shared-kpi="revenue"]')).toHaveText("2200.000")
+  await expect(page.locator('[data-analytics-change="snap-Sfax-2026-07-01-rev-2"]')).toBeVisible()
+  await page.getByRole("button", { name: "Créer nouveau dossier AI Director" }).click()
+  await expect.poll(()=>createdMissions).toBe(1)
+  await expect.poll(()=>executedMissions).toBe(1)
   await page.getByRole("button", { name: "Déconnecter les 3 plateformes" }).click()
   await expect(agentic).toHaveCount(0)
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveCount(0)
