@@ -1,4 +1,4 @@
-import { platformContextSchema, type PlatformContext } from "../../../shared/contracts/analytics-platform"
+import { platformContextSchema, analyticsOverviewSchema, type PlatformContext, type AnalyticsOverview } from "../../../shared/contracts/analytics-platform"
 
 export type RevenueOpportunity = {
   customerId: string
@@ -67,7 +67,23 @@ export async function fetchPlatformContext(token: string, signal?: AbortSignal):
   return parsed.data
 }
 
-export type { PlatformContext }
+export type { PlatformContext, AnalyticsOverview }
+
+export type SharedFilters = { agency: string; from: string; to: string }
+export async function fetchSharedOverview(
+  token: string, filters: SharedFilters, signal?: AbortSignal,
+): Promise<AnalyticsOverview> {
+  const q = new URLSearchParams({ from: filters.from, to: filters.to })
+  if (filters.agency !== "all") q.set("agency", filters.agency)
+  const response = await fetch(API_BASE + "/api/v1/analytics/overview?" + q, {
+    headers: { Authorization: "Bearer " + token },
+    signal,
+  })
+  if (!response.ok) throw new Error("Source analytique commune indisponible (HTTP " + response.status + ")")
+  const parsed = analyticsOverviewSchema.safeParse(await response.json())
+  if (!parsed.success) throw new Error("Contrat de snapshot analytique invalide")
+  return parsed.data
+}
 
 export async function fetchRevenueGrowth(
   token: string,
