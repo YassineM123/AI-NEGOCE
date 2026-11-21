@@ -538,6 +538,16 @@ export const api = {
     if (filters.to) p.set("to", filters.to)
     return request<import("./features/bi-360/types").ForecastingResponse>(`/bi/360/forecasting?${p}`)
   },
+  biExport: (module: string, format: "csv" | "json" = "csv", filters: import("./features/bi-360/types").BiUniversalFilters = {}) => {
+    // Download via the same authenticated API client as private document previews.
+    // A naked <a href="/api/..."> would omit the required Authorization header.
+    const params = new URLSearchParams({ module, format })
+    if (filters.period) params.set("period", filters.period)
+    if (filters.agency) params.set("agency", filters.agency)
+    if (filters.from) params.set("from", filters.from)
+    if (filters.to) params.set("to", filters.to)
+    return requestBlob(`/bi/360/export?${params}`)
+  },
   biExportUrl: (module: string, format: "csv" | "json" = "csv", filters: import("./features/bi-360/types").BiUniversalFilters = {}) => {
     const p = new URLSearchParams({ module, format })
     if (filters.period) p.set("period", filters.period)
