@@ -237,7 +237,7 @@ export function datasetFrom(db: ErpDatabase): Dataset {
   if (cached && cached.db === db && cached.version === db.version) return cached.data
   const sales = db.all<Sale & { kind: "invoice" | "credit_note" }>(
     `SELECT l.id, s.number invoiceId, s.invoice_date date, a.name agency, c.name customer, c.id customerId,
-            p.id productId, p.name product, pc.name family, coalesce(r.name, '—') representative,
+            p.id productId, l.quantity quantity, p.name product, pc.name family, coalesce(r.name, '—') representative,
             CASE s.doc_type WHEN 'credit_note' THEN -l.line_ht ELSE l.line_ht END revenue,
             CASE s.doc_type WHEN 'credit_note' THEN -l.line_cost ELSE l.line_cost END cost,
             s.doc_type kind, s.status
