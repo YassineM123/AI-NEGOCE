@@ -128,7 +128,7 @@ export function AdvancedMissions({token,agency}:{token:string;agency:string}){
   </div>
 }
 
-export function AdvancedApprovals({token,agency}:{token:string;agency:string}){
+export function AdvancedApprovals({token,agency,userId}:{token:string;agency:string;userId?:string}){
   const [approvals,setApprovals]=useState<Approval[]>([])
   const [comments,setComments]=useState<Record<string,string>>({})
   const [error,setError]=useState("")
@@ -159,7 +159,8 @@ export function AdvancedApprovals({token,agency}:{token:string;agency:string}){
           <p>{label(a.agent)} · {a.agency} · {when(a.createdAt)}</p>
           <p className="aw-sub">Action proposée : <strong>{a.actionType}</strong> · demandeur : {a.requestedBy}</p>
           {a.evidence.length>0&&<div className="aw-result">Références : {a.evidence.slice(0,8).join(", ")}</div>}
-          {a.status==="pending"?<div className="aw-decision-controls">
+          {a.status==="pending" && a.requestedBy===userId?<Notice>Double validation obligatoire : vous ne pouvez pas approuver votre propre demande.</Notice>:null}
+          {a.status==="pending" && a.requestedBy!==userId?<div className="aw-decision-controls">
             <label>Commentaire de revue<textarea rows={2} value={comments[a.id]||""} maxLength={1500}
               onChange={e=>setComments(old=>({...old,[a.id]:e.target.value}))} placeholder="Justification et observations"/></label>
             <div className="aw-actions"><button className="aw-primary" disabled={Boolean(busy)}
@@ -173,7 +174,7 @@ export function AdvancedApprovals({token,agency}:{token:string;agency:string}){
   </section>
 }
 
-export function AdvancedNotifications({token,agency}:{token:string;agency:string}){
+export function AdvancedNotifications({token,agency,userId}:{token:string;agency:string;userId?:string}){
   const [items,setItems]=useState<Notification[]>([])
   const [unread,setUnread]=useState(0)
   const [error,setError]=useState("")
@@ -199,7 +200,7 @@ export function AdvancedNotifications({token,agency}:{token:string;agency:string
     {items.length===0?<Empty>Aucune notification enregistrée.</Empty>:items.filter(n=>agency==="all"||agency===n.agency).map(n=>
       <article className="aw-notification" key={n.id}>
         <div><strong>{n.title}</strong><p>{n.message}</p><small>{n.agency} · {when(n.createdAt)} · {n.kind}</small></div>
-        {!n.readBy.length?<button className="aw-secondary" onClick={()=>{void read(n)}}>Marquer lue</button>:
+        {!userId || !n.readBy.includes(userId)?<button className="aw-secondary" onClick={()=>{void read(n)}}>Marquer lue</button>:
           <span className="aw-status aw-status-reviewed">Lue</span>}
       </article>)}
   </section>
