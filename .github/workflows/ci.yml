@@ -12,6 +12,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run dataset:generate
       - run: npm run db:seed
+      - name: Validate pseudonymized Phase 2 Database extractions
+        run: npm run demo:database:audit
       # GitHub stores OCR fixture binaries in LFS. A normal checkout only returns
       # tiny pointers, which must NEVER be treated as uploadable PDF/image bytes.
       - name: Materialize adverse OCR/upload fixture binaries
