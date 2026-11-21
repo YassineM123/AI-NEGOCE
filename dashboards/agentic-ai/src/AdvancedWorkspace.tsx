@@ -34,7 +34,10 @@ export type Notification={
   id:string;agency:string;kind:string;title:string;message:string;missionId:string|null;
   createdAt:string;readBy:string[];recipientId:string|null;audience:"user"|"reviewer"
 }
-type ChatMessage={id:string;role:"assistant"|"user";content:string;createdAt:string;model:string|null;sources:string[]}
+type ChatMessage={id:string;role:"assistant"|"user";content:string;createdAt:string;model:string|null;sources:string[];
+  usage?:{promptTokens:number|null;completionTokens:number|null;totalTokens:number|null;estimatedContextTokens:number;maxOutputTokens:number}}
+type AgentBrief={source:string;asOf:string;findings:number;modelCalls:0;estimatedTokens:0;
+  top:Array<{title:string;reason:string;actionType:string;evidence:string[]}>;remainingFindings:number}
 async function api<T>(token:string,path:string,options?:{method?:string;body?:unknown;signal?:AbortSignal}):Promise<T>{
   const response=await fetch(ROOT+path,{
     method:options?.method??"GET",
@@ -223,6 +226,8 @@ export function AdvancedNotifications({token,agency,userId}:{token:string;agency
 
 export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:string;agent:AgentDomain}){
   const [messages,setMessages]=useState<ChatMessage[]>([])
+  const [brief,setBrief]=useState<AgentBrief|null>(null)
+  const [budget,setBudget]=useState<{callsToday:number;dailyLimit:number}|null>(null)
   const [draft,setDraft]=useState("")
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState("")
@@ -234,31 +239,50 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
     }catch(e){setError(e instanceof Error?e.message:"Historique indisponible")}
   },[token,agency,agent])
   useEffect(()=>{void fetchHistory()},[fetchHistory])
+  useEffect(()=>{setBrief(null);setBudget(null)},[agent,agency,token])
+  const getBrief=async()=>{
+    setBusy(true);setError("")
+    try{
+      const response=await api<AgentBrief>(token,"/brief/"+agent+"?"+new URLSearchParams({agency}))
+      setBrief(response)
+    }catch(e){setError(e instanceof Error?e.message:"Résumé non disponible")}
+    finally{setBusy(false)}
+  }
   const send=async(e:FormEvent)=>{
     e.preventDefault()
     if(!draft.trim()||busy)return
     setBusy(true);setError("")
     const text=draft.trim()
     try{
-      const result=await api<{message:ChatMessage}>(token,"/chat/"+agent,{
+      const result=await api<{message:ChatMessage;budget?:{callsToday:number;dailyLimit:number}}>(token,"/chat/"+agent,{
         method:"POST",body:{agency,turnId:crypto.randomUUID(),message:text},
       })
-      setDraft("");await fetchHistory()
+      setDraft("");if(result.budget)setBudget(result.budget);await fetchHistory()
       if(!result.message)throw new Error("Réponse vide")
     }catch(err){setError(err instanceof Error?err.message:"Conversation indisponible")}
     finally{setBusy(false)}
   }
   return <section className="aw-panel aw-chat-panel">
     <header className="aw-heading"><div><h3>Conversation — {label(agent)}</h3>
-      <p>LLM réel côté serveur · données ERP autorisées · références source conservées</p></div>
-      <button className="aw-secondary" onClick={()=>{void fetchHistory()}}>Historique</button></header>
+      <p>Résumé sans tokens ou conversation LLM à budget borné · sources datées</p></div>
+      <div className="aw-actions"><button className="aw-secondary" disabled={busy} onClick={()=>{void getBrief()}}>Résumé gratuit · 0 token</button>
+      <button className="aw-secondary" onClick={()=>{void fetchHistory()}}>Historique</button></div></header>
+    {brief&&<section className="aw-brief" aria-label="Diagnostic factuel sans appel au modèle">
+      <div className="aw-inline"><strong>Diagnostic factuel : {brief.findings} constat(s)</strong>
+        <small>0 appel LLM · 0 token · arrêté {brief.asOf}</small></div>
+      {brief.top.map((f,i)=><div className="aw-brief-item" key={i}>
+        <b>{f.title}</b><p>{f.reason}</p>
+        <small>Action suggérée : {f.actionType} · preuves : {f.evidence.length?f.evidence.join(", "):"Aucune pièce disponible"}</small>
+      </div>)}
+      {brief.remainingFindings>0&&<p className="aw-sub">+ {brief.remainingFindings} autres constats consultables dans les rapports métier.</p>}
+    </section>}
     <div className="aw-chat-history" aria-live="polite">
       {messages.length===0?<Empty>Aucun échange pour cette agence. La conversation nécessite une configuration LLM serveur.</Empty>:
         messages.map(m=><article className={"aw-chat-bubble "+m.role} key={m.id}>
           <strong>{m.role==="assistant"?label(agent):"Vous"}</strong>
           <p>{m.content}</p>
           {m.sources.length>0&&<small>Sources : {m.sources.slice(0,7).join(", ")}</small>}
-          <small>{when(m.createdAt)}{m.model?" · "+m.model:""}</small>
+          <small>{when(m.createdAt)}{m.model?" · "+m.model:""}{m.usage?.totalTokens!=null?" · "+m.usage.totalTokens+" tokens mesurés":m.usage?" · consommation fournisseur non reportée":""}</small>
         </article>)}
     </div>
     {error&&<Notice>{error}</Notice>}
@@ -269,7 +293,7 @@ export function AdvancedAgentChat({token,agency,agent}:{token:string;agency:stri
         placeholder="Posez une question basée sur les données et recommandations..."/>
       <button className="aw-primary" disabled={busy||draft.trim().length<2} type="submit">{busy?"Analyse...":"Envoyer"}</button>
     </form>
-    <p className="aw-sub">Les échanges ne déclenchent aucun email, achat, paiement ou autre action ERP. Sans fournisseur LLM configuré, le serveur renvoie une erreur explicite.</p>
+    <p className="aw-sub">{budget?"Appels IA aujourd'hui : "+budget.callsToday+"/"+budget.dailyLimit+" · ":""}Le résumé est gratuit. Les conversations ont un contexte et une sortie plafonnés. Aucun email, achat, paiement ou autre action ERP n'est déclenché.</p>
   </section>
 }
 
