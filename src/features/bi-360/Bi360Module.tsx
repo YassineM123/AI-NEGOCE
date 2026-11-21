@@ -65,6 +65,7 @@ export const Bi360Module: React.FC<Bi360ModuleProps> = ({ onNavigateCopilot, use
 
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState<"csv" | "json" | null>(null)
 
   // Drilldown modal state
   const [drillDownTarget, setDrillDownTarget] = useState<{
@@ -175,6 +176,26 @@ export const Bi360Module: React.FC<Bi360ModuleProps> = ({ onNavigateCopilot, use
     setAgency("all")
   }
 
+  const handleExport = async (format: "csv" | "json") => {
+    setExporting(format)
+    setError(null)
+    try {
+      const blob = await api.biExport(activeTab, format, currentFilters)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `bi360_${activeTab}_${period}.${format}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Export indisponible")
+    } finally {
+      setExporting(null)
+    }
+  }
+
   const unackAlertCount = alertsList.filter((a) => !a.acknowledged).length
 
   return (
@@ -184,19 +205,20 @@ export const Bi360Module: React.FC<Bi360ModuleProps> = ({ onNavigateCopilot, use
         <div className="bi-header-title">
           <h1>
             <span>BI 360 Enterprise</span>
-            <span className="bi-badge-pill success">
-              <span className="bi-pulse-dot" /> Temps Réel ERP
+            <span className="bi-badge-pill info">
+              {cockpitData ? "Snapshot ERP sandbox" : "Source non vérifiée"}
             </span>
           </h1>
           <p className="bi-header-subtitle">
-            Pilotage financier, commercial et logistique certifié — Données consolidées au 15/10/2026
+            Pilotage financier, commercial et logistique — arrêté au {cockpitData?.asOf ?? "—"} ; source de test à valider avant exploitation
           </p>
         </div>
 
         <div className="bi-header-actions">
-          <a
-            href={api.biExportUrl(activeTab, "csv", currentFilters)}
-            download={`bi360_${activeTab}_${period}.csv`}
+          <button
+            type="button"
+            onClick={() => { void handleExport("csv") }}
+            disabled={exporting !== null}
             className="bi-btn bi-btn-secondary"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -204,20 +226,21 @@ export const Bi360Module: React.FC<Bi360ModuleProps> = ({ onNavigateCopilot, use
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Export CSV
-          </a>
+            {exporting === "csv" ? "Export en cours…" : "Export CSV"}
+          </button>
 
-          <a
-            href={api.biExportUrl(activeTab, "json", currentFilters)}
-            download={`bi360_${activeTab}_${period}.json`}
+          <button
+            type="button"
+            onClick={() => { void handleExport("json") }}
+            disabled={exporting !== null}
             className="bi-btn bi-btn-secondary"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
             </svg>
-            JSON
-          </a>
+            {exporting === "json" ? "Export en cours…" : "Export JSON"}
+          </button>
 
           {onNavigateCopilot && (
             <button
@@ -247,9 +270,9 @@ export const Bi360Module: React.FC<Bi360ModuleProps> = ({ onNavigateCopilot, use
             value={period}
             onChange={(e) => setPeriod(e.target.value as BiUniversalPeriod)}
           >
-            <option value="month">Mois en cours (Octobre 2026)</option>
-            <option value="quarter">Trimestre en cours (Q4 2026)</option>
-            <option value="year">Année en cours (YTD 2026)</option>
+            <option value="month">Mois en cours (selon arrêté)</option>
+            <option value="quarter">Trimestre en cours (selon arrêté)</option>
+            <option value="year">Année en cours (selon arrêté)</option>
             <option value="custom">Plage personnalisée</option>
             <option value="all">Tout l'historique disponible</option>
           </select>
