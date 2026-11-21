@@ -502,6 +502,7 @@ body{font-size:13px;letter-spacing:-.04px}
 </style></head><body>
 <div id="app"><div class="loading"><div class="load-mark">N</div><h1>AI‑NÉGOCE Intelligence Studio</h1><p>Initialisation des analyses…</p></div></div>
 <script src="platform-client.js"></script>
+<script src="governed-ds.js"></script>
 <script>
 
 /* engine.mjs */
@@ -926,6 +927,8 @@ function sourceFoot(suffix=''){return `<p class="chart-foot">Source : ${html(sta
  */
 function governedDataSciencePage(){
  const x=state.platform.overview, i=x?.insights, title=NAV.find(n=>n[1]===state.page)?.[3]||'Data Science';
+ if(x?.dataScience?.analysis && typeof window.AINegoceGovernedDataScience==='function')
+   return window.AINegoceGovernedDataScience(x,state.page,{fAll,fKpis,table,fCard,fWarning,html,fmt,amt,lineChart});
  if(!i)return fAll(title,'Source gouvernée · périmètre API', '', fWarning('Données descriptives du serveur indisponibles. Aucun résultat local ne peut remplacer un snapshot filtré.'),false);
  const summary=i.summary, c=i.coverage, months=i.months, customerRows=i.topCustomers;
  const metrics=fKpis([
