@@ -34,7 +34,6 @@ async function cycle() {
   finally{running=false}
 }
 const timer=setInterval(()=>{void cycle()},60_000)
-timer.unref()
 void cycle()
 async function shutdown() {
   stopping=true
