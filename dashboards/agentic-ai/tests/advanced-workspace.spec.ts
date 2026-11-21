@@ -50,6 +50,7 @@ test("uses server approvals, notifications and agent chat, with no ERP writeback
   const approval={
     id:"c26fda34-9e56-4dbb-8f3c-222220000002",missionId:"2a50abcc-47b3-41ee-b2f5-222220000001",
     agency:"Sfax",agent:"financial_strategy",requestedBy:"requester-02",
+    from:"2026-10-01",to:"2026-12-31",
     status:"pending",version:1,actionType:"review_collection",summary:"Revue créances Sfax",
     evidence:["INV-101"],createdAt:"2026-11-21T09:00:00.000Z",reviewedBy:null,comment:null,
   }
