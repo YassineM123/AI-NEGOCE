@@ -14,8 +14,10 @@ anonymisées, les preuves de contrôle et un prototype statique du centre BI.
 
 ## Lancer le prototype
 
-Ouvrir `app/index.html` dans un navigateur moderne. Le prototype est autonome
-et ne nécessite ni installation de dépendances ni accès à la base de production.
+Depuis la racine du projet, lancer `python -m http.server 8000`, puis ouvrir
+`http://localhost:8000/app/` dans un navigateur moderne. Le serveur HTTP local
+est nécessaire pour charger les fichiers CSV. Le prototype ne nécessite aucune
+installation JavaScript ni aucun accès à la base de production.
 
 ## Documents de départ
 
