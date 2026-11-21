@@ -2,6 +2,14 @@
 
 Cette branche regroupe **trois espaces distincts** dans un seul dépôt Git : Data Analyse (BI), Data Science et Agentic AI, ainsi que le backend ERP/Copilot existant. Les deux premiers espaces sont conservés en prototypes HTML/JavaScript et le troisième est une application **React 19 + TypeScript + Vite**. Les trois plateformes partagent désormais une session sandbox et des KPI gouvernés (CA, créances, période et agence) depuis un backend commun. Les calculs détaillés historiques BI/DS restent locaux et aucune connexion à l'ERP LAI réel n'est déclarée.
 
+## Démonstration client Phase 2 — sources IAINEG pseudonymisées
+
+Mode optionnel : `DEMO_DATA_SOURCE=extractions` (uniquement local-dev ou test). Le backend utilise alors le journal de `Database/extractions/` pour les KPI partagés BI / Data Science / Agentic, **exclusivement en TND**. Le journal contient aussi EUR et USD, **jamais additionnés** au TND. Les coûts par facture, échéances individuelles et PMP sont absents : aucune marge ou valorisation fictive n'est inventée dans la source gouvernée.
+
+Les compléments *100 % synthétiques* « livraisons fournisseurs » et « trésorerie » sont des pages de simulation séparées dans Data Analyse. Ils ne servent ni à calculer les KPI d'extraction ni à entraîner un modèle.
+
+Avant la réunion, lancer `npm run demo:database:audit` et consulter le **[guide Phase 2 — démonstration client](docs/PHASE2_DATABASE_DEMO.md)** (commandes PowerShell, limites, preuves, tests).
+
 ## Contenu du dépôt
 
 - [`dashboards/data-analysis/`](dashboards/data-analysis/) — centre BI
