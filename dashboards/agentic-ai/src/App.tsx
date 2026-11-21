@@ -393,9 +393,9 @@ export default function App() {
     return <section className="shared-global-kpis" data-platform-app="agentic"
       data-platform-snapshot={x.snapshotId} aria-label="Snapshot analytique commun">
       <div><strong>Snapshot partagé — BI / Data Science / Agentic</strong>
-        <span>{x.snapshot.source} · arrêté au {x.snapshot.asOf} · {x.snapshot.isSynthetic ? "Données synthétiques" : "Source à vérifier"}</span></div>
+        <span>{x.snapshot.source} · arrêté au {x.snapshot.asOf} · {x.snapshot.source.includes("IAINEG") ? "EXTRAITS PSEUDONYMISÉS · SQL NON RAPPROCHÉ · TND SEUL" : x.snapshot.isSynthetic ? "Données synthétiques" : "Source à vérifier"}</span></div>
       <div><small>CA HT · TND</small><b data-shared-kpi="revenue">{x.bi.data.revenue.toFixed(3)}</b></div>
-      <div><small>Créances · TND</small><b data-shared-kpi="receivables">{x.bi.data.receivables.toFixed(3)}</b></div>
+      <div><small>{x.snapshot.source.includes("IAINEG") ? "Créances · source détaillée absente (0 technique)" : "Créances · TND"}</small><b data-shared-kpi="receivables">{x.bi.data.receivables.toFixed(3)}</b></div>
       <div><small>Agence / Période</small><b>{x.scope === "*" ? "Toutes" : x.scope.join(", ")} · {period}</b></div>
     </section>
   }
