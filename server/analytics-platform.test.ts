@@ -3,6 +3,7 @@ import request from "supertest"
 import { analyticsOverviewSchema, platformContextSchema } from "../shared/contracts/analytics-platform.js"
 import { bearer, makeApp } from "../tests/qa/support/harness.js"
 import { hasPermission, permissionsForRole } from "./permissions.js"
+import { defaultDataset, overview as computeBiOverview } from "./services.js"
 
 describe("shared analytics permissions", () => {
   it.each([
@@ -73,6 +74,40 @@ describe("analytics platform API", () => {
       .set(bearer("dev-admin-org-b"))
     expect(tenant.status).toBe(403)
     expect(tenant.body.error.code).toBe("ERP_SOURCE_UNAVAILABLE")
+  })
+
+
+  it("keeps agency and period snapshots consistent with the governed BI calculator", async () => {
+    const { app } = makeApp()
+    const periods = [
+      { from: "2026-07-01", to: "2026-09-30" },
+      { from: "2026-10-01", to: "2026-12-31" },
+    ]
+    const snapshots: string[] = []
+    for (const period of periods) {
+      const response = await request(app).get("/api/v1/analytics/overview")
+        .query({ agency: "Sfax", ...period })
+        .set(bearer("dev-manager-sfax"))
+      expect(response.status).toBe(200)
+      expect(analyticsOverviewSchema.safeParse(response.body).success).toBe(true)
+      expect(response.body.scope).toEqual(["Sfax"])
+      expect(response.body.bi.data.filters.from).toBe(period.from)
+      expect(response.body.bi.data.filters.to).toBe(period.to)
+      expect(response.body.bi.data.revenue).toBe(
+        computeBiOverview({ agencies: ["Sfax"], ...period }, defaultDataset()).revenue,
+      )
+      expect(response.body.bi.data.receivables).toBe(
+        computeBiOverview({ agencies: ["Sfax"], ...period }, defaultDataset()).receivables,
+      )
+      expect(response.body.dataScience.modelServingVerified).toBe(false)
+      expect(response.body.agentic.availableAgents).toHaveLength(4)
+      snapshots.push(response.body.snapshotId)
+    }
+    expect(snapshots[0]).not.toBe(snapshots[1])
+    const denied = await request(app).get("/api/v1/analytics/overview")
+      .query({ agency: "Tunis Centre", ...periods[0] })
+      .set(bearer("dev-manager-sfax"))
+    expect(denied.status).toBe(403)
   })
 
   it("rejects invalid periods", async () => {
