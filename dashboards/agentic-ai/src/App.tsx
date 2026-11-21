@@ -567,6 +567,7 @@ export default function App() {
     const metricEntries = specialist ? Object.entries(specialist.metrics).slice(0, 4) : []
     const source = specialist?.snapshot.source ?? revenueResult?.snapshot.source
     const asOf = specialist?.snapshot.asOf ?? revenueResult?.snapshot.asOf
+    const deep = specialist?.deepAnalysis ?? revenueResult?.deepAnalysis
     return <>
       <div className="agent-page-head">
         <Avatar agent={selectedAgent} size="large"/>
@@ -608,6 +609,11 @@ export default function App() {
               ? <p className="source-note"><Icon name="database" size={15}/> Source : {source} · arrêté au {asOf} · période : {sharedFilters.from} → {sharedFilters.to} · lecture seule</p>
               : <div className="no-connection"><Icon name="alert" size={18}/> {specialistError ?? "Connectez le sandbox pour interroger ce spécialiste."}</div>}
           </Card>
+          {deep && <Card title="Diagnostic approfondi" action={<Pill tone="blue">Chiffré et explicable</Pill>}>
+            <div className="detail-highlight"><Icon name="target" size={20}/><div><b>{deep.headline}</b><p>{deep.explanation}</p></div></div>
+            <div className="mini-stats">{deep.quantifiedInsights.map(metric=><div key={metric.id}><span>{metric.label}</span><b>{metric.value===null?"N/D":metric.value.toLocaleString("fr-FR",{maximumFractionDigits:3})+(metric.unit==="TND"?" TND":metric.unit==="percent"?" %":"")}</b><small>{metric.interpretation}</small></div>)}</div>
+          </Card>}
+          {deep && <Card title="Alternatives comparées">{deep.alternatives.map(option=><div className="decision-short" key={option.id}><div><b>{option.label}</b><small>{option.assumption}</small><small>{option.tradeoffs.join(" · ")}</small></div><Pill tone="blue">{option.estimatedValueTnd===null?"Impact à valider":option.estimatedValueTnd.toLocaleString("fr-FR",{maximumFractionDigits:3})+" TND"}</Pill></div>)}</Card>}
           <Card title="Évolution du CA HT — données BI synchronisées">
             {trendMonths.length?
               <div className="table-scroll" data-agentic-period-chart={sharedOverview?.snapshotId}>
@@ -639,6 +645,7 @@ export default function App() {
         </div>
         <div className="stack">
           <Card title="Actions suggérées" action={<Pill tone="amber">Revue humaine</Pill>}>
+            {deep?.proposedActions.map(action=><div key={action.id} className="recommendation"><div className="recommendation-top"><Icon name="target" size={18}/><b>{action.label}</b><Pill tone={action.priority==="high"?"red":action.priority==="medium"?"amber":"blue"}>{action.priority}</Pill></div><p>{action.rationale}</p><p className="source-note">Brouillon · validation humaine · preuves : {action.sourceFindingIds.join(", ")}</p></div>)}
             {alerts.filter((n) => n.agent===selectedAgent).map((n)=><div key={n.id} className="recommendation">
               <div className="recommendation-top"><Icon name="target" size={18}/><b>{n.title}</b><Pill tone={priorityTone[n.priority]}>{priorityLabel[n.priority]}</Pill></div>
               <p>{n.detail}</p><div className="recommendation-actions"><Action icon="plus" onClick={()=>{setNewAgent(selectedAgent);setNewTitle(n.title);setMissionModal(true)}}>Créer une mission</Action><Action light icon="check" onClick={()=>setAlerts(prev=>prev.map(x=>x.id===n.id?{...x,seen:true}:x))}>Marquer lue</Action></div>
@@ -678,12 +685,18 @@ export default function App() {
               <Card title="Plan de délégation confirmé">
                 <div className="table-scroll"><table><thead><tr><th>Étape</th><th>Agent</th><th>Exécution</th><th>Résultat</th></tr></thead><tbody>{directorReport.plan.map((step)=><tr key={step.agent}><td>{step.step}</td><td>{step.agent.replace(/_/g," ")}</td><td><Pill tone="green">Read-only</Pill></td><td>{directorReport.sections.find((r)=>r.agent===step.agent)?.status==="ok"?"Analysé":"Données absentes"}</td></tr>)}</tbody></table></div>
               </Card>
+              {directorReport.comparison && <Card title="Comparaison des spécialistes">
+                <p className="muted-text small">{directorReport.comparison.explanation}</p>
+                <div className="table-scroll"><table><thead><tr><th>Agent</th><th>Constats</th><th>Critiques</th><th>Alternatives</th><th>Actions</th></tr></thead><tbody>{directorReport.comparison.scorecard.map(row=><tr key={row.agent}><td>{row.agent.replace(/_/g," ")}</td><td>{row.findings}</td><td>{row.highPriorityFindings}</td><td>{row.alternatives}</td><td>{row.proposedActions}</td></tr>)}</tbody></table></div>
+                {[...directorReport.comparison.synergies,...directorReport.comparison.conflicts].map((item,index)=><div className="governance-row" key={item.title+index}><Icon name="layers" size={17}/><div><b>{item.title}</b><small>{item.agents.join(" + ")} · {item.explanation}</small></div></div>)}
+              </Card>}
               <Card title="Constats priorisés">
                 {directorReport.highlights.length ? directorReport.highlights.map((item)=><div className="recommendation" key={item.agent+item.id}><div className="recommendation-top"><Icon name="target" size={18}/><b>{item.title}</b><Pill tone={item.priority==="high"?"red":item.priority==="medium"?"amber":"blue"}>{item.priority}</Pill></div><p>{item.explanation}</p><div className="evidence-items">{item.evidence.slice(0,4).map((e,i)=><span key={e.id+i}><Icon name="document" size={14}/>{e.agency} · {e.id}</span>)}</div><p className="source-note">Spécialiste : {item.agent.replace(/_/g," ")} · Brouillon / validation humaine</p></div>)
                 : <Empty title="Aucun constat" text="Les données disponibles ne permettent pas de prioriser une action."/>}
               </Card>
             </div>
             <Card title="Contrôles & limites">
+              {directorReport.comparison && <><h4>Actions consolidées</h4>{directorReport.comparison.prioritizedActions.slice(0,5).map(action=><div className="recommendation" key={action.agent+action.id}><b>#{action.rank} · {action.label}</b><p>{action.rationale}</p><small>{action.agent.replace(/_/g," ")} · validation humaine obligatoire</small></div>)}</>}
               {directorReport.warnings.map((w,i)=><div className="governance-row" key={i}><Icon name="alert" size={17}/><div><small>{w}</small></div></div>)}
               <p className="muted-text">Les chiffres des autres dashboards BI/DS ne sont pas encore consommés en temps réel. Un dossier persistant et un modèle de conversation autonome restent à implémenter.</p>
             </Card>

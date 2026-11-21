@@ -2,7 +2,7 @@ import type { AgencyScope } from "../auth.js"
 import { compareThreeStrategyScenarios } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
- amount, ensureLimit, finding, inventoryInScope, percent,
+ amount, buildDeepAnalysis, ensureLimit, finding, inventoryInScope, percent,
  receivablesInScope, salesInScope, snapshot, sumMoney, periodContainsSnapshot, type AgentReport, type ReportPeriod,
 } from "./common.js"
 
@@ -60,19 +60,18 @@ export function analyzeBusinessStrategy(input: {
    assumption:"Hypothèse purement arithmétique, à coûts constants NON validée ; pas un modèle de demande ni un ROI.",
    valueTnd:sales.length ? amount(totalRevenueTnd*increase/100) : null,
  }))
+ const metrics={agenciesCompared:agencyKeys.length,revenueTnd:sales.length?totalRevenueTnd:null,
+   agenciesWithMarginUnknown:rows.filter(x=>x.missingCostLines>0).length,
+   outstandingTnd:debt.length?sumMoney(debt.map(x=>x.outstanding)):null,
+   lowStockPositions:periodContainsSnapshot(input.dataset.metadata.asOf,input.period)?inventory.filter(x=>x.reorderPoint>0&&x.quantity<x.reorderPoint).length:null}
+ const allScenarios=[...scenarios,...strategic.scenarios.map(s=>({id:"STRATEGY_"+s.id,label:"Sensibilité "+s.title,
+   assumption:"Hypothèse purement arithmétique sur le CA, non une prévision; cash/CAPEX non vérifiés.",valueTnd:s.revenueTnd}))]
  return {
    agent:"business_strategy",
    status:agencyKeys.length?"ok":"no_data",
    executionMode:"read_only",
    snapshot:snap,
-   metrics:{
-     agenciesCompared:agencyKeys.length,
-     revenueTnd:sales.length?totalRevenueTnd:null,
-     agenciesWithMarginUnknown:rows.filter(x=>x.missingCostLines>0).length,
-     outstandingTnd:debt.length?sumMoney(debt.map(x=>x.outstanding)):null,
-     lowStockPositions:periodContainsSnapshot(input.dataset.metadata.asOf,input.period)?
-       inventory.filter(x=>x.reorderPoint>0&&x.quantity<x.reorderPoint).length:null,
-   },
+   metrics,
    findings,
    scenarios:[
      ...scenarios,
@@ -82,6 +81,10 @@ export function analyzeBusinessStrategy(input: {
        valueTnd:s.revenueTnd,
      })),
    ],
+   deepAnalysis:buildDeepAnalysis({headline:agencyKeys.length?`${agencyKeys.length} agence(s) comparée(s), ${totalRevenueTnd.toFixed(3)} TND de CA`:"Stratégie non analysable",
+     explanation:"Rapproche revenu, marge disponible, créances et tension stock afin d'exposer les contraintes avant arbitrage.",metrics,
+     metricDefinitions:{agenciesCompared:{label:"Agences comparées",unit:"count",interpretation:"Agences avec données exploitables."},revenueTnd:{label:"CA HT net",unit:"TND",interpretation:"Somme signée des ventes comptabilisées."},outstandingTnd:{label:"Créances ouvertes",unit:"TND",interpretation:"Exposition documentaire du périmètre."},lowStockPositions:{label:"Tensions stock",unit:"count",interpretation:"Positions sous leur seuil ERP."}},findings,scenarios:allScenarios,
+     scenarioTradeoffs:["Impact de CA rendu comparable","CAPEX et élasticité non intégrés","À confronter aux contraintes finance et stock"]}),
    decisionSupport:{strategicScenarios:strategic},
    warnings:[
      "Créances à la date d'arrêté sur factures émises dans la période ; stocks seulement si le snapshot date de la période.",

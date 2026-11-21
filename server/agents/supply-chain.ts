@@ -2,7 +2,7 @@ import type { AgencyScope } from "../auth.js"
 import { proposeTransferCandidates } from "./decision-support.js"
 import type { Dataset } from "../services.js"
 import {
-  amount, ensureLimit, finding, inventoryInScope, snapshot, sumMoney, periodContainsSnapshot,
+  amount, buildDeepAnalysis, ensureLimit, finding, inventoryInScope, snapshot, sumMoney, periodContainsSnapshot,
   type AgentReport, type Evidence, type ReportPeriod,
 } from "./common.js"
 
@@ -61,23 +61,23 @@ export function analyzeSupplyChain(input: {
         type:"stock_position" as const,id:e.reference,agency:e.agency,
       }))))
   }
+  const metrics = {stockPositions:snapshotApplicable?rows.length:null,lowStockPositions:snapshotApplicable?lowStock.length:null,
+    emptyStockPositions:snapshotApplicable?validThreshold.filter((r)=>r.quantity<=0).length:null,
+    positionsWithMissingThreshold:snapshotApplicable?rows.length-validThreshold.length:null,
+    indicativeStockValueTnd:availableInventory.length?sumMoney(availableInventory.map((r)=>r.quantity*r.unitCost)):null,
+    indicativeReorderCostTnd:scenarios[0].valueTnd}
   return {
     agent:"supply_chain_intelligence",
     status:rows.length?"ok":"no_data",
     executionMode:"read_only",
     snapshot:snap,
-    metrics:{
-      stockPositions:snapshotApplicable?rows.length:null,
-      lowStockPositions:snapshotApplicable?lowStock.length:null,
-      emptyStockPositions:snapshotApplicable?validThreshold.filter((r)=>r.quantity<=0).length:null,
-      positionsWithMissingThreshold:snapshotApplicable?rows.length-validThreshold.length:null,
-      indicativeStockValueTnd:availableInventory.length
-        ? sumMoney(availableInventory.map((r)=>r.quantity*r.unitCost))
-        : null,
-      indicativeReorderCostTnd:scenarios[0].valueTnd,
-    },
+    metrics,
     findings,
     scenarios,
+    deepAnalysis:buildDeepAnalysis({headline:rows.length?`${lowStock.length} position(s) sous le seuil sur ${rows.length}`:"Stock non analysable",
+      explanation:"Confrontation du disponible au seuil ERP, valorisation de l'écart minimal et distinction entre achat indicatif et transfert à vérifier.",metrics,
+      metricDefinitions:{stockPositions:{label:"Positions analysées",unit:"count",interpretation:"Positions visibles dans le snapshot."},lowStockPositions:{label:"Positions sous seuil",unit:"count",interpretation:"Références sous leur seuil déclaré."},emptyStockPositions:{label:"Positions vides",unit:"count",interpretation:"Références à quantité nulle ou négative."},indicativeReorderCostTnd:{label:"Coût de remise au seuil",unit:"TND",interpretation:"Écart au seuil valorisé au coût disponible."}},findings,scenarios,
+      scenarioTradeoffs:["Réduction du risque de rupture","Mobilisation de fonds de roulement","Délais, MOQ et réservations non intégrés"]}),
     decisionSupport:{transferCandidates:transferOptions},
     warnings:[
       ...(!rows.length && (input.period?.from||input.period?.to) ? ["Stock historique non disponible : le snapshot au "+snap.asOf+" est hors de la période demandée."] : []),

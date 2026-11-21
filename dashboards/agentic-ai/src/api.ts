@@ -32,7 +32,15 @@ export type RevenueResult = {
   }
   analysis: { customersAnalyzed: number; opportunitiesFound: number; returned: number }
   opportunities: RevenueOpportunity[]
+  deepAnalysis: DeepAnalysis
   warnings: string[]
+}
+export type DeepAnalysis = {
+  headline: string
+  explanation: string
+  quantifiedInsights: Array<{id:string;label:string;value:number|null;unit:"TND"|"percent"|"count"|"score";interpretation:string}>
+  alternatives: Array<{id:string;label:string;assumption:string;estimatedValueTnd:number|null;tradeoffs:string[]}>
+  proposedActions: Array<{id:string;label:string;rationale:string;priority:"high"|"medium"|"low";status:"draft_only";requiresHumanApproval:true;sourceFindingIds:string[]}>
 }
 
 // This is the existing server contract. No fake backend is called and no secrets are persisted.
@@ -125,6 +133,7 @@ export type SpecialistReport = {
     action: { type: string; status: "draft_only"; requiresHumanApproval: true }
   }>
   scenarios: Array<{ id: string; label: string; assumption: string; valueTnd: number | null }>
+  deepAnalysis: DeepAnalysis
   warnings: string[]
 }
 export type DirectorReport = {
@@ -139,9 +148,18 @@ export type DirectorReport = {
     agent: string; status: string;
     metrics: Record<string, number | null>
     findings: SpecialistReport["findings"]
+    scenarios: SpecialistReport["scenarios"]
+    deepAnalysis: DeepAnalysis
     warnings: string[]
   }>
   highlights: Array<SpecialistReport["findings"][number] & { agent: string }>
+  comparison?: {
+    scorecard:Array<{agent:string;status:string;quantifiedInsights:DeepAnalysis["quantifiedInsights"];findings:number;highPriorityFindings:number;alternatives:number;proposedActions:number}>
+    synergies:Array<{agents:string[];title:string;explanation:string}>
+    conflicts:Array<{agents:string[];title:string;explanation:string}>
+    prioritizedActions:Array<DeepAnalysis["proposedActions"][number]&{rank:number;agent:string}>
+    explanation:string
+  }
   summary: { agentsInvoked: number; totalFindings: number; requiresHumanReview: boolean; erpWrites: number }
   warnings: string[]
 }

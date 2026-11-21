@@ -45,6 +45,9 @@ describe("New specialist agents — deterministic and scoped",()=>{
     expect(x.findings[0].evidence[0].id).toBe("INV-S1")
     expect(JSON.stringify(x)).not.toContain("Confidentiel Tunis")
     expect(x.findings[0].action.status).toBe("draft_only")
+    expect(x.deepAnalysis.quantifiedInsights.find(i=>i.id==="overdueTnd")?.value).toBe(320.125)
+    expect(x.deepAnalysis.alternatives).toHaveLength(3)
+    expect(x.deepAnalysis.proposedActions[0].requiresHumanApproval).toBe(true)
   })
   it("Supply Chain uses existing reorder points without creating orders",()=>{
     const x=analyzeSupplyChain({scope:["Sfax"],dataset:sample()})
@@ -56,6 +59,7 @@ describe("New specialist agents — deterministic and scoped",()=>{
     expect(x.findings[0].evidence).toEqual([{type:"stock_position",id:"STK-S1",agency:"Sfax"}])
     expect(x.findings[0].action.requiresHumanApproval).toBe(true)
     expect(JSON.stringify(x)).not.toContain("Secret Tunis")
+    expect(x.deepAnalysis.quantifiedInsights.find(i=>i.id==="indicativeReorderCostTnd")?.value).toBe(47.25)
   })
   it("Business Strategy abstains from margin if one cost is missing",()=>{
     const x=analyzeBusinessStrategy({scope:["Sfax"],dataset:sample()})
@@ -67,6 +71,7 @@ describe("New specialist agents — deterministic and scoped",()=>{
     expect(x.scenarios[0].valueTnd).toBe(75)
     expect(JSON.stringify(x)).not.toContain("Confidentiel Tunis")
     expect(JSON.stringify(x)).not.toContain("999999")
+    expect(x.deepAnalysis.explanation.length).toBeGreaterThan(40)
   })
   it("No data returns no_data and never fabricates financial values",()=>{
     const dataset=sample()
@@ -102,6 +107,10 @@ describe("AI Director — bounded specialist delegation",()=>{
     expect(x.sections).toHaveLength(4)
     expect(x.summary.agentsInvoked).toBe(4)
     expect(x.highlights.every(h=>h.action.status==="draft_only")).toBe(true)
+    expect(x.comparison.scorecard).toHaveLength(4)
+    expect(x.comparison.scorecard.every(row=>row.quantifiedInsights.length>0)).toBe(true)
+    expect(x.comparison.synergies.length).toBeGreaterThan(0)
+    expect(x.comparison.prioritizedActions.every(a=>a.requiresHumanApproval)).toBe(true)
     expect(JSON.stringify(x)).not.toContain("Confidentiel Tunis")
   })
   it("honors explicit allowed agents and refuses invalid objectives or limits",()=>{

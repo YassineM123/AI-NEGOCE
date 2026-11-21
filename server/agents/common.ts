@@ -20,6 +20,36 @@ export type AgentFinding = {
   evidence: Evidence[]
   action: { type: string; status: "draft_only"; requiresHumanApproval: true }
 }
+export type QuantifiedInsight = {
+  id: string
+  label: string
+  value: number | null
+  unit: "TND" | "percent" | "count" | "score"
+  interpretation: string
+}
+export type AgentAlternative = {
+  id: string
+  label: string
+  assumption: string
+  estimatedValueTnd: number | null
+  tradeoffs: string[]
+}
+export type ProposedAction = {
+  id: string
+  label: string
+  rationale: string
+  priority: AgentPriority
+  status: "draft_only"
+  requiresHumanApproval: true
+  sourceFindingIds: string[]
+}
+export type DeepAnalysis = {
+  headline: string
+  explanation: string
+  quantifiedInsights: QuantifiedInsight[]
+  alternatives: AgentAlternative[]
+  proposedActions: ProposedAction[]
+}
 export type AgentSnapshot = {
   asOf: string
   source: string
@@ -36,8 +66,37 @@ export type AgentReport = {
   metrics: Record<string, number | null>
   findings: AgentFinding[]
   scenarios: Array<{ id: string; label: string; assumption: string; valueTnd: number | null }>
+  deepAnalysis: DeepAnalysis
   decisionSupport?: Record<string,unknown>
   warnings: string[]
+}
+
+export function buildDeepAnalysis(input: {
+  headline: string
+  explanation: string
+  metrics: Record<string, number | null>
+  metricDefinitions: Record<string, { label: string; unit: QuantifiedInsight["unit"]; interpretation: string }>
+  findings: AgentFinding[]
+  scenarios: AgentReport["scenarios"]
+  scenarioTradeoffs: string[]
+}): DeepAnalysis {
+  return {
+    headline: input.headline,
+    explanation: input.explanation,
+    quantifiedInsights: Object.entries(input.metricDefinitions).map(([id, definition]) => ({
+      id, label: definition.label, value: input.metrics[id] ?? null,
+      unit: definition.unit, interpretation: definition.interpretation,
+    })),
+    alternatives: input.scenarios.map((scenario) => ({
+      id: scenario.id, label: scenario.label, assumption: scenario.assumption,
+      estimatedValueTnd: scenario.valueTnd, tradeoffs: input.scenarioTradeoffs,
+    })),
+    proposedActions: input.findings.map((item) => ({
+      id: "ACTION-" + item.id, label: item.title, rationale: item.explanation,
+      priority: item.priority, status: "draft_only" as const,
+      requiresHumanApproval: true as const, sourceFindingIds: [item.id],
+    })),
+  }
 }
 export const inScope = (agency: string, scope: AgencyScope) =>
   scope === "*" || scope.includes(agency)
