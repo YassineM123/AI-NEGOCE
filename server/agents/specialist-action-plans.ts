@@ -24,7 +24,7 @@ export function commercialAccountPlans(dataset:Dataset,scope:AgencyScope,period:
   groups.set(k,[...(groups.get(k)??[]),r])
  }
  const byAgency=new Map<string,Array<{id:string;agency:string;name:string;categories:Set<string>;
-    invoices:string[];revenue:number;grossMargin:number|null;lastDate:string}>>()
+    invoices:string[];categoryInvoices:Map<string,string[]>;revenue:number;grossMargin:number|null;lastDate:string}>>()
  for(const [k,rows] of groups){
   const revenue=sumMoney(rows.map(x=>x.revenue))
   const costComplete=rows.every(x=>x.cost!==null&&x.cost!==undefined)
@@ -33,6 +33,8 @@ export function commercialAccountPlans(dataset:Dataset,scope:AgencyScope,period:
    agency:rows[0].agency,name:rows[0].customer,
    categories:new Set(rows.filter(x=>x.revenue>0).map(x=>x.family).filter(Boolean)),
    invoices:[...new Set(rows.map(x=>x.invoiceId))].sort(),
+   categoryInvoices:new Map([...new Set(rows.map(x=>x.family))].map(family=>
+     [family,[...new Set(rows.filter(x=>x.family===family).map(x=>x.invoiceId))].sort()])),
    revenue,grossMargin,lastDate:rows.map(x=>x.date).sort().at(-1)!}
   byAgency.set(customer.agency,[...(byAgency.get(customer.agency)??[]),customer])
  }
@@ -43,9 +45,8 @@ export function commercialAccountPlans(dataset:Dataset,scope:AgencyScope,period:
   for(const c of customers)for(const family of c.categories){
    const value=frequency.get(family)??{customers:new Set<string>(),invoices:new Set<string>()}
    value.customers.add(c.id)
-   for(const s of sales.filter(x=>x.agency===agency&&(x.customerId??"name:"+x.customer)===c.id&&x.family===family)){
-    value.invoices.add(s.invoiceId)
-   }
+   for(const invoiceId of c.categoryInvoices.get(family)??[])
+     value.invoices.add(invoiceId)
    frequency.set(family,value)
   }
   for(const c of customers){
