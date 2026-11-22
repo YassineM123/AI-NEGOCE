@@ -260,10 +260,39 @@ export function datasetFrom(db: ErpDatabase): Dataset {
             coalesce(i.reorder_point, 0) reorderPoint, i.unit_cost unitCost
        FROM inventory i JOIN products p ON p.id = i.product_id JOIN agencies a ON a.id = i.agency_id`,
   )
+  const collections = db.all<{id:string;invoiceId:string;agency:string;date:string;amountTnd:number}>(
+    `SELECT pay.id, s.number invoiceId, a.name agency, pay.payment_date date,
+            pay.amount amountTnd
+       FROM payments pay
+       JOIN sales_invoices s ON s.id = pay.sales_invoice_id
+       JOIN agencies a ON a.id = s.agency_id
+      WHERE s.status='posted' AND s.doc_type='invoice'
+        AND pay.payment_date <= ?`,
+    db.asOf(),
+  )
+  const supplierDocuments = db.all<{
+    orderId:string;supplierId:string;supplier:string;agency:string
+    orderDate:string;invoiceDate:string;invoiceId:string;lagDays:number;amountTnd:number
+  }>(
+    `SELECT po.id orderId,sup.id supplierId,sup.name supplier,a.name agency,
+            po.order_date orderDate,si.invoice_date invoiceDate,si.id invoiceId,
+            CAST(julianday(si.invoice_date)-julianday(po.order_date) AS INTEGER) lagDays,
+            si.total_ht amountTnd
+       FROM supplier_invoices si
+       JOIN purchase_orders po ON po.id=si.purchase_order_id
+       JOIN suppliers sup ON sup.id=si.supplier_id AND sup.id=po.supplier_id
+       JOIN agencies a ON a.id=si.agency_id AND a.id=po.agency_id
+      WHERE po.status!='cancelled' AND si.status!='cancelled'
+        AND si.currency='TND' AND si.invoice_date>=po.order_date
+        AND si.invoice_date <= ?`,
+    db.asOf(),
+  )
   const data: Dataset = {
     sales,
     receivables,
     inventory,
+    collections,
+    supplierDocuments,
     metadata: { ...datasetMetadata, source: "Bac à sable ERP synthétique (SQLite) — données fictives", asOf: db.asOf(), lastUpdated: new Date().toISOString() },
   }
   cached = { db, version: db.version, data }
