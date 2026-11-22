@@ -38,6 +38,18 @@ const example=():Dataset=>{
     ],
     inventory:[{reference:"SKU-SFX",product:"Bureau",agency:"Sfax",
       quantity:2,reorderPoint:10,unitCost:50}],
+    collections:[
+      {id:"COL-SF",invoiceId:"SFX-1",agency:"Sfax",date:"2026-07-20",amountTnd:50},
+      {id:"COL-TN",invoiceId:"TUN-1",agency:"Tunis Centre",date:"2026-10-07",amountTnd:25},
+    ],
+    supplierDocuments:[
+      {orderId:"PO-SF",supplierId:"SUP-SF",supplier:"Fournisseur fictif Sfax",
+       agency:"Sfax",orderDate:"2026-07-01",invoiceDate:"2026-07-11",
+       invoiceId:"SI-SF",lagDays:10,amountTnd:300},
+      {orderId:"PO-TN",supplierId:"SUP-TN",supplier:"Fournisseur fictif Tunis",
+       agency:"Tunis Centre",orderDate:"2026-09-01",invoiceDate:"2026-09-11",
+       invoiceId:"SI-TN",lagDays:10,amountTnd:500},
+    ],
     metadata:{...baseline.metadata,source:"PostgreSQL synthetic QA",asOf:"2026-10-15",
       lastUpdated:"2026-10-15T09:00:00.000Z"},
   }
@@ -94,6 +106,12 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect(one.body.dataScience.analysis.scenarios.basisRevenueTnd).toBe(100)
     expect(one.body.dataScience.analysis.portfolio.customers).toBe(1)
     expect(one.body.bi.data.metadata.snapshotRevision).toBe(1)
+    expect(one.body.dataScience.analysis.advancedModels).toBeDefined()
+    expect(one.body.dataScience.analysis.advancedModels.collections.status).toBe("insufficient_history")
+    expect(one.body.dataScience.analysis.advancedModels.suppliers.events).toBe(1)
+    const loaded=await readAnalyticalDataset(t)
+    expect(loaded?.dataset.collections?.map(e=>e.id)).toEqual(["COL-SF","COL-TN"])
+    expect(loaded?.dataset.supplierDocuments?.map(e=>e.invoiceId)).toEqual(["SI-SF","SI-TN"])
     const rev=await request(app).get("/api/v1/agentic/revenue-growth/opportunities")
       .set(bearer("dev-manager-sfax")).query(filter)
     expect(rev.status).toBe(200)
