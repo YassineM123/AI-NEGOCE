@@ -233,6 +233,15 @@ export const analyticsOverviewSchema = z.object({
     isSynthetic: z.boolean(),
     storage:z.enum(["postgres","local_fixture"]).optional(),
     revision:z.number().int().positive().nullable().optional(),
+    demo:z.object({
+      mode:z.literal("synthetic_live_demo"),
+      lastEvent:z.object({
+        id:z.string(),kind:z.enum(["sale","collection","restock","supplier"]),
+        agency:z.string(),date:z.string(),reference:z.string(),
+        amountTnd:z.number().nullable(),units:z.number().nullable(),
+        description:z.string(),erpWrites:z.literal(0),
+      }).optional(),
+    }).optional(),
   }),
   bi: z.object({ status: z.literal("available"), data: biOverviewSchema }),
   dataScience: z.object({
