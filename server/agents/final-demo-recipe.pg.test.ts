@@ -14,6 +14,7 @@ import {loadConfig} from "../config.js"
 import {DisabledOcrProvider} from "../ocr.js"
 import {TestErpAdapter} from "../erp.js"
 import {readAnalyticalDataset,saveAnalyticalDataset} from "../analytics-database.js"
+import {applySyntheticDemoEvent} from "../demo-live-simulator.js"
 import {bearer,TEST_DEV_KEY} from "../../tests/qa/support/harness.js"
 import {finalDemoDataset,finalDemoScope,finalDemoDirectorObjective} from "./final-demo-fixture.js"
 
@@ -215,4 +216,58 @@ describe.skipIf(!url)("REAL POSTGRES — five-scenario reproducible decision rec
   const foreign=await readAnalyticalDataset(store.forTenant("tenant-other"))
   expect(foreign).toBeNull()
  })
+ it("publishes four living events to PostgreSQL and refreshes BI, DS and governed Agentic",async()=>{
+  const tenant=store.forTenant("demo-fictive")
+  const source=finalDemoDataset()
+  source.inventory=source.inventory.map(x=>({...x,quantity:x.agency==="Sfax"?20:x.quantity}))
+  const seed=await saveAnalyticalDataset(tenant,source,"synthetic",true)
+  const app=createApp({config:loadConfig({NODE_ENV:"test",AUTH_MODE:"local-dev",
+   DATABASE_URL:isolated(),UNIFIED_ANALYTICS_SOURCE:"postgres",
+   AUTH_DEV_SIGNING_KEY:TEST_DEV_KEY}),
+   store,ocr:new DisabledOcrProvider(),erp:new TestErpAdapter()})
+  const auth=bearer("dev-admin")
+  const query={agency:"Sfax",...finalDemoScope}
+  const before=await request(app).get("/api/v1/analytics/overview").set(auth).query(query)
+  expect(before.status).toBe(200)
+  expect(before.body.bi.data.revenue).toBe(2500)
+  let revision=seed.revision
+  let generated
+  for(const kind of ["sale","collection","restock","supplier"] as const){
+   const current=await readAnalyticalDataset(tenant)
+   expect(current?.revision).toBe(revision)
+   generated=applySyntheticDemoEvent(current!.dataset,{sequence:revision,agency:"Sfax",kind})
+   const saved=await saveAnalyticalDataset(tenant,generated.dataset,"synthetic",true,revision)
+   expect(saved.revision).toBe(++revision)
+   expect(saved.sourceHash).toMatch(/^[0-9a-f]{64}$/)
+   await expect(saveAnalyticalDataset(tenant,generated.dataset,"synthetic",true,revision-1))
+     .rejects.toThrow("ANALYTICS_REVISION_CONFLICT")
+  }
+  const after=await request(app).get("/api/v1/analytics/overview").set(auth).query(query)
+  expect(after.status).toBe(200)
+  expect(after.body.snapshotId).not.toBe(before.body.snapshotId)
+  expect(after.body.snapshot.revision).toBe(revision)
+  expect(after.body.snapshot.demo.mode).toBe("synthetic_live_demo")
+  expect(after.body.snapshot.demo.lastEvent.kind).toBe("supplier")
+  expect(after.body.bi.data.revenue).toBeGreaterThan(before.body.bi.data.revenue)
+  expect(after.body.dataScience.analysis.scenarios.basisRevenueTnd)
+    .toBe(after.body.bi.data.revenue)
+  const loaded=await readAnalyticalDataset(tenant)
+  expect(loaded?.dataset.metadata.demoEvents).toHaveLength(4)
+  expect(loaded?.dataset.collections?.some(x=>x.id.startsWith("SIM-"))).toBe(true)
+  expect(loaded?.dataset.supplierDocuments?.some(x=>x.invoiceId.startsWith("SI-SIM-"))).toBe(true)
+  const finance=await request(app).get(api+"/financial-strategy/analysis").set(auth).query(query)
+  const supply=await request(app).get(api+"/supply-chain/recommendations").set(auth).query(query)
+  const director=await request(app).post(api+"/ai-director/investigate").set(auth)
+   .send({...query,objective:finalDemoDirectorObjective})
+  for(const res of [finance,supply,director])expect(res.status).toBe(200)
+  expect(director.body.summary.erpWrites).toBe(0)
+  const otherAgency=await request(app).get("/api/v1/analytics/overview").set(auth)
+    .query({agency:"Tunis Centre",...finalDemoScope})
+  expect(otherAgency.status).toBe(200)
+  expect(otherAgency.body.snapshot.demo.lastEvent).toBeUndefined()
+  expect(JSON.stringify(otherAgency.body)).not.toContain("SIM-")
+  const otherTenant=await readAnalyticalDataset(store.forTenant("tenant-other"))
+  expect(otherTenant).toBeNull()
+ })
+
 })
