@@ -779,6 +779,17 @@ export default function App() {
                 {directorReport.decisionDossier.unresolvedDependencies.map((d,i)=>
                   <div className="governance-row" key={i}><Icon name="alert" size={16}/><div><small>{d}</small></div></div>)}
               </div>}
+              {directorReport.decisionReadiness && <section data-director-decision-readiness={directorReport.decisionReadiness.policyVersion} aria-label="Vérifications décisionnelles AI Director">
+                <h4>Feux de décision · {directorReport.decisionReadiness.assessed} propositions</h4>
+                <p className="source-note">Aucune action ERP exécutable : {directorReport.decisionReadiness.readyForErpExecution} validée. Les pièces et les permissions doivent être revérifiées.</p>
+                {directorReport.decisionReadiness.entries.slice(0,8).map((entry,index)=>
+                  <div className="governance-row" key={entry.agent+entry.findingId+index}>
+                    <Icon name="alert" size={16}/><div><b>{entry.agent.replace(/_/g," ")} · {entry.action.replace(/_/g," ")}</b>
+                    <small>{entry.blockers.length} blocage(s) documenté(s) · {entry.evidenceIds.length} preuve(s) vérifiées</small>
+                    {entry.checks.filter(check=>!check.verified).slice(0,3).map(check=>
+                      <small key={check.name}>• {check.detail}</small>)}</div>
+                  </div>)}
+              </section>}
               {directorReport.warnings.map((w,i)=><div className="governance-row" key={i}><Icon name="alert" size={17}/><div><small>{w}</small></div></div>)}
               <p className="muted-text">Les rapports des spécialistes partagent le snapshot BI/DS. Cette investigation reste en lecture seule ; les missions et validations persistantes sont gérées dans le workspace serveur. Aucun write-back ERP.</p>
             </Card>
@@ -794,14 +805,14 @@ export default function App() {
       <div className="director-grid">
         <div className="stack">
           <Card title="Orchestration des agents — Délégation et coordination" action={<Pill tone="blue">Moteur API disponible</Pill>}>{orchestrator()}</Card>
-          <Card title="Planification de mission" action={<Action light icon="plus" onClick={() => setMissionModal(true)}>Nouvelle mission</Action>}>
+          <Card title="Planification de mission" action={<Action light icon="plus" onClick={() => token ? navigate("missions") : setMissionModal(true)}>Nouvelle mission</Action>}>
             <p className="muted-text">Les missions ci-dessous sont des exemples visuels. Le plan API confirmé apparaît en haut après exécution.</p>
             <div className="director-work"><div><Icon name="target" /><span><b>{activeMission.id} — {activeMission.title}</b><small>Priorité : {priorityLabel[activeMission.priority]} · Progression : {activeMission.progress} %</small></span></div><Progress value={activeMission.progress}/></div>
             <div className="table-scroll"><table><thead><tr><th>Étape</th><th>Agent</th><th>Statut</th><th>Avancement</th></tr></thead><tbody>{agents.map((a, i) => <tr key={a.id}><td>{["Analyse clients", "Projection financière", "Évaluation stocks", "Arbitrage stratégique"][i]}</td><td><AgentLabel agent={a.id}/></td><td><Pill tone={a.implemented ? "green" : "gray"}>{a.implemented ? "MVP" : "À intégrer"}</Pill></td><td>{a.implemented ? "API disponible" : "Non exécutée"}</td></tr>)}</tbody></table></div>
           </Card>
         </div>
         <div className="stack">
-          <Card title="Synthèse du Director" action={<Pill tone="blue">Orchestration read-only</Pill>}><div className="detail-highlight"><Icon name="target" size={22}/><div><b>Prochaine action recommandée</b><p>Les quatre Agents calculent des constats en lecture seule. Les validations et actions ERP exigent encore un backend de décisions persistant.</p></div></div><div className="check-list"><p><Icon name="check" size={17}/> Revenue Growth, Financial, Supply Chain, Business : API disponibles</p><p><Icon name="check" size={17}/> Interface de pilotage React créée</p><p><Icon name="clock" size={17}/> AI Director : orchestration read-only implémentée</p><p><Icon name="clock" size={17}/> Actions métier et notifications persistantes à développer</p></div><div className="horizontal-actions"><Action icon="plus" onClick={() => setMissionModal(true)}>Créer un plan</Action><Action light icon="document" onClick={() => navigate("decisions")}>Décisions</Action></div></Card>
+          <Card title="Synthèse du Director" action={<Pill tone="blue">Orchestration read-only</Pill>}><div className="detail-highlight"><Icon name="target" size={22}/><div><b>Prochaine action recommandée</b><p>Les quatre Agents calculent des constats en lecture seule. Les validations et actions ERP exigent encore un backend de décisions persistant.</p></div></div><div className="check-list"><p><Icon name="check" size={17}/> Revenue Growth, Financial, Supply Chain, Business : API disponibles</p><p><Icon name="check" size={17}/> Interface de pilotage React créée</p><p><Icon name="clock" size={17}/> AI Director : orchestration read-only implémentée</p><p><Icon name="clock" size={17}/> Actions ERP transactionnelles non homologuées ; missions et notifications sandbox persistantes disponibles</p></div><div className="horizontal-actions"><Action icon="plus" onClick={() => token ? navigate("missions") : setMissionModal(true)}>Créer un plan</Action><Action light icon="document" onClick={() => navigate("decisions")}>Décisions</Action></div></Card>
           <Card title="Arbitrages en attente">{pendingDecisions.slice(0, 3).map((d) => <button key={d.id} type="button" className="alert-inline" onClick={() => { setDecisionId(d.id); navigate("decisions") }}><span className="alert-marker marker-amber"><Icon name="alert" size={17}/></span><span><b>{d.title}</b><small>{d.risk} · {byAgent(d.agent).name}</small></span><Icon name="chevron" size={16}/></button>)}</Card>
           <Card title="Demandes à traiter"><button className="director-request" onClick={() => setMissionModal(true)}><Icon name="target"/><span><b>Lancer une investigation</b><small>Créer une mission pour l'agent adapté</small></span><Icon name="chevron"/></button></Card>
         </div>
