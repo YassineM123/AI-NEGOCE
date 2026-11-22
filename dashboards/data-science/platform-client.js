@@ -91,6 +91,12 @@
       return () => listeners.delete(fn);
     },
     getFilters() { return { ...currentState.filters }; },
+    openAgent(agent) {
+      if (!portal || !portalReady || !currentState.connected) return false;
+      if (!["revenue", "finance", "supply", "strategy"].includes(agent)) return false;
+      global.parent.postMessage({ type:"AI_NEGOCE_BRIDGE_OPEN_AGENT",agent },origin);
+      return true;
+    },
     async connectLocalDemo() {
       if (portal) {
         if (!portalReady || !currentState.connected) throw new Error("Connectez-vous depuis Agentic Command Center");
