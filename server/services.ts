@@ -11,7 +11,7 @@ import type { AgencyScope } from "./auth.js"
 
 /** Posted customer collection event from the synthetic ERP, not proof of bank settlement. */
 export type CollectionEvent = {
-  id:string; invoiceId:string;agency:string;date:string;amountTnd:number
+  id:string; invoiceId:string;agency:string;customerId?:string;date:string;amountTnd:number
 }
 /** Order-to-supplier-invoice milestone, NOT a goods receipt or OTIF measure. */
 export type SupplierDocumentEvent = {
