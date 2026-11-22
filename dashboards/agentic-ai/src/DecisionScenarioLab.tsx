@@ -56,7 +56,7 @@ export default function DecisionScenarioLab({
  </label>
  const stockNum=(label:string,key:"availableUnits"|"dailyDemandUnits"|"replenishmentLeadDays")=>
   <label className="scenario-field"><span>{label}</span><input type="number"
-    min={key==="dailyDemandUnits"||key==="replenishmentLeadDays"?"0.001":"0"}
+    min={key==="replenishmentLeadDays"?"1":key==="dailyDemandUnits"?"0.001":"0"}
     step={key==="replenishmentLeadDays"?"1":"0.001"} required value={stock[key]}
     onChange={e=>setStock(previous=>({...previous,[key]:Number(e.target.value)}))}/></label>
  return <section className="scenario-lab" aria-label="Simulations métier explicables">
