@@ -250,7 +250,7 @@ export function datasetFrom(db: ErpDatabase): Dataset {
        LEFT JOIN representatives r ON r.id = s.representative_id`,
   )
   const receivables = db.all<Receivable>(
-    `SELECT s.number invoiceId, a.name agency, c.name customer, r.invoice_date date, r.due_date dueDate, r.outstanding
+    `SELECT s.number invoiceId, a.name agency, c.name customer, c.id customerId, r.invoice_date date, r.due_date dueDate, r.outstanding
        FROM receivables r JOIN sales_invoices s ON s.id = r.sales_invoice_id
        JOIN agencies a ON a.id = r.agency_id JOIN customers c ON c.id = r.customer_id
       WHERE r.outstanding > 0`,
