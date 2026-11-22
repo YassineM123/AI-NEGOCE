@@ -81,6 +81,12 @@ export function buildAnalyticsOverview(input: {
       isSynthetic: input.organization.isSynthetic,
       storage:input.dataset.metadata.snapshotRevision?"postgres" as const:"local_fixture" as const,
       revision:input.dataset.metadata.snapshotRevision??null,
+      ...(input.organization.isSynthetic&&input.dataset.metadata.simulationMode==="synthetic_live_demo"?
+        {demo:{
+          mode:"synthetic_live_demo" as const,
+          ...((input.scope==="*"||input.scope.includes(input.dataset.metadata.demoLastEvent?.agency??""))
+            &&input.dataset.metadata.demoLastEvent?{lastEvent:input.dataset.metadata.demoLastEvent}:{})
+        }}:{}),
     },
     bi: { status: "available", data: bi },
     insights,
