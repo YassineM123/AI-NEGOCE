@@ -57,12 +57,14 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
   const s=choose(available),quantity=1
   const existing=lines.find(x=>x.agency===selected&&x.customerId)
     ??lines.find(x=>x.agency===selected)
+  const productLine=lines.find(x=>x.agency===selected&&
+    (x.productId===s.reference||x.product===s.product))
   if(!existing)throw new Error("DEMO_CUSTOMER_REQUIRED")
   const value=tnd(Math.max(.001,s.unitCost*1.4)*quantity)
   const cost=tnd(s.unitCost*quantity)
   lines.push({id:identifier,invoiceId:identifier,date,agency:selected,
    customer:existing.customer,customerId:existing.customerId,
-   product:s.product,productId:s.reference,quantity,family:existing.family||"Autres",
+   product:s.product,productId:s.reference,quantity,family:productLine?.family||"Autres",
    representative:"Simulateur (fictif)",revenue:value,cost,
    kind:"invoice",status:"posted"})
   s.quantity=tnd(s.quantity-quantity)
