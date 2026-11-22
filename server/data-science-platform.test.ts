@@ -85,10 +85,16 @@ describe("Data Science governed by exact same BI dataset, agency and period",()=
     const data=defaultDataset()
     const ds=buildDataScienceAnalysis(data,{agencies:"*",from:"2024-01-01",to:"2024-12-31"})
     expect(ds.inventory.periodApplicable).toBe(false)
-    expect(ds.inventory.status).toBe("observed_current_snapshot")
+    expect(ds.inventory.status).toBe("not_available")
+    expect(ds.inventory.positions).toBe(0)
+    expect(ds.inventory.topBelow).toEqual([])
+    expect(ds.warnings.join(" ")).toContain("Stock historique indisponible")
     expect(ds.scenarios.basisRevenueTnd).toBe(overview({
       agencies:"*",from:"2024-01-01",to:"2024-12-31"},data).revenue)
     expect(ds.cash.basis).toBe("outstanding_for_invoices_issued_in_selected_period")
+    const today=buildDataScienceAnalysis(data,{agencies:"*",from:data.metadata.asOf,to:data.metadata.asOf})
+    expect(today.inventory.periodApplicable).toBe(true)
+    expect(today.inventory.status).toBe("observed_current_snapshot")
   })
   it("uses an explicit no-data state instead of fabricating client or scenario figures",()=>{
     const ds=buildDataScienceAnalysis(defaultDataset(),{
