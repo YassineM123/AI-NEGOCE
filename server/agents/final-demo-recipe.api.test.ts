@@ -12,7 +12,9 @@ import request from "supertest"
 import {bearer,makeApp} from "../../tests/qa/support/harness.js"
 import {finalDemoDataset,finalDemoScope,finalDemoDirectorObjective} from "./final-demo-fixture.js"
 
-const root="/api/v1/ageconst scope=finalDemoScope
+const root="/api/v1/agentic"
+const workspace=root+"/workspace"
+const scope=finalDemoScope
 const directorObjective=finalDemoDirectorObjective
 const dataset=finalDemoDataset
 const jsonFingerprint=(value:unknown)=>createHash("sha256").update(JSON.stringify(value)).digest("hex")
