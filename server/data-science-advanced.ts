@@ -30,15 +30,13 @@ const unavailable=(reason:string)=>({
  selectedScore:null as number|null,forecast:null as number|null,
  reason,
 })
-type Outcome=ReturnType<typeof unavailable>
-const result=(o:Outcome)=>o
 
 /** Historical, strictly observed "no next invoice in 90 days" label.
  *  Does not prove contractual customer churn, only purchase inactivity.
  */
 export function backtestCustomerInactivity(dataset:Dataset,filters:Filters={}){
  const end=filters.to&&filters.to<dataset.metadata.asOf?filters.to:dataset.metadata.asOf
- const rows=filteredSales({agencies:filters.agencies},dataset)
+ const rows=filteredSales({agencies:filters.agencies,from:filters.from},dataset)
   .filter(s=>s.date<=end&&s.revenue>0&&!((s.kind??"invoice")==="credit_note"))
  const byCustomer=new Map<string,string[]>()
  for(const s of rows){
