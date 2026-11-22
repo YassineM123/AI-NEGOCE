@@ -88,7 +88,17 @@ export function buildAnalyticsOverview(input: {
             &&input.dataset.metadata.demoLastEvent?{lastEvent:input.dataset.metadata.demoLastEvent}:{})
         }}:{}),
     },
-    bi: { status: "available", data: bi },
+    bi: { status: "available", data: {
+      ...bi,
+      // Never leak unscoped event history through the generic BI metadata
+      // passthrough when a manager is restricted to one agency.
+      metadata:{
+        adapter:bi.metadata.adapter,source:bi.metadata.source,
+        currency:bi.metadata.currency,asOf:bi.metadata.asOf,
+        lastUpdated:bi.metadata.lastUpdated,
+        snapshotRevision:bi.metadata.snapshotRevision,
+      },
+    } },
     insights,
     dataScience: {
       status:canReadDataScience?"available" as const:"forbidden" as const,
