@@ -2,6 +2,7 @@ import {describe,expect,it} from "vitest"
 import {defaultDataset,type Dataset} from "./services.js"
 import {backtestCollections,backtestCustomerInactivity,backtestSupplierDocuments} from "./data-science-advanced.js"
 import {buildDataScienceAnalysis} from "./data-science-platform.js"
+import {governedDataScienceSchema} from "../shared/contracts/analytics-platform.js"
 
 function advancedFixture():Dataset{
  const d=defaultDataset()
@@ -81,6 +82,8 @@ describe("Advanced DS — temporal model evaluation on same scoped source",()=>{
  it("runs all pilots on one versioned BI/DS dataset and abstains on missing relations",()=>{
   const data=advancedFixture()
   const ds=buildDataScienceAnalysis(data,{agencies:["Sfax"]})
+  const checked=governedDataScienceSchema.safeParse(ds)
+  expect(checked.success,JSON.stringify(checked.error?.issues)).toBe(true)
   expect(ds.advancedModels.collections.status).toBe("backtested_pilot")
   expect(ds.advancedModels.suppliers.eligibleGroups).toBe(1)
   expect(ds.advancedModels.inactivity.trainSamples).toBeGreaterThan(0)
