@@ -12,7 +12,7 @@ jobs:
       - run: npm run typecheck
       - run: npx vitest run server/agents/revenue-growth.test.ts server/agents/revenue-growth.api.test.ts server/agents/agentic-suite.test.ts server/agents/agentic-suite.api.test.ts server/agents/workspace.api.test.ts server/agents/five-agents-journey.api.test.ts
       - name: Final five-scenario deterministic demonstration recipe
-        run: npx vitest run server/agents/final-demo-recipe.api.test.ts --reporter=verbose
+        run: npx vitest run server/agents/final-demo-recipe.api.test.ts server/agents/explainable-scenarios.api.test.ts --reporter=verbose
       - run: npm run agentic:typecheck
       - run: npm run agentic:build
 
