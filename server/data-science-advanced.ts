@@ -28,6 +28,7 @@ const unavailable=(reason:string)=>({
  trainSamples:0,holdoutSamples:0,
  candidates:[] as Evaluation[],baselineScore:null as number|null,
  selectedScore:null as number|null,forecast:null as number|null,
+ forecastMonth:null as string|null,
  reason,
 })
 
