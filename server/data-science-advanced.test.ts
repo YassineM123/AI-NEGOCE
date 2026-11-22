@@ -39,6 +39,16 @@ function advancedFixture():Dataset{
     lastUpdated:"2026-10-20T00:00:00Z"}}
 }
 describe("Advanced DS — temporal model evaluation on same scoped source",()=>{
+ it("always validates contract for sparse and legacy dataset",()=>{
+  for(const data of [defaultDataset(),advancedFixture()]){
+   for(const filters of [{agencies:"*" as const},{agencies:["Sfax"],from:"2026-07-01",to:"2026-09-30"}]){
+    const ds=buildDataScienceAnalysis(data,filters)
+    const result=governedDataScienceSchema.safeParse(ds)
+    expect(result.success,JSON.stringify(result.error?.issues)).toBe(true)
+   }
+  }
+ })
+
  it("evaluates customer 90-day inactivity against a temporal prevalence baseline",()=>{
   const data=advancedFixture()
   const result=backtestCustomerInactivity(data,{agencies:["Sfax"]})
