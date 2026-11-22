@@ -189,6 +189,55 @@ export const governedDataScienceSchema=z.object({
       warnings:z.array(z.string()),
     }),
   }).optional(),
+  linkedEvidence:z.object({
+    source:z.literal("synthetic_linked_erp_history"),status:z.literal("not_certified"),
+    scope:z.object({agencies:z.union([z.literal("*"),z.array(z.string())]),from:z.string().nullable(),to:z.string().nullable()}),
+    stock:z.object({
+      status:z.enum(["no_positions","reconciled","unverified"]),
+      sourceAsOf:z.string(),evaluatedAt:z.string(),
+      positions:z.number().int().nonnegative(),
+      reconciledPositions:z.number().int().nonnegative(),
+      historicalEligible:z.number().int().nonnegative(),
+      movementRows:z.number().int().nonnegative(),
+      inflowUnits:z.number(),outflowUnits:z.number(),
+      mismatches:z.array(z.object({
+        agency:z.string(),sku:z.string(),openingDate:z.string().nullable(),
+        movementCount:z.number().int(),stockNow:z.number(),
+        stockLedgerNow:z.number().nullable(),historicalAtEnd:z.number().nullable(),
+        reconciled:z.boolean(),
+      })),
+      historicalExamples:z.array(z.object({
+        agency:z.string(),sku:z.string(),openingDate:z.string().nullable(),
+        movementCount:z.number().int(),stockNow:z.number(),
+        stockLedgerNow:z.number().nullable(),historicalAtEnd:z.number().nullable(),
+        reconciled:z.boolean(),
+      })),
+    }),
+    procurement:z.object({
+      status:z.enum(["linked_invoices_not_receipts","no_order_lines"]),
+      orderLines:z.number().int(),orders:z.number().int(),invoiceDocuments:z.number().int(),
+      incompleteLines:z.number().int(),overInvoicedLines:z.number().int(),
+      supplierExamples:z.array(z.object({
+        agency:z.string(),supplierId:z.string(),supplier:z.string(),
+        documentedOrders:z.number().int(),orderedUnits:z.number(),invoicedUnits:z.number(),
+        documentaryFillPercent:z.number().nullable(),invoiceIds:z.array(z.string()),
+      })),
+      evidenceSample:z.array(z.object({
+        agency:z.string(),orderId:z.string(),orderLineId:z.string(),sku:z.string(),
+        supplierId:z.string(),invoiceIds:z.array(z.string()),
+      })),
+    }),
+    customers:z.object({
+      status:z.enum(["crm_master_data","no_customer_master"]),
+      masterProfiles:z.number().int(),profilesWithOpenReceivables:z.number().int(),
+      segments:z.array(z.object({
+        agency:z.string(),segment:z.string(),clients:z.number().int(),
+        creditLimitsTnd:z.number(),outstandingTnd:z.number(),
+      })),
+      warning:z.string(),
+    }),
+    warnings:z.array(z.string()),
+  }).optional(),
   inventory:z.object({
     status:z.enum(["observed_current_snapshot","not_available"]),
     periodApplicable:z.boolean(),
