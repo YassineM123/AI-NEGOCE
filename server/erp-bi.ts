@@ -288,12 +288,64 @@ export function datasetFrom(db: ErpDatabase): Dataset {
         AND si.invoice_date <= ?`,
     db.asOf(),
   )
+  // Source stock ledger: every movement has a documented reference and
+  // joins both the agency and SKU. Never reconstruct delivery from invoice lag.
+  const stockMovements = db.all<NonNullable<Dataset["stockMovements"]>[number]>(
+    `SELECT m.id,m.date,a.name agency,m.product_id productId,p.sku,
+            m.type,m.quantity,coalesce(m.reference,'') reference
+       FROM stock_movements m
+       JOIN agencies a ON a.id=m.agency_id
+       JOIN products p ON p.id=m.product_id
+      WHERE m.date <= ?
+      ORDER BY m.date,m.id`,
+    db.asOf(),
+  )
+  // PO-line invoicing is linked by PO + product + supplier + agency. Summing
+  // invoice quantities cannot be interpreted as physical goods received.
+  const procurementLines = db.all<NonNullable<Dataset["procurementLines"]>[number]>(
+    `SELECT pol.id orderLineId,po.id orderId,a.name agency,p.sku,
+            p.id productId,sup.id supplierId,sup.name supplier,
+            po.order_date orderDate,pol.quantity orderedUnits,
+            coalesce((SELECT sum(sil.quantity) FROM supplier_invoice_lines sil
+              JOIN supplier_invoices si ON si.id=sil.supplier_invoice_id
+              WHERE si.purchase_order_id=po.id AND sil.product_id=pol.product_id
+                AND si.agency_id=po.agency_id AND si.supplier_id=po.supplier_id
+                AND si.status='posted' AND si.invoice_date<=?),0) invoicedUnits,
+            pol.unit_cost unitCostTnd,po.status
+       FROM purchase_order_lines pol
+       JOIN purchase_orders po ON po.id=pol.purchase_order_id
+       JOIN suppliers sup ON sup.id=po.supplier_id
+       JOIN agencies a ON a.id=po.agency_id
+       JOIN products p ON p.id=pol.product_id
+      WHERE po.status!='cancelled' AND po.order_date<=?
+      ORDER BY po.order_date,pol.id`,
+    db.asOf(),db.asOf(),
+  ).map(row=>({...row,supplierInvoiceIds:db.all<{id:string}>(
+    `SELECT DISTINCT si.id FROM supplier_invoices si
+       JOIN supplier_invoice_lines sil ON sil.supplier_invoice_id=si.id
+      WHERE si.purchase_order_id=? AND si.agency_id=
+        (SELECT agency_id FROM purchase_orders WHERE id=?)
+        AND si.supplier_id=? AND sil.product_id=? AND si.status='posted'
+        AND si.invoice_date<=? ORDER BY si.id`,
+    row.orderId,row.orderId,row.supplierId,row.productId,db.asOf(),
+  ).map(x=>x.id)}))
+  const customerProfiles = db.all<NonNullable<Dataset["customerProfiles"]>[number]>(
+    `SELECT c.id,c.name,a.name agency,coalesce(c.segment,'Non classé') segment,
+            coalesce(c.credit_limit,0) creditLimitTnd,
+            coalesce(c.payment_terms_days,0) paymentTermsDays,
+            c.representative_id representativeId
+       FROM customers c JOIN agencies a ON a.id=c.agency_id
+      ORDER BY c.id`,
+  )
   const data: Dataset = {
     sales,
     receivables,
     inventory,
     collections,
     supplierDocuments,
+    stockMovements,
+    procurementLines,
+    customerProfiles,
     metadata: { ...datasetMetadata, source: "Bac à sable ERP synthétique (SQLite) — données fictives", asOf: db.asOf(), lastUpdated: new Date().toISOString() },
   }
   cached = { db, version: db.version, data }
