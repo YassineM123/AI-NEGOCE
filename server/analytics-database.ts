@@ -20,7 +20,7 @@ const sale=z.object({
 })
 const receivable=z.object({
   invoiceId:z.string().min(1),agency:z.string().min(1),
-  customer:z.string(),date:iso,dueDate:iso,outstanding:finite.nonnegative(),
+  customer:z.string(),customerId:z.string().optional(),date:iso,dueDate:iso,outstanding:finite.nonnegative(),
 })
 const stock=z.object({
   reference:z.string().min(1),product:z.string(),agency:z.string().min(1),
