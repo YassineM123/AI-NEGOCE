@@ -623,3 +623,11 @@ td b { font-weight: 690; color: #173050; }
 .specialist-caveat{font-size:11px;color:#82652c;line-height:1.5;margin:0}
 .specialist-evidence-head button:focus-visible{outline:3px solid #9ec8f6;outline-offset:2px}
 @media(max-width:650px){.specialist-evidence{padding:13px}}
+
+
+/* One shared real-time snapshot label. Synthetic only, never claim live ERP. */
+.ux-live-event{display:flex;flex-direction:column;gap:5px;margin-top:14px;
+ background:#eff8ff;border:1px solid #bfdbfa;color:#1a497e;border-radius:10px;padding:12px 14px}
+.ux-live-event strong{font-size:12px;font-weight:750}
+.ux-live-event span{font-size:12px;color:#27557e}
+.ux-live-event small{font-size:10px;color:#647e98;line-height:1.5}
