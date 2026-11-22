@@ -25,6 +25,7 @@ export type Receivable = {
   invoiceId: string
   agency: string
   customer: string
+  customerId?:string
   date: string
   dueDate: string
   outstanding: number
