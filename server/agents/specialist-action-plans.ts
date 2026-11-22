@@ -131,9 +131,15 @@ export function replenishmentReviewPlan(dataset:Dataset,scope:AgencyScope,period
  const skuPilot=forecastSkuDemand(dataset,{agencies:scope,from:period.from,to:period.to},50)
  const forecasts=new Map(skuPilot.results.filter(x=>x.status==="backtested_pilot"&&x.forecast)
   .map(x=>[key(x.agency,x.productId),x]))
+ const skuToId=new Map<string,string>()
+ for(const m of dataset.stockMovements??[])
+  if(!skuToId.has(key(m.agency,m.sku)))skuToId.set(key(m.agency,m.sku),m.productId)
+ for(const p of dataset.procurementLines??[])
+  if(!skuToId.has(key(p.agency,p.sku)))skuToId.set(key(p.agency,p.sku),p.productId)
  const proposals=positions.filter(x=>x.reorderPoint>0&&x.quantity<x.reorderPoint)
   .map(x=>{
-   const forecast=forecasts.get(key(x.agency,x.reference))
+   const forecastProductId=skuToId.get(key(x.agency,x.reference))??x.reference
+   const forecast=forecasts.get(key(x.agency,forecastProductId))
    const minimumUnits=Math.max(0,Math.ceil(x.reorderPoint-x.quantity))
    const pastOrders=(dataset.procurementLines??[]).filter(p=>p.agency===x.agency&&
      p.sku===x.reference&&p.orderDate<=dataset.metadata.asOf)
