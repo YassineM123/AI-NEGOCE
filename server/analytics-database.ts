@@ -25,6 +25,7 @@ const receivable=z.object({
 const stock=z.object({
   reference:z.string().min(1),product:z.string(),agency:z.string().min(1),
   quantity:finite,reorderPoint:finite,unitCost:finite.nonnegative(),
+  openingDate:iso.nullable().optional(),openingQuantity:finite.nullable().optional(),
 })
 const datasetSchema=z.object({
   sales:z.array(sale).max(100000),
@@ -39,6 +40,26 @@ const datasetSchema=z.object({
     supplier:z.string().min(1),agency:z.string().min(1),orderDate:iso,invoiceDate:iso,
     invoiceId:z.string().min(1),lagDays:z.number().int().nonnegative().max(3650),
     amountTnd:finite.nonnegative(),
+  }).strict()).max(100000).optional(),
+  stockMovements:z.array(z.object({
+    id:z.string().min(1),date:iso,agency:z.string().min(1),
+    productId:z.string().min(1),sku:z.string().min(1),
+    type:z.enum(["receipt","sale","return","transfer_in","transfer_out","adjustment"]),
+    quantity:finite,reference:z.string(),
+  }).strict()).max(100000).optional(),
+  procurementLines:z.array(z.object({
+    orderLineId:z.string().min(1),orderId:z.string().min(1),
+    agency:z.string().min(1),sku:z.string().min(1),productId:z.string().min(1),
+    supplierId:z.string().min(1),supplier:z.string().min(1),orderDate:iso,
+    orderedUnits:finite.nonnegative(),invoicedUnits:finite.nonnegative(),
+    unitCostTnd:finite.nonnegative(),
+    status:z.enum(["open","invoiced"]),supplierInvoiceIds:z.array(z.string().min(1)).max(1000),
+  }).strict()).max(100000).optional(),
+  customerProfiles:z.array(z.object({
+    id:z.string().min(1),name:z.string().min(1),agency:z.string().min(1),
+    segment:z.string().min(1),creditLimitTnd:finite.nonnegative(),
+    paymentTermsDays:z.number().nonnegative().max(3650),
+    representativeId:z.string().nullable(),
   }).strict()).max(100000).optional(),
   metadata:z.object({
     adapter:z.string(),source:z.string().min(4),currency:z.literal("TND"),
@@ -58,7 +79,9 @@ function validate(data:unknown):Dataset{
      parsed.collections?.some(r=>r.date>parsed.metadata.asOf) ||
      parsed.supplierDocuments?.some(r=>r.invoiceDate>parsed.metadata.asOf||
        r.orderDate>r.invoiceDate||
-       Math.abs((Date.parse(r.invoiceDate+"T00:00:00Z")-Date.parse(r.orderDate+"T00:00:00Z"))/86400000-r.lagDays)>0.01))
+       Math.abs((Date.parse(r.invoiceDate+"T00:00:00Z")-Date.parse(r.orderDate+"T00:00:00Z"))/86400000-r.lagDays)>0.01) ||
+     parsed.stockMovements?.some(r=>r.date>parsed.metadata.asOf) ||
+     parsed.procurementLines?.some(r=>r.orderDate>parsed.metadata.asOf))
     throw new Error("ANALYTICS_INVALID_DATE: fact rows after asOf are forbidden")
   return parsed as unknown as Dataset
 }
