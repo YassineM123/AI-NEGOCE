@@ -51,16 +51,22 @@ export function assessDecisionReadiness(input:{
  const inventory=inventoryInScope(dataset,scope,period)
  const debts=receivablesInScope(dataset,scope,period)
  const hasCosts=sales.length>0&&sales.every(x=>x.cost!==null&&x.cost!==undefined)
+ const evidenceExists=(e:{type:string;id:string;agency:string})=>{
+   if(e.type==="invoice")return sales.some(s=>s.agency===e.agency&&s.invoiceId===e.id)
+   if(e.type==="receivable")return debts.some(d=>d.agency===e.agency&&d.invoiceId===e.id)
+   if(e.type==="stock_position")return inventory.some(s=>s.agency===e.agency&&s.reference===e.id)
+   return false
+ }
  const entries:Readiness[]=input.proposals.map(proposal=>{
    const evidence=proposal.evidence.filter(e=>scopeAllows(scope,e.agency))
-   const evidenceValid=evidence.length===proposal.evidence.length
+   const evidenceValid=evidence.length===proposal.evidence.length&&evidence.every(evidenceExists)
    const agencies=new Set(evidence.map(e=>e.agency))
    const hasStock=inventory.some(x=>agencies.size===0||agencies.has(x.agency))
    const hasReceivables=debts.some(x=>agencies.size===0||agencies.has(x.agency))
    const criteria=checksFor(proposal.agent,hasStock,hasCosts,hasReceivables)
    const checks=[
      {name:"evidence_scope",verified:evidenceValid&&evidence.length>0,
-       detail:evidenceValid&&evidence.length>0?"Références limitées aux agences autorisées":"Preuve absente ou hors du périmètre autorisé"},
+       detail:evidenceValid&&evidence.length>0?"Pièces présentes dans le périmètre autorisé":"Preuve absente, non vérifiée ou hors du périmètre autorisé"},
      {name:"snapshot_date",verified:/^\\d{4}-\\d{2}-\\d{2}$/.test(dataset.metadata.asOf),
        detail:"Date d'arrêté de la source; fraîcheur temps réel non garantie"},
      ...criteria.map(([name,detail])=>({name,verified:false,detail})),
@@ -69,7 +75,7 @@ export function assessDecisionReadiness(input:{
    return {agent:proposal.agent,findingId:proposal.id,action:proposal.action.type,
      status:"blocked_pending_verification" as const,
      blockers:checks.filter(x=>!x.verified).map(x=>x.name),
-     evidenceIds:evidence.map(e=>e.agency+":"+e.type+":"+e.id),
+     evidenceIds:evidence.filter(evidenceExists).map(e=>e.agency+":"+e.type+":"+e.id),
      checks,requiresHumanApproval:true as const,erpWrites:0 as const}
  })
  return {status:"human_validation_required" as const,
