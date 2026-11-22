@@ -231,6 +231,10 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await page.getByRole("button", { name: "Créer nouveau dossier AI Director" }).click()
   await expect.poll(()=>createdMissions).toBe(1)
   await expect.poll(()=>executedMissions).toBe(1)
+  // Creating a Director mission navigates to the missions workspace. Return to
+  // the platform settings before using the disconnect control.
+  await page.getByRole("button", { name: "Plateformes BI / DS" }).click()
+  await expect(page.getByRole("button", { name: "Déconnecter les 3 plateformes" })).toBeVisible()
   await page.getByRole("button", { name: "Déconnecter les 3 plateformes" }).click()
   await expect(agentic).toHaveCount(0)
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveCount(0)
