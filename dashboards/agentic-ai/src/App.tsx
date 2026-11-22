@@ -281,6 +281,17 @@ export default function App() {
       const msg = event.data as { type?: string; id?: unknown; operation?: unknown } | null
       if (!msg || typeof msg !== "object") return
       if (msg.type === "AI_NEGOCE_BRIDGE_READY") { sendState(); return }
+      // Same-origin child dashboards can navigate to a specialist without
+      // receiving the access token. Restrict the action to four known agents.
+      if (msg.type === "AI_NEGOCE_BRIDGE_OPEN_AGENT") {
+        const target = (event.data as {agent?:unknown}).agent
+        const allowed = ["revenue","finance","supply","strategy"]
+        if (token && typeof target === "string" && allowed.includes(target)) {
+          setSelectedAgent(target as AgentKey)
+          setPage("agent")
+        }
+        return
+      }
       if (msg.type !== "AI_NEGOCE_BRIDGE_REQUEST" ||
         typeof msg.id !== "string" || !/^req-[0-9]{1,8}$/.test(msg.id)) return
       const reply = (data: unknown, error?: string) =>
