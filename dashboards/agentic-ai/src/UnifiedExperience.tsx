@@ -59,6 +59,15 @@ export default function UnifiedExperience({overview,agency,from,to,connected,onN
     {ready?(x?.snapshot.isSynthetic?"Sandbox synthétique · lecture seule":"Source non homologuée · lecture seule"):"Source non connectée"}
    </span>
   </div>
+  {x?.snapshot.demo&&<div className="ux-live-event" role="status" data-demo-live="true">
+    <strong>Simulation d'entreprise active · PostgreSQL révision {x.snapshot.revision??"N/D"}</strong>
+    <span>{x.snapshot.demo.lastEvent?
+      x.snapshot.demo.lastEvent.date+" · "+x.snapshot.demo.lastEvent.agency+
+      " · "+({sale:"Nouvelle vente",collection:"Règlement client",restock:"Réapprovisionnement",supplier:"Facture fournisseur"}[x.snapshot.demo.lastEvent.kind])+
+      " · "+x.snapshot.demo.lastEvent.reference:
+      "Dernière opération dans une autre agence ou hors périmètre"}</span>
+    <small>Les KPI sont recalculés lors de la publication d'un nouveau snapshot (vérification toutes les 30 s, onglet visible). Aucun ERP réel connecté.</small>
+   </div>}
   <div className="ux-links" aria-label="Navigation transversale">
    <button onClick={()=>onNavigate("bi")}>BI 360</button>
    <button onClick={()=>onNavigate("ds")}>Data Science</button>
