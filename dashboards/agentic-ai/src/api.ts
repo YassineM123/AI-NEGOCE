@@ -145,6 +145,18 @@ export type DirectorReport = {
   }>
   highlights: Array<SpecialistReport["findings"][number] & { agent: string }>
   summary: { agentsInvoked: number; totalFindings: number; requiresHumanReview: boolean; erpWrites: number }
+  decisionReadiness?:{
+    status:"human_validation_required";policyVersion:string;
+    snapshot:{asOf:string;revision:number|null;source:string;scope:string[]|"*";period:{from?:string;to?:string}};
+    assessed:number;readyForErpExecution:0;
+    entries:Array<{
+      agent:string;findingId:string;action:string;status:"blocked_pending_verification";
+      blockers:string[];evidenceIds:string[];
+      checks:Array<{name:string;verified:boolean;detail:string}>;
+      requiresHumanApproval:true;erpWrites:0;
+    }>;
+    warnings:string[];
+  }
   decisionDossier?:{
     status:string;dataAsOf:string;source:string;snapshotRevision:number|null
     domainCoverage:Array<{agent:string;status:string;findings:number;evidenceCount:number;limitations:string[]}>
