@@ -5,6 +5,7 @@ import { analyzeFinancialStrategy } from "./financial-strategy.js"
 import { analyzeSupplyChain } from "./supply-chain.js"
 import { analyzeBusinessStrategy } from "./business-strategy.js"
 import { ensureLimit, snapshot, type AgentDomain, type AgentFinding, type AgentReport, type ReportPeriod } from "./common.js"
+import {assessDecisionReadiness} from "./decision-gates.js"
 
 export type DirectorAgent = "revenue_growth" | AgentDomain
 export const DIRECTOR_AGENTS: DirectorAgent[] = [
@@ -106,6 +107,7 @@ export function investigateWithDirector(input: {
     })),
     sections,
     highlights,
+    decisionReadiness:assessDecisionReadiness({dataset:input.dataset,scope:input.scope,period:input.period,proposals:highlights}),
     decisionDossier:{
       status:"requires_human_review" as const,
       dataAsOf:snap.asOf,source:snap.source,scope:snap.scope,period:snap.period,
