@@ -38,6 +38,18 @@ const example=():Dataset=>{
     ],
     inventory:[{reference:"SKU-SFX",product:"Bureau",agency:"Sfax",
       quantity:2,reorderPoint:10,unitCost:50}],
+    collections:[
+      {id:"COL-SF",invoiceId:"SFX-1",agency:"Sfax",date:"2026-07-20",amountTnd:50},
+      {id:"COL-TN",invoiceId:"TUN-1",agency:"Tunis Centre",date:"2026-10-07",amountTnd:25},
+    ],
+    supplierDocuments:[
+      {orderId:"PO-SF",supplierId:"SUP-SF",supplier:"Fournisseur fictif Sfax",
+       agency:"Sfax",orderDate:"2026-07-01",invoiceDate:"2026-07-11",
+       invoiceId:"SI-SF",lagDays:10,amountTnd:300},
+      {orderId:"PO-TN",supplierId:"SUP-TN",supplier:"Fournisseur fictif Tunis",
+       agency:"Tunis Centre",orderDate:"2026-09-01",invoiceDate:"2026-09-11",
+       invoiceId:"SI-TN",lagDays:10,amountTnd:500},
+    ],
     metadata:{...baseline.metadata,source:"PostgreSQL synthetic QA",asOf:"2026-10-15",
       lastUpdated:"2026-10-15T09:00:00.000Z"},
   }
@@ -94,6 +106,12 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect(one.body.dataScience.analysis.scenarios.basisRevenueTnd).toBe(100)
     expect(one.body.dataScience.analysis.portfolio.customers).toBe(1)
     expect(one.body.bi.data.metadata.snapshotRevision).toBe(1)
+    expect(one.body.dataScience.analysis.advancedModels).toBeDefined()
+    expect(one.body.dataScience.analysis.advancedModels.collections.status).toBe("insufficient_history")
+    expect(one.body.dataScience.analysis.advancedModels.suppliers.events).toBe(1)
+    const loaded=await readAnalyticalDataset(t)
+    expect(loaded?.dataset.collections?.map(e=>e.id)).toEqual(["COL-SF","COL-TN"])
+    expect(loaded?.dataset.supplierDocuments?.map(e=>e.invoiceId)).toEqual(["SI-SF","SI-TN"])
     const rev=await request(app).get("/api/v1/agentic/revenue-growth/opportunities")
       .set(bearer("dev-manager-sfax")).query(filter)
     expect(rev.status).toBe(200)
@@ -205,6 +223,61 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
       .set(bearer("dev-admin-org-b"))
     expect(blocked.status).toBe(403)
     expect((await readAnalyticalDataset(db.forTenant("tenant-other")))).toBeNull()
+  })
+  it("backtests linked collections and supplier milestones on PostgreSQL and reruns after revision",async()=>{
+    const t=db.forTenant("demo-fictive")
+    const baseline=example()
+    const collections=Array.from({length:21},(_,i)=>({
+      id:"PAY-PG-"+i,invoiceId:"SFX-1",customerId:"c-sfax",
+      agency:"Sfax",
+      date:new Date(Date.UTC(2025,i,18)).toISOString().slice(0,10),
+      amountTnd:1000+i*25,
+    }))
+    const supplierDocuments=Array.from({length:24},(_,i)=>{
+      const invoiceDate=new Date(Date.UTC(2025,Math.floor(i/2),9+i%2)).toISOString().slice(0,10)
+      const lagDays=10+i%3
+      const orderDate=new Date(Date.parse(invoiceDate+"T00:00:00Z")-lagDays*86400000)
+        .toISOString().slice(0,10)
+      return {orderId:"PO-ADV-"+i,supplierId:"SUP-ADV",supplier:"Fournisseur test",
+        agency:"Sfax",invoiceDate,orderDate,invoiceId:"SI-ADV-"+i,lagDays,amountTnd:500+i*10}
+    })
+    const source={...baseline,collections,supplierDocuments}
+    const saved=await saveAnalyticalDataset(t,source,"synthetic",true)
+    const app=createApp({config:loadConfig({NODE_ENV:"test",AUTH_MODE:"local-dev",
+      DATABASE_URL:scoped(),UNIFIED_ANALYTICS_SOURCE:"postgres",AUTH_DEV_SIGNING_KEY:TEST_DEV_KEY}),
+      store:db,ocr:new DisabledOcrProvider(),erp:new TestErpAdapter()})
+    const filter={agency:"Sfax",from:"2025-01-01",to:"2026-10-15"}
+    const first=await request(app).get("/api/v1/analytics/overview")
+      .set(bearer("dev-manager-sfax")).query(filter)
+    expect(first.status).toBe(200)
+    expect(first.body.snapshot.revision).toBe(saved.revision)
+    const evaluated=first.body.dataScience.analysis.advancedModels
+    expect(evaluated.collections.status).toBe("backtested_pilot")
+    expect(evaluated.collections.forecast).toBeGreaterThan(0)
+    expect(evaluated.collections.holdoutSamples).toBe(4)
+    expect(evaluated.suppliers.eligibleGroups).toBe(1)
+    expect(evaluated.suppliers.events).toBe(24)
+    expect(evaluated.suppliers.results[0].evidenceInvoiceIds).toHaveLength(4)
+    const replay=await request(app).get("/api/v1/analytics/overview")
+      .set(bearer("dev-manager-sfax")).query(filter)
+    expect(replay.body.dataScience.analysis.advancedModels).toEqual(evaluated)
+    const corrected={...source,
+      collections:source.collections.map(e=>e.id==="PAY-PG-19"?{...e,amountTnd:e.amountTnd+500}:e),
+      metadata:{...source.metadata,lastUpdated:"2026-10-15T11:00:00Z"},
+    }
+    const next=await saveAnalyticalDataset(t,corrected,"synthetic",true)
+    expect(next.revision).toBe(saved.revision+1)
+    const updated=await request(app).get("/api/v1/analytics/overview")
+      .set(bearer("dev-manager-sfax")).query(filter)
+    expect(updated.status).toBe(200)
+    expect(updated.body.snapshotId).not.toBe(first.body.snapshotId)
+    expect(updated.body.dataScience.analysis.advancedModels.collections.selectedScore)
+      .not.toBe(evaluated.collections.selectedScore)
+    const denied=await request(app).get("/api/v1/analytics/overview")
+      .set(bearer("dev-manager-sfax"))
+      .query({...filter,agency:"Tunis Centre"})
+    expect(denied.status).toBe(403)
+    expect(await readAnalyticalDataset(db.forTenant("tenant-other"))).toBeNull()
   })
   it("keeps dataset access guarded by the PostgreSQL app role",async()=>{
     const pool=new Pool({connectionString:scoped()})

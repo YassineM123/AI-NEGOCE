@@ -76,6 +76,39 @@ global.AINegoceGovernedDataScience=function(x,page,h){
    ],sku.results):warn("Pas de série SKU exploitable : quantités ou historique insuffisants."))+
   warn("Pilote chronologique, sans certification. Les ventes observées ne mesurent pas les ventes perdues en rupture."),
   {icon:"trend"});
+ const adv=ds.advancedModels;
+ const advancedPanel=fCard("Modèles avancés · validation temporelle",
+  !adv?warn("Aucun modèle avancé publié dans ce snapshot."):
+  table([
+    {label:"Objet",key:"name"},{label:"Statut",key:"status"},
+    {label:"Modèle retenu",key:"model"},
+    {label:"Baseline",key:"base"},
+    {label:"Score test",key:"score"},
+    {label:"Échantillon test",key:"holdout"},
+  ],[
+    {name:"Inactivité client à 90 j · proxy",
+     status:adv.inactivity.status,model:adv.inactivity.model||"N/D",
+     base:adv.inactivity.baselineScore==null?"N/D":fmt(adv.inactivity.baselineScore)+" Brier",
+     score:adv.inactivity.selectedScore==null?"N/D":fmt(adv.inactivity.selectedScore)+" Brier",
+     holdout:adv.inactivity.holdoutSamples},
+    {name:"Encaissements documentés · mensuel",
+     status:adv.collections.status,model:adv.collections.model||"N/D",
+     base:adv.collections.baselineScore==null?"N/D":fmt(adv.collections.baselineScore*100)+" % WAPE",
+     score:adv.collections.selectedScore==null?"N/D":fmt(adv.collections.selectedScore*100)+" % WAPE",
+     holdout:adv.collections.holdoutSamples},
+    {name:"Factures fournisseurs après commande",
+     status:adv.suppliers.backtested>0?"backtested_pilot":"insufficient_history",
+     model:adv.suppliers.backtested+" groupe(s) sur "+adv.suppliers.eligibleGroups,
+     base:"MAE de référence",score:"MAE (jours)",holdout:adv.suppliers.events},
+  ])+
+  (adv.suppliers.results.length?table([
+    {label:"Fournisseur",key:"supplier"},{label:"Agence",key:"agency"},
+    {label:"MAE",format:r=>fmt(r.maeDays)+" j"},
+    {label:"MAE baseline",format:r=>fmt(r.baselineMaeDays)+" j"},
+    {label:"Délai documentaire prévu",format:r=>r.predictedDocumentLagDays==null?"N/D":fmt(r.predictedDocumentLagDays)+" j"},
+  ],adv.suppliers.results):warn("Pas assez de jalons commande–facture fournisseur pour une évaluation admissible."))+
+  warn("Churn : non-réachat observé, pas résiliation. Encaissements ≠ trésorerie bancaire. Factures fournisseurs ≠ réceptions. Modèles non homologués."),
+  {icon:"database"});
  const seg=fCard("Récence des clients · constat, pas churn ML",
   table([{label:"Segment",key:"label"},{label:"Clients",key:"count"}],[
     {label:"Récent : 0–29 jours",count:portfolio.recent0to29},
@@ -121,17 +154,17 @@ global.AINegoceGovernedDataScience=function(x,page,h){
     {icon:"shield"});
  const grid=(...parts)=>'<div class="f-grid f-halves">'+parts.join("")+"</div>";
  let body=scope;
- if(page==="home")body+=grid(history,clients,seg,scenariosTable,sourcePanel);
+ if(page==="home")body+=grid(history,clients,seg,advancedPanel,scenariosTable,sourcePanel);
  else if(page==="clients")body+=grid(clients,seg);
- else if(page==="churn")body+=grid(seg,clients);
+ else if(page==="churn")body+=grid(seg,advancedPanel,clients);
  else if(page==="forecast")body+=grid(history,forecastInfo,skuPanel)+trendTable;
  else if(page==="inventory")body+=grid(inventoryPanel,skuPanel,sourcePanel);
- else if(page==="cash")body+=grid(cashPanel,sourcePanel);
+ else if(page==="cash")body+=grid(cashPanel,advancedPanel,sourcePanel);
  else if(page==="optim")body+=grid(scenariosTable,forecastInfo);
  else if(page==="quality"||page==="data")body+=grid(sourcePanel,history);
- else if(page==="models")body+=grid(forecastInfo,skuPanel,sourcePanel);
+ else if(page==="models")body+=grid(forecastInfo,skuPanel,advancedPanel,sourcePanel);
  else if(page==="affinity")body+=availability("Affinité et recommandations croisées : liens article–panier et catalogue vérifié nécessaires.");
- else if(page==="suppliers")body+=availability("Performance fournisseurs : commandes, dates promises et livraisons réelles manquantes.");
+ else if(page==="suppliers")body+=grid(advancedPanel,sourcePanel);
  else if(page==="production")body+=availability("Planification production : nomenclatures, capacités et besoins matières indisponibles.");
  else if(page==="impact")body+=availability("Impact observé : interventions historiques et groupes de comparaison absents.");
  else if(page==="tasks")body+=availability("Les tâches locales du prototype ne sont pas des missions Agentic persistantes ; utilisez le Command Center pour les missions réelles de démo.");
