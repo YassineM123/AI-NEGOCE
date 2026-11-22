@@ -21,6 +21,10 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Generate deterministic synthetic ERP dataset for live browser API
+        run: |
+          npm run dataset:generate
+          npm run db:seed
       - run: npm run agentic:typecheck
       - name: Install Chrome for Playwright
         run: npx playwright install --with-deps chromium
