@@ -32,7 +32,7 @@ const datasetSchema=z.object({
   inventory:z.array(stock).max(100000),
   collections:z.array(z.object({
     id:z.string().min(1),invoiceId:z.string().min(1),
-    agency:z.string().min(1),date:iso,amountTnd:finite.nonnegative(),
+    agency:z.string().min(1),customerId:z.string().min(1).optional(),date:iso,amountTnd:finite.nonnegative(),
   }).strict()).max(100000).optional(),
   supplierDocuments:z.array(z.object({
     orderId:z.string().min(1),supplierId:z.string().min(1),
