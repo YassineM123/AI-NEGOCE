@@ -81,8 +81,27 @@ export function buildAnalyticsOverview(input: {
       isSynthetic: input.organization.isSynthetic,
       storage:input.dataset.metadata.snapshotRevision?"postgres" as const:"local_fixture" as const,
       revision:input.dataset.metadata.snapshotRevision??null,
+      ...(input.organization.isSynthetic&&input.dataset.metadata.simulationMode==="synthetic_live_demo"?
+        {demo:{
+          mode:"synthetic_live_demo" as const,
+          ...((input.scope==="*"||input.scope.includes(input.dataset.metadata.demoLastEvent?.agency??""))
+            &&input.dataset.metadata.demoLastEvent
+            &&(!input.from||input.dataset.metadata.demoLastEvent.date>=input.from)
+            &&(!input.to||input.dataset.metadata.demoLastEvent.date<=input.to)
+            ?{lastEvent:input.dataset.metadata.demoLastEvent}:{})
+        }}:{}),
     },
-    bi: { status: "available", data: bi },
+    bi: { status: "available", data: {
+      ...bi,
+      // Never leak unscoped event history through the generic BI metadata
+      // passthrough when a manager is restricted to one agency.
+      metadata:{
+        adapter:bi.metadata.adapter,source:bi.metadata.source,
+        currency:bi.metadata.currency,asOf:bi.metadata.asOf,
+        lastUpdated:bi.metadata.lastUpdated,
+        snapshotRevision:bi.metadata.snapshotRevision,
+      },
+    } },
     insights,
     dataScience: {
       status:canReadDataScience?"available" as const:"forbidden" as const,

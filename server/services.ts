@@ -19,6 +19,11 @@ export type SupplierDocumentEvent = {
   orderDate:string;invoiceDate:string;invoiceId:string
   lagDays:number;amountTnd:number
 }
+export type SyntheticDemoEvent={
+ id:string;kind:"sale"|"collection"|"restock"|"supplier"
+ agency:string;date:string;reference:string;amountTnd:number|null
+ units:number|null;description:string;erpWrites:0
+}
 export type Dataset = {
   sales: Sale[]
   receivables: Receivable[]
@@ -26,7 +31,12 @@ export type Dataset = {
   /** Optional documented histories; absence must never imply zero activity. */
   collections?: CollectionEvent[]
   supplierDocuments?: SupplierDocumentEvent[]
-  metadata: typeof datasetMetadata & {snapshotRevision?:number}
+  metadata: typeof datasetMetadata & {
+    snapshotRevision?:number
+    demoEvents?:SyntheticDemoEvent[]
+    demoLastEvent?:SyntheticDemoEvent
+    simulationMode?:"synthetic_live_demo"
+  }
 }
 export const defaultDataset = (): Dataset => ({
   sales,
