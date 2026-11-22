@@ -30,6 +30,16 @@ const datasetSchema=z.object({
   sales:z.array(sale).max(100000),
   receivables:z.array(receivable).max(100000),
   inventory:z.array(stock).max(100000),
+  collections:z.array(z.object({
+    id:z.string().min(1),invoiceId:z.string().min(1),
+    agency:z.string().min(1),date:iso,amountTnd:finite.nonnegative(),
+  }).strict()).max(100000).optional(),
+  supplierDocuments:z.array(z.object({
+    orderId:z.string().min(1),supplierId:z.string().min(1),
+    supplier:z.string().min(1),agency:z.string().min(1),orderDate:iso,invoiceDate:iso,
+    invoiceId:z.string().min(1),lagDays:z.number().int().nonnegative().max(3650),
+    amountTnd:finite.nonnegative(),
+  }).strict()).max(100000).optional(),
   metadata:z.object({
     adapter:z.string(),source:z.string().min(4),currency:z.literal("TND"),
     asOf:iso,lastUpdated:z.string().min(10),
@@ -44,7 +54,11 @@ const transaction=(tenant:TenantStore)=>{
 function validate(data:unknown):Dataset{
   const parsed=datasetSchema.parse(data)
   if(parsed.sales.some(r=>r.date>parsed.metadata.asOf) ||
-     parsed.receivables.some(r=>r.date>parsed.metadata.asOf))
+     parsed.receivables.some(r=>r.date>parsed.metadata.asOf) ||
+     parsed.collections?.some(r=>r.date>parsed.metadata.asOf) ||
+     parsed.supplierDocuments?.some(r=>r.invoiceDate>parsed.metadata.asOf||
+       r.orderDate>r.invoiceDate||
+       Math.abs((Date.parse(r.invoiceDate+"T00:00:00Z")-Date.parse(r.orderDate+"T00:00:00Z"))/86400000-r.lagDays)>0.01))
     throw new Error("ANALYTICS_INVALID_DATE: fact rows after asOf are forbidden")
   return parsed as unknown as Dataset
 }
