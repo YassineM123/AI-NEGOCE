@@ -9,10 +9,23 @@ import {
 } from "./data.js"
 import type { AgencyScope } from "./auth.js"
 
+/** Posted customer collection event from the synthetic ERP, not proof of bank settlement. */
+export type CollectionEvent = {
+  id:string; invoiceId:string;agency:string;date:string;amountTnd:number
+}
+/** Order-to-supplier-invoice milestone, NOT a goods receipt or OTIF measure. */
+export type SupplierDocumentEvent = {
+  orderId:string;supplierId:string;supplier:string;agency:string
+  orderDate:string;invoiceDate:string;invoiceId:string
+  lagDays:number;amountTnd:number
+}
 export type Dataset = {
   sales: Sale[]
   receivables: Receivable[]
   inventory: InventoryItem[]
+  /** Optional documented histories; absence must never imply zero activity. */
+  collections?: CollectionEvent[]
+  supplierDocuments?: SupplierDocumentEvent[]
   metadata: typeof datasetMetadata & {snapshotRevision?:number}
 }
 export const defaultDataset = (): Dataset => ({
