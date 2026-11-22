@@ -11,6 +11,8 @@ permissions:
 jobs:
   ui-45-pages:
     runs-on: ubuntu-24.04
+    env:
+      RECETTE_REAL_API: '1'
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
