@@ -267,7 +267,7 @@ export function datasetFrom(db: ErpDatabase): Dataset {
        JOIN sales_invoices s ON s.id = pay.sales_invoice_id
        JOIN agencies a ON a.id = s.agency_id
       WHERE s.status='posted' AND s.doc_type='invoice'
-        AND pay.payment_date <= ?`,
+        AND pay.payment_date <= ? AND pay.amount >= 0`,
     db.asOf(),
   )
   const supplierDocuments = db.all<{
@@ -283,7 +283,8 @@ export function datasetFrom(db: ErpDatabase): Dataset {
        JOIN suppliers sup ON sup.id=si.supplier_id AND sup.id=po.supplier_id
        JOIN agencies a ON a.id=si.agency_id AND a.id=po.agency_id
       WHERE po.status!='cancelled' AND si.status!='cancelled'
-        AND si.currency='TND' AND si.invoice_date>=po.order_date
+        AND si.currency='TND' AND si.total_ht IS NOT NULL AND si.total_ht>=0
+        AND si.invoice_date>=po.order_date
         AND si.invoice_date <= ?`,
     db.asOf(),
   )
