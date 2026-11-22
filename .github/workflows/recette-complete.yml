@@ -1,0 +1,84 @@
+name: recette-ui-et-cinq-scenarios-postgresql
+
+on:
+  push:
+    branches: [feature/ai-negoce-complete-demo]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-45-pages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run agentic:typecheck
+      - name: Install Chrome for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Execute page-by-page Agentic / BI / Data Science UI acceptance
+        run: npx playwright test --config dashboards/agentic-ai/playwright.config.ts dashboards/agentic-ai/tests/recette-all-pages.spec.ts --reporter=list
+      - name: Upload UI screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recette-ui-45-pages
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 14
+
+  five-decisions-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: recette_qa_only
+          POSTGRES_DB: agentic_recette
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agentic_recette"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      TEST_DATABASE_URL: postgres://postgres:recette_qa_only@127.0.0.1:5432/agentic_recette
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Run five-decision PostgreSQL business acceptance
+        run: npx vitest run server/agents/final-demo-recipe.pg.test.ts server/agents/workspace.pg.test.ts server/analytics-database.pg.test.ts --reporter=verbose
+      - name: Run director, specialist and decision-readiness checks
+        run: npx vitest run server/agents/final-demo-recipe.api.test.ts server/agents/agentic-suite.test.ts server/agents/specialist-action-plans.api.test.ts server/agents/decision-gates.test.ts --reporter=verbose
+      - name: Run frontend production builds
+        run: |
+          npm run agentic:typecheck
+          npm run agentic:build
+      - name: Save PostgreSQL acceptance summary
+        if: always()
+        run: |
+          mkdir -p reports/evidence
+          printf 'GitHub SHA: %s\nWorkflow: %s\n' "$GITHUB_SHA" "$GITHUB_WORKFLOW" > reports/evidence/recette-commit.txt
+      - name: Upload PostgreSQL receipt metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recette-postgres-scenarios
+          path: |
+            reports/evidence/recette-commit.txt
+          retention-days: 14
