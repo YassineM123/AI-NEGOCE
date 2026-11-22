@@ -1,0 +1,41 @@
+import {test,expect} from "@playwright/test"
+
+/** These assertions require the real loopback backend; they never use mocked
+ * agent reports. PostgreSQL history/revision replay is covered in the PG job. */
+test.describe("Live sandbox — connected cross-dashboard agent journeys",()=>{
+ test.skip(process.env.RECETTE_REAL_API!=="1","Requires real loopback development API")
+ test("BI and Data Science open corresponding agents through the token-free parent bridge",async({page})=>{
+  test.setTimeout(120_000)
+  await page.goto("/")
+  await page.getByRole("button",{name:"Plateformes BI / DS"}).click()
+  await page.getByRole("button",{name:"Connecter la session sandbox"}).click()
+  const frame=page.frameLocator('iframe[title="Data Analyse"]')
+  await expect(frame.locator('[data-agentic-open="revenue"]')).toBeVisible()
+  await frame.locator('[data-agentic-open="revenue"]').click()
+  await expect(page.getByRole("heading",{name:"Revenue Growth Agent"})).toBeVisible()
+  await page.getByRole("button",{name:"Plateformes BI / DS"}).click()
+  await page.getByRole("tab",{name:"Data Science · Studio"}).click()
+  const ds=page.frameLocator('iframe[title="Data Science"]')
+  await expect(ds.locator('[data-agentic-open="strategy"]')).toBeVisible()
+  await ds.locator('[data-agentic-open="strategy"]').click()
+  await expect(page.getByRole("heading",{name:"Business Strategy Agent"})).toBeVisible()
+ })
+ test("unified decision panel uses the scoped BI snapshot and shows four specialist statuses",async({page})=>{
+  test.setTimeout(90_000)
+  await page.goto("/")
+  await page.getByRole("button",{name:"Connexions BI / Data Science"}).click()
+  await page.getByRole("button",{name:"Connecter sandbox local"}).click()
+  await page.getByRole("button",{name:"Vue d'ensemble"}).click()
+  const panel=page.getByRole("region",{name:"Pilotage des agents sur données BI et Data Science"})
+  await expect(panel).toBeVisible()
+  await expect(panel.locator('[data-linked-agent]')).toHaveCount(4)
+  await expect(panel).toContainText("Qualité de données pour les décisions")
+  await expect(panel.locator("[data-agentic-linked-snapshot]")).toHaveCount(0)
+  await expect(panel).toContainText("Un périmètre, une période")
+  const source=await panel.getAttribute("data-agentic-linked-snapshot")
+  expect(source).not.toBe("unavailable")
+  await page.getByRole("combobox",{name:"Agence"}).selectOption("Sfax")
+  await expect(panel).toContainText("agence Sfax")
+  await expect.poll(()=>panel.getAttribute("data-agentic-linked-snapshot")).not.toBe(source)
+ })
+})
