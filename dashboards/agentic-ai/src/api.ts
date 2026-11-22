@@ -145,6 +145,11 @@ export type DirectorReport = {
   }>
   highlights: Array<SpecialistReport["findings"][number] & { agent: string }>
   summary: { agentsInvoked: number; totalFindings: number; requiresHumanReview: boolean; erpWrites: number }
+  decisionDossier?:{
+    status:string;dataAsOf:string;source:string;snapshotRevision:number|null
+    domainCoverage:Array<{agent:string;status:string;findings:number;evidenceCount:number;limitations:string[]}>
+    unresolvedDependencies:string[];nextStep:string
+  }
   warnings: string[]
 }
 const SPECIALIST_PATHS: Record<SpecialistAgent,string> = {
