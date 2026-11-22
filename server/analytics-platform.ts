@@ -85,7 +85,10 @@ export function buildAnalyticsOverview(input: {
         {demo:{
           mode:"synthetic_live_demo" as const,
           ...((input.scope==="*"||input.scope.includes(input.dataset.metadata.demoLastEvent?.agency??""))
-            &&input.dataset.metadata.demoLastEvent?{lastEvent:input.dataset.metadata.demoLastEvent}:{})
+            &&input.dataset.metadata.demoLastEvent
+            &&(!input.from||input.dataset.metadata.demoLastEvent.date>=input.from)
+            &&(!input.to||input.dataset.metadata.demoLastEvent.date<=input.to)
+            ?{lastEvent:input.dataset.metadata.demoLastEvent}:{})
         }}:{}),
     },
     bi: { status: "available", data: {
