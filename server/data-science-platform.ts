@@ -76,6 +76,7 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
         i.summary.monthlyChangePercent>=20?"growing" as const:"stable" as const,
       method:"consecutive_closed_months_only" as const},
     skuDemand:forecastSkuDemand(data,filters),
+    linkedEvidence:analyzeLinkedBusinessEvidence(data,filters),
     advancedModels:{
       inactivity:backtestCustomerInactivity(data,filters),
       collections:backtestCollections(data,filters),
