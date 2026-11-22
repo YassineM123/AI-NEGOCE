@@ -1,5 +1,6 @@
 import type { AgencyScope } from "../auth.js"
 import { analyzeReceivablesAging } from "./decision-support.js"
+import {collectionReviewQueue} from "./specialist-action-plans.js"
 import type { Dataset } from "../services.js"
 import {
   amount, daysBetween, ensureLimit, finding, percent, receivablesInScope,
@@ -69,7 +70,8 @@ export function analyzeFinancialStrategy(input: {
     },
     findings,
     scenarios,
-    decisionSupport:{aging:analyzeReceivablesAging(input.dataset,input.scope,input.period)},
+    decisionSupport:{aging:analyzeReceivablesAging(input.dataset,input.scope,input.period),
+      collectionQueue:collectionReviewQueue(input.dataset,input.scope,input.period,limit)},
     warnings:[
       "Créances arrêtées au "+snap.asOf+" sur des factures émises pendant la période sélectionnée, pas un solde historique à la fin de cette période.",
       "Les créances sont des soldes documentaires, pas un solde bancaire ni un cash-flow prévisionnel.",
