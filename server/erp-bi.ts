@@ -257,7 +257,8 @@ export function datasetFrom(db: ErpDatabase): Dataset {
   )
   const inventory = db.all<InventoryItem>(
     `SELECT p.sku reference, p.name product, a.name agency, i.current_quantity quantity,
-            coalesce(i.reorder_point, 0) reorderPoint, i.unit_cost unitCost
+            coalesce(i.reorder_point, 0) reorderPoint, i.unit_cost unitCost,
+            i.opening_date openingDate, i.opening_quantity openingQuantity
        FROM inventory i JOIN products p ON p.id = i.product_id JOIN agencies a ON a.id = i.agency_id`,
   )
   const collections = db.all<{id:string;invoiceId:string;agency:string;customerId?:string;date:string;amountTnd:number}>(
