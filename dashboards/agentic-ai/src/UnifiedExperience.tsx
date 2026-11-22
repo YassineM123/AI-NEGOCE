@@ -60,7 +60,7 @@ export default function UnifiedExperience({overview,agency,from,to,connected,onN
    </span>
   </div>
   {x?.snapshot.demo&&<div className="ux-live-event" role="status" data-demo-live="true">
-    <strong>Simulation d'entreprise active · PostgreSQL révision {x.snapshot.revision??"N/D"}</strong>
+    <strong>Dernière simulation enregistrée · PostgreSQL révision {x.snapshot.revision??"N/D"}</strong>
     <span>{x.snapshot.demo.lastEvent?
       x.snapshot.demo.lastEvent.date+" · "+x.snapshot.demo.lastEvent.agency+
       " · "+({sale:"Nouvelle vente",collection:"Règlement client",restock:"Réapprovisionnement",supplier:"Facture fournisseur"}[x.snapshot.demo.lastEvent.kind])+
