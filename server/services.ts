@@ -24,6 +24,24 @@ export type SyntheticDemoEvent={
  agency:string;date:string;reference:string;amountTnd:number|null
  units:number|null;description:string;erpWrites:0
 }
+/** Each stock movement is tied to a source document and a product+agency. */
+export type StockMovementEvidence={
+ id:string;date:string;agency:string;productId:string;sku:string
+ type:"receipt"|"sale"|"return"|"transfer_in"|"transfer_out"|"adjustment"
+ quantity:number;reference:string
+}
+/** Synthetic PO line and matched posted supplier invoice quantities, NOT goods delivery. */
+export type ProcurementLineEvidence={
+ orderLineId:string;orderId:string;agency:string;sku:string;productId:string
+ supplierId:string;supplier:string;orderDate:string
+ orderedUnits:number;invoicedUnits:number;unitCostTnd:number
+ status:"open"|"invoiced";supplierInvoiceIds:string[]
+}
+/** Master CRM profile, not consent/credit-risk evidence. */
+export type CustomerMasterEvidence={
+ id:string;name:string;agency:string;segment:string
+ creditLimitTnd:number;paymentTermsDays:number;representativeId:string|null
+}
 export type Dataset = {
   sales: Sale[]
   receivables: Receivable[]
@@ -31,6 +49,9 @@ export type Dataset = {
   /** Optional documented histories; absence must never imply zero activity. */
   collections?: CollectionEvent[]
   supplierDocuments?: SupplierDocumentEvent[]
+  stockMovements?: StockMovementEvidence[]
+  procurementLines?: ProcurementLineEvidence[]
+  customerProfiles?: CustomerMasterEvidence[]
   metadata: typeof datasetMetadata & {
     snapshotRevision?:number
     demoEvents?:SyntheticDemoEvent[]
