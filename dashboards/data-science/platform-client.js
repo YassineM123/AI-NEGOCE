@@ -133,5 +133,16 @@
     },
   });
 
+  // Dedicated cross-dashboard shortcut, no token exposure or ERP mutation.
+  global.document.addEventListener("click", function (event) {
+    const action = event.target instanceof Element
+      ? event.target.closest("[data-agentic-open]") : null;
+    if (!action) return;
+    const agent = action.getAttribute("data-agentic-open");
+    if (!global.AINegocePlatform.openAgent(agent)) {
+      event.preventDefault();
+      global.alert("Ouvrez le Command Center et connectez la session centrale avant de consulter cet agent.");
+    }
+  });
   if (portal) global.parent.postMessage({ type: "AI_NEGOCE_BRIDGE_READY" }, origin);
 })(window);
