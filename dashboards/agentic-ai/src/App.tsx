@@ -751,8 +751,18 @@ export default function App() {
               </Card>
             </div>
             <Card title="Contrôles & limites">
+              {directorReport.decisionDossier && <div data-director-decision-dossier={directorReport.decisionDossier.snapshotRevision??"local"}>
+                <h4>Dossier transverse · arrêté {directorReport.decisionDossier.dataAsOf}</h4>
+                <p className="source-note">Révision PostgreSQL : {directorReport.decisionDossier.snapshotRevision??"N/D"} · revue humaine obligatoire</p>
+                {directorReport.decisionDossier.domainCoverage.map(d=>
+                  <div className="governance-row" key={d.agent}><Icon name={d.status==="ok"?"check":"alert"} size={16}/>
+                    <div><b>{d.agent.replace(/_/g," ")}</b><small>{d.findings} constats · {d.evidenceCount} preuve(s) · {d.status}</small></div></div>)}
+                <h4>Vérifications avant approbation</h4>
+                {directorReport.decisionDossier.unresolvedDependencies.map((d,i)=>
+                  <div className="governance-row" key={i}><Icon name="alert" size={16}/><div><small>{d}</small></div></div>)}
+              </div>}
               {directorReport.warnings.map((w,i)=><div className="governance-row" key={i}><Icon name="alert" size={17}/><div><small>{w}</small></div></div>)}
-              <p className="muted-text">Les chiffres des autres dashboards BI/DS ne sont pas encore consommés en temps réel. Un dossier persistant et un modèle de conversation autonome restent à implémenter.</p>
+              <p className="muted-text">Les rapports des spécialistes partagent le snapshot BI/DS. Cette investigation reste en lecture seule ; les missions et validations persistantes sont gérées dans le workspace serveur. Aucun write-back ERP.</p>
             </Card>
           </div>
         </>}
