@@ -42,8 +42,10 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
  const debts=data.receivables.map(x=>({...x}))
  const collections=(data.collections??[]).map(x=>({...x}))
  const supplierDocuments=(data.supplierDocuments??[]).map(x=>({...x}))
- if([...lines,...collections,...supplierDocuments].some(x=>
-  "id" in x&&x.id===identifier || "invoiceId" in x&&x.invoiceId===identifier))
+ if(data.metadata.demoEvents?.some(x=>x.id===identifier)||
+   lines.some(x=>x.id===identifier||x.invoiceId===identifier)||
+   collections.some(x=>x.id===identifier)||
+   supplierDocuments.some(x=>x.orderId==="PO-"+identifier||x.invoiceId==="SI-"+identifier))
   throw new Error("DEMO_ALREADY_APPLIED")
  const choose=(xs:typeof stock)=>xs.slice().sort((a,b)=>a.reference.localeCompare(b.reference))[sequence%xs.length]
  const fallbackStock=stock.filter(x=>x.agency===selected)
