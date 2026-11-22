@@ -256,7 +256,12 @@ for (const po of purchaseOrders) {
     // partial invoicing: two invoices covering complementary line sets
     const cut = int(1, lines.length - 1)
     addSupplierInvoice(po.supplier_id as string, po.agency_id as string, invDate, po.id as string, lines.slice(0, cut))
-    addSupplierInvoice(po.supplier_id as string, po.agency_id as string, addDays(invDate, int(1, 15)), po.id as string, lines.slice(cut))
+    // A split invoice may not be issued after the frozen synthetic as-of date:
+    // otherwise its stock receipt would appear in current inventory but not in
+    // the date-scoped movement ledger used by the three dashboards.
+    addSupplierInvoice(po.supplier_id as string, po.agency_id as string,
+      minDate(addDays(invDate, int(1, 15)), SCENARIO.periodEnd),
+      po.id as string, lines.slice(cut))
     po.status = "invoiced"
   } else {
     addSupplierInvoice(po.supplier_id as string, po.agency_id as string, invDate, po.id as string, lines)
