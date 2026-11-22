@@ -38,6 +38,7 @@ import { analyzeSupplyChain } from "./agents/supply-chain.js"
 import { analyzeBusinessStrategy } from "./agents/business-strategy.js"
 import { investigateWithDirector, DIRECTOR_AGENTS } from "./agents/ai-director.js"
 import { registerAgenticWorkspaceRoutes } from "./agents/workspace-api.js"
+import {decisionSimulationSchema,simulateDecision} from "./agents/explainable-scenarios.js"
 import { createLlmProvider, type LlmProvider } from "./llm/index.js"
 import { validateInvoice, type InvoiceInput } from "./invoice-validation.js"
 import {
@@ -392,6 +393,38 @@ export function createApp(deps = defaultDependencies()) {
     }).catch(next)
   }
   registerAgenticWorkspaceRoutes(app, { store, dataset: data, llm: deps.llm, requireErpData })
+
+  // Demonstration-only what-if endpoint. Never reclassify user supplied bank/
+  // supply assumptions as observed ERP facts. Read-only, agency-authorized.
+  app.post(
+    "/api/v1/agentic/simulations/explain",
+    requirePermission("agentic.read"),
+    requireErpData,
+    (req,res)=>{
+      const organization=res.locals.organization as Organization
+      if(!organization?.isSynthetic)
+        return res.status(403).json({error:{code:"SYNTHETIC_ONLY",message:"Simulation réservée au tenant fictif"}})
+      const parsed=decisionSimulationSchema.safeParse(req.body)
+      if(!parsed.success)
+        return res.status(400).json({error:{code:"INVALID_SIMULATION",details:parsed.error.flatten()}})
+      const permitted=scopedAgencies(req,parsed.data.agency)
+      if(permitted===null)
+        return res.status(403).json({error:{code:"AGENCY_FORBIDDEN"}})
+      if(parsed.data.from&&parsed.data.to&&parsed.data.from>parsed.data.to)
+        return res.status(400).json({error:{code:"INVALID_PERIOD"}})
+      const context=data()
+      const result=simulateDecision(parsed.data)
+      res.setHeader("Cache-Control","no-store")
+      return res.json({
+        ...result,sourceContext:{
+          source:context.metadata.source,asOf:context.metadata.asOf,
+          // Explicitly NOT evidence for assumed cash or demand.
+          usedForCalculations:false,
+        },scope:permitted,executionMode:"read_only",modelCalls:0,
+      })
+    },
+  )
+
 
   // Safe provenance report, never raw client identifiers. Scope remains demo tenant only.
   app.get(
