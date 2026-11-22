@@ -37,7 +37,8 @@ const example=():Dataset=>{
         date:"2026-07-13",dueDate:"2026-07-30",outstanding:25},
     ],
     inventory:[{reference:"SKU-SFX",product:"Bureau",agency:"Sfax",
-      quantity:2,reorderPoint:10,unitCost:50}],
+      quantity:2,reorderPoint:10,unitCost:50,
+      openingDate:"2026-01-01",openingQuantity:5}],
     collections:[
       {id:"COL-SF",invoiceId:"SFX-1",agency:"Sfax",date:"2026-07-20",amountTnd:50},
       {id:"COL-TN",invoiceId:"TUN-1",agency:"Tunis Centre",date:"2026-10-07",amountTnd:25},
@@ -49,6 +50,28 @@ const example=():Dataset=>{
       {orderId:"PO-TN",supplierId:"SUP-TN",supplier:"Fournisseur fictif Tunis",
        agency:"Tunis Centre",orderDate:"2026-09-01",invoiceDate:"2026-09-11",
        invoiceId:"SI-TN",lagDays:10,amountTnd:500},
+    ],
+    stockMovements:[
+      {id:"MOVE-SF",agency:"Sfax",sku:"SKU-SFX",productId:"PRD-SFX",
+        date:"2026-07-15",type:"sale",quantity:-3,reference:"SFX-1"},
+      {id:"MOVE-TN",agency:"Tunis Centre",sku:"SKU-TN",productId:"PRD-TN",
+        date:"2026-09-15",type:"adjustment",quantity:1,reference:"CONFIDENTIAL-TN"},
+    ],
+    procurementLines:[
+      {orderLineId:"POL-SF",orderId:"PO-SF",agency:"Sfax",sku:"SKU-SFX",
+        productId:"PRD-SFX",supplierId:"SUP-SF",supplier:"Fournisseur fictif Sfax",
+        orderDate:"2026-07-01",orderedUnits:10,invoicedUnits:8,unitCostTnd:50,
+        status:"invoiced",supplierInvoiceIds:["SI-SF"]},
+      {orderLineId:"POL-TN",orderId:"PO-TN",agency:"Tunis Centre",sku:"SKU-TN",
+        productId:"PRD-TN",supplierId:"SUP-TN",supplier:"Fournisseur secret Tunis",
+        orderDate:"2026-09-01",orderedUnits:5,invoicedUnits:5,unitCostTnd:60,
+        status:"invoiced",supplierInvoiceIds:["SI-TN"]},
+    ],
+    customerProfiles:[
+      {id:"c-sfax",name:"Client Sfax",agency:"Sfax",segment:"PME",
+        creditLimitTnd:500,paymentTermsDays:30,representativeId:null},
+      {id:"c-tunis",name:"Client Tunis",agency:"Tunis Centre",segment:"Entreprise",
+        creditLimitTnd:9000,paymentTermsDays:60,representativeId:null},
     ],
     metadata:{...baseline.metadata,source:"PostgreSQL synthetic QA",asOf:"2026-10-15",
       lastUpdated:"2026-10-15T09:00:00.000Z"},
@@ -109,6 +132,13 @@ describe.skipIf(!url)("One PostgreSQL source: BI, Data Science, 5 Agents",()=>{
     expect(one.body.dataScience.analysis.advancedModels).toBeDefined()
     expect(one.body.dataScience.analysis.advancedModels.collections.status).toBe("insufficient_history")
     expect(one.body.dataScience.analysis.advancedModels.suppliers.events).toBe(1)
+    expect(one.body.dataScience.analysis.linkedEvidence.stock.status).toBe("reconciled")
+    expect(one.body.dataScience.analysis.linkedEvidence.stock.reconciledPositions).toBe(1)
+    expect(one.body.dataScience.analysis.linkedEvidence.procurement.incompleteLines).toBe(1)
+    expect(one.body.dataScience.analysis.linkedEvidence.procurement.evidenceSample[0].invoiceIds).toEqual(["SI-SF"])
+    expect(one.body.dataScience.analysis.linkedEvidence.customers.masterProfiles).toBe(1)
+    expect(JSON.stringify(one.body.dataScience.analysis.linkedEvidence)).not.toContain("CONFIDENTIAL-TN")
+    expect(JSON.stringify(one.body.dataScience.analysis.linkedEvidence)).not.toContain("Fournisseur secret Tunis")
     const loaded=await readAnalyticalDataset(t)
     expect(loaded?.dataset.collections?.map(e=>e.id)).toEqual(["COL-SF","COL-TN"])
     expect(loaded?.dataset.supplierDocuments?.map(e=>e.invoiceId)).toEqual(["SI-SF","SI-TN"])
