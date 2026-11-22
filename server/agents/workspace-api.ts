@@ -41,6 +41,10 @@ function scopedFingerprint(dataset:Dataset,scope:AgencyScope,period:ReportPeriod
   for(const r of dataset.sales)if(allowed(r.agency))hash.update(JSON.stringify(r))
   for(const r of dataset.receivables)if(allowed(r.agency))hash.update(JSON.stringify(r))
   for(const r of dataset.inventory)if(allowed(r.agency))hash.update(JSON.stringify(r))
+  // Revisions in supporting financial/supplier documentary history also
+  // invalidate previously approved dossiers, without hashing another agency.
+  for(const r of dataset.collections??[])if(allowed(r.agency))hash.update(JSON.stringify(r))
+  for(const r of dataset.supplierDocuments??[])if(allowed(r.agency))hash.update(JSON.stringify(r))
   return hash.digest("hex")
 }
 
