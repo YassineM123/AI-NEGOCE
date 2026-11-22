@@ -21,13 +21,14 @@ export function summarizeAgentCoverage(input:{
  const {overview,revenue,specialists,errors,filters,connected}=input
  const samePeriod=(period?:{from:string|null;to:string|null})=>
    period?.from===filters.from&&period?.to===filters.to
- const sameSource=(source?:string,asOf?:string)=>
-   !!overview&&source===overview.snapshot.source&&asOf===overview.snapshot.asOf
+ const sameSource=(source?:string,asOf?:string,scope?:string[]|"*")=>
+   !!overview&&source===overview.snapshot.source&&asOf===overview.snapshot.asOf&&
+   JSON.stringify(scope)==JSON.stringify(overview.scope)
  return catalog.map(({key,title})=>{
   if(!connected||!overview)return {key,label:title,status:"unavailable",findings:null,signal:"Source absente",detail:"Connectez la session centrale"}
   if(key==="revenue"){
    if(!revenue)return {key,label:title,status:"loading",findings:null,signal:"Calcul en cours",detail:"Attente du rapport du spécialiste"}
-   if(!samePeriod(revenue.snapshot.period)||!sameSource(revenue.snapshot.source,revenue.snapshot.asOf))
+   if(!samePeriod(revenue.snapshot.period)||!sameSource(revenue.snapshot.source,revenue.snapshot.asOf,revenue.snapshot.scope))
      return {key,label:title,status:"error",findings:null,signal:"Snapshot incohérent",detail:"Rapport périmé : actualiser les analyses"}
    return {key,label:title,status:revenue.status==="no_data"?"empty":"ready",
      findings:revenue.analysis.opportunitiesFound,
@@ -37,7 +38,7 @@ export function summarizeAgentCoverage(input:{
   const report=specialists[key]
   if(errors[key])return {key,label:title,status:"error",findings:null,signal:"API indisponible",detail:errors[key]}
   if(!report)return {key,label:title,status:"loading",findings:null,signal:"Calcul en cours",detail:"Attente du rapport du spécialiste"}
-  if(!samePeriod(report.snapshot.period)||!sameSource(report.snapshot.source,report.snapshot.asOf))
+  if(!samePeriod(report.snapshot.period)||!sameSource(report.snapshot.source,report.snapshot.asOf,report.snapshot.scope))
    return {key,label:title,status:"error",findings:null,signal:"Snapshot incohérent",detail:"Rapport périmé : actualiser les analyses"}
   const headline=key==="finance"?
     "Créances échues : "+currency(at(report.metrics.overdueTnd)):
