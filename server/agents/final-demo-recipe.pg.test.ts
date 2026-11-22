@@ -67,6 +67,30 @@ describe.skipIf(!url)("REAL POSTGRES — five-scenario reproducible decision rec
   const hypothetical=all.body.dataScience.analysis.scenarios.options.find((s:{id:string})=>s.id==="ambitious")
   expect(hypothetical.revenueTnd).toBe(7475)
   expect(hypothetical.feasible).toBeNull()
+  // The CDC AG-02 / AG-03 parameterized examples also run against the
+  // PostgreSQL-backed API with identical tenant and agency authorization.
+  const liquidity=await request(app).post(api+"/simulations/explain").set(adminToken).send({
+    kind:"liquidity",agency:"Sfax",
+    inputs:{asOf:"2026-10-20",days:30,openingCashTnd:650000,
+      inflowsTnd:300000,outflowsTnd:800000,floorTnd:250000},
+  })
+  expect(liquidity.status).toBe(200)
+  expect(liquidity.body.result).toMatchObject({
+    projectedCashTnd:150000,shortfallToFloorTnd:100000,breachesFloor:true,
+  })
+  expect(liquidity.body.sourceContext).toMatchObject({
+    source:fixture.metadata.source,usedForCalculations:false,
+  })
+  const demandCoverage=await request(app).post(api+"/simulations/explain").set(adminToken).send({
+    kind:"stock_coverage",agency:"Sfax",
+    inputs:{asOf:"2026-10-20",sku:"SKU-A",availableUnits:120,
+      dailyDemandUnits:20,replenishmentLeadDays:10},
+  })
+  expect(demandCoverage.status).toBe(200)
+  expect(demandCoverage.body.result).toMatchObject({
+    coverageDays:6,shortfallDays:4,shortageUnits:80,
+  })
+  expect(demandCoverage.body.erpWrites).toBe(0)
   const snapshotId=all.body.snapshotId
   const growth=await request(app).get(api+"/revenue-growth/opportunities")
     .set(adminToken).query(filter)
