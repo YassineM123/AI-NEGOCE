@@ -18,6 +18,12 @@ try{
  const supplierCount=data.supplierDocuments?.length??0
  const audit=analyzeLinkedBusinessEvidence(data,{agencies:"*"})
  const issues:string[]=[]
+ const beyondCutoff=db.one<{invoices:number}>(
+  "SELECT count(*) invoices FROM supplier_invoices WHERE invoice_date > ?",data.metadata.asOf)
+ const futureMovements=db.one<{movements:number}>(
+  "SELECT count(*) movements FROM stock_movements WHERE date > ?",data.metadata.asOf)
+ if(beyondCutoff.invoices>0)issues.push("Supplier invoice dates extend after the dataset as-of")
+ if(futureMovements.movements>0)issues.push("Stock movement dates extend after the dataset as-of")
  if(ledger.length<1000)issues.push("Missing stock movement history")
  if(p.length<100)issues.push("Missing linked purchase order lines")
  if(crm.length<100)issues.push("Missing customer CRM masters")
