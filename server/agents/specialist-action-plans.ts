@@ -10,6 +10,9 @@ import {forecastSkuDemand} from "../sku-demand-model.js"
 
 const key=(...x:string[])=>JSON.stringify(x)
 const allow=(s:AgencyScope,agency:string)=>s==="*"||s.includes(agency)
+const dataCustomerProfile=(dataset:Dataset,agency:string,id:string)=>
+  dataset.customerProfiles?.find(p=>p.agency===agency&&p.id===id)
+
 
 /** REV-01/05/06/07, FIN-01 (partial): category gap against documented peers.
  *  Evidence is purchase invoices, never a claim that the stock or product
@@ -58,7 +61,10 @@ export function commercialAccountPlans(dataset:Dataset,scope:AgencyScope,period:
       status:"investigate_only" as const}))
     .sort((a,b)=>b.peerCustomers-a.peerCustomers||a.family.localeCompare(b.family))
    if(opportunities.length===0)continue
+   const profile=dataCustomerProfile(dataset,c.agency,c.id)
    plans.push({customerId:c.id,customerName:c.name,agency:c.agency,
+    clientSegment:profile?.segment??null,
+    creditLimitTnd:profile?.creditLimitTnd??null,
     revenueTnd:c.revenue,grossMarginTnd:c.grossMargin,
     marginCoverage:c.grossMargin===null?"incomplete" as const:"complete" as const,
     peerBase:customers.length,ownedCategories:[...c.categories].sort(),
@@ -129,18 +135,29 @@ export function replenishmentReviewPlan(dataset:Dataset,scope:AgencyScope,period
   .map(x=>{
    const forecast=forecasts.get(key(x.agency,x.reference))
    const minimumUnits=Math.max(0,Math.ceil(x.reorderPoint-x.quantity))
+   const pastOrders=(dataset.procurementLines??[]).filter(p=>p.agency===x.agency&&
+     p.sku===x.reference&&p.orderDate<=dataset.metadata.asOf)
+    .sort((a,b)=>b.orderDate.localeCompare(a.orderDate)||b.orderId.localeCompare(a.orderId))
+   const lastOrder=pastOrders[0]
    const cost=Number.isFinite(x.unitCost)&&x.unitCost>=0?amount(minimumUnits*x.unitCost):null
    return {agency:x.agency,sku:x.reference,product:x.product,
     availableUnits:x.quantity,reorderPointUnits:x.reorderPoint,minimumUnits,
     purchaseBudgetEstimateTnd:cost,forecastQuantityNextMonth:forecast?.forecast?.quantity??null,
     forecastWape:forecast?.backtest.wape??null,
     forecastVersion:forecast?.modelVersion??null,
-    supplier:null as null,expectedDeliveryDate:null as null,moqUnits:null as null,
+    supplier:lastOrder?.supplier??null,
+    supplierSource:lastOrder?"previous_purchase_order_not_validated":null,
+    lastOrderId:lastOrder?.orderId??null,
+    documentaryOrderedUnits:lastOrder?.orderedUnits??null,
+    documentaryInvoicedUnits:lastOrder?.invoicedUnits??null,
+    expectedDeliveryDate:null as null,moqUnits:null as null,
     reservationsVerified:false as const,
     proposedAction:{type:"prepare_purchase_request",status:"draft_only" as const,requiresHumanApproval:true as const},
-    evidence:[{type:"stock_position" as const,id:x.reference,agency:x.agency}],
+    evidence:[{type:"stock_position" as const,id:x.reference,agency:x.agency},
+      ...(lastOrder?[{type:"purchase_order" as const,id:lastOrder.orderId,agency:x.agency}]:[])],
     warnings:["Quantité minimale = seuil - disponible, pas quantité d'achat optimisée.",
-      "Fournisseur, MOQ, délai, réservations, transit et budget approuvé inconnus."]}
+      "Le fournisseur affiché est issu d'une commande historique, sans preuve de disponibilité ou prix actuel.",
+      "MOQ, délai, réservations, transit et budget approuvé inconnus."]}
   }).sort((a,b)=>a.availableUnits-b.availableUnits||a.agency.localeCompare(b.agency)||a.sku.localeCompare(b.sku))
  return {status:positions.length?"observed_current_snapshot" as const:"not_available" as const,
   stockAsOf:dataset.metadata.asOf,positionsAnalyzed:positions.length,
