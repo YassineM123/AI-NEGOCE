@@ -260,8 +260,8 @@ export function datasetFrom(db: ErpDatabase): Dataset {
             coalesce(i.reorder_point, 0) reorderPoint, i.unit_cost unitCost
        FROM inventory i JOIN products p ON p.id = i.product_id JOIN agencies a ON a.id = i.agency_id`,
   )
-  const collections = db.all<{id:string;invoiceId:string;agency:string;date:string;amountTnd:number}>(
-    `SELECT pay.id, s.number invoiceId, a.name agency, pay.payment_date date,
+  const collections = db.all<{id:string;invoiceId:string;agency:string;customerId?:string;date:string;amountTnd:number}>(
+    `SELECT pay.id, s.number invoiceId, a.name agency, s.customer_id customerId, pay.payment_date date,
             pay.amount amountTnd
        FROM payments pay
        JOIN sales_invoices s ON s.id = pay.sales_invoice_id
