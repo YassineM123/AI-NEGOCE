@@ -29,7 +29,6 @@ export default defineConfig({
         FRONTEND_ORIGIN: "http://127.0.0.1:8444",
         UNIFIED_ANALYTICS_SOURCE: "legacy",
         RATE_LIMIT_PER_MINUTE: "1000",
-        DATABASE_URL: "",
         LOG_LEVEL: "silent",
       },
       reuseExistingServer: false,
