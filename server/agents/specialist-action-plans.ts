@@ -95,7 +95,7 @@ export function collectionReviewQueue(dataset:Dataset,scope:AgencyScope,period:R
    dueDate:r.dueDate,overdueDays:daysLate,outstandingTnd:amount(r.outstanding),
    linkedCollectionsTnd:linked.length?collected:null,
    linkedPaymentIds:linked.map(x=>x.id).sort().slice(0,20),
-   classification:isOverdue?(daysLate>90?"critical_overdue":"overdue"):"not_due",
+   classification:(isOverdue?(daysLate>90?"critical_overdue":"overdue"):"not_due") as "critical_overdue"|"overdue"|"not_due",
    priority:isOverdue?(daysLate>90?"high":"medium"):"low",
    proposedAction:isOverdue?"verify_and_prepare_collection":"monitor_due_date",
    status:"draft_only" as const,requiresHumanApproval:true as const,
