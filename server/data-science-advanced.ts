@@ -68,7 +68,10 @@ export function backtestCustomerInactivity(dataset:Dataset,filters:Filters={}){
  const out=unavailable("Labels de non-réachat à 90 jours non observables ou échantillon insuffisant.")
  if(cutoffs.length<8)return out
  const held=new Set(cutoffs.slice(-3))
- const train=samples.filter(s=>!held.has(s.date))
+ const holdoutStart=cutoffs[cutoffs.length-3]
+ // Embargo: a 90-day training label must be fully known BEFORE the first
+ // holdout cutoff, otherwise future customer activity leaks into training.
+ const train=samples.filter(s=>!held.has(s.date)&&add(s.date,90)<holdoutStart)
  const test=samples.filter(s=>held.has(s.date))
  if(train.length<100||test.length<40||
     train.filter(s=>s.label===0).length<10||train.filter(s=>s.label===1).length<10||
