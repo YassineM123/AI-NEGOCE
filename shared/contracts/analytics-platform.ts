@@ -171,7 +171,7 @@ export const governedDataScienceSchema=z.object({
       holdoutSamples:z.number().int().nonnegative(),
       candidates:z.array(z.object({name:z.string(),metric:z.enum(["brier","wape","mae_days"]),score:z.number().nullable()})),
       baselineScore:z.number().nullable(),selectedScore:z.number().nullable(),
-      forecast:z.number().nullable(),forecastMonth:z.string().optional(),reason:z.string(),
+      forecast:z.number().nullable(),forecastMonth:z.string().nullable().optional(),reason:z.string(),
     }),
     suppliers:z.object({
       status:z.literal("pilot_not_certified"),verifiedProduction:z.literal(false),
@@ -188,7 +188,7 @@ export const governedDataScienceSchema=z.object({
       })),
       warnings:z.array(z.string()),
     }),
-  }),
+  }).optional(),
   inventory:z.object({
     status:z.enum(["observed_current_snapshot","not_available"]),
     periodApplicable:z.boolean(),
