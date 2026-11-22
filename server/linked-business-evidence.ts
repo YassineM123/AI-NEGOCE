@@ -7,7 +7,6 @@ import type {Dataset,Filters} from "./services.js"
 const allowed=(agency:string,filters:Filters)=>
  !filters.agencies||filters.agencies==="*"||filters.agencies.includes(agency)
 const r3=(v:number)=>Math.round(v*1000)/1000
-const money=(xs:number[])=>r3(xs.reduce((a,x)=>a+Math.round(x*1000),0)/1000)
 const key=(agency:string,sku:string)=>JSON.stringify([agency,sku])
 export function analyzeLinkedBusinessEvidence(data:Dataset,filters:Filters={}){
  const asOf=data.metadata.asOf
@@ -22,7 +21,8 @@ export function analyzeLinkedBusinessEvidence(data:Dataset,filters:Filters={}){
  const stockRows=positions.map(i=>{
   const movements=allByKey.get(key(i.agency,i.reference))??[]
   const openingDate=i.openingDate??null,opening=i.openingQuantity??null
-  const eligible=opening!==null&&openingDate!==null&&openingDate<=asOf
+  const eligible=data.stockMovements!==undefined&&opening!==null&&
+   openingDate!==null&&openingDate<=asOf
   const predicted=eligible?r3(opening+movements.filter(m=>m.date>=openingDate)
     .reduce((s,m)=>s+m.quantity,0)):null
   const matches=eligible&&predicted!==null&&Math.abs(predicted-i.quantity)<=0.001
