@@ -14,6 +14,7 @@ import {
 } from "./api"
 import UnifiedExperience from "./UnifiedExperience"
 import DecisionScenarioLab from "./DecisionScenarioLab"
+import SpecialistDecisionSupport from "./SpecialistDecisionSupport"
 import { AGENT_DOMAIN, AdvancedMissions, AdvancedApprovals, AdvancedNotifications, AdvancedAgentChat, AdvancedOverview } from "./AdvancedWorkspace"
 
 type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "notifications" | "platforms" | "connections" | "audit" | "settings"
@@ -693,6 +694,10 @@ export default function App() {
                 ? <div className="agentic-findings">{findings.map((item)=><article key={item.id} className="recommendation"><div className="recommendation-top"><Icon name="target" size={18}/><b>{item.title}</b><Pill tone={item.priority==="high"?"red":item.priority==="medium"?"amber":"blue"}>{item.priority}</Pill></div><p>{item.explanation}</p><div className="evidence-items">{item.evidence.slice(0,5).map((e,i)=><span key={e.id+i}><Icon name="document" size={14}/>{e.type} · {e.id}</span>)}</div><p className="source-note">Action : {item.action.type} · Brouillon · Validation humaine obligatoire</p></article>)}</div>
                 : <Empty icon="database" title="Aucun résultat exploitable" text={source ? "Aucune recommandation calculée sur cette source et ce périmètre." : "Connectez le sandbox pour lire l'API de cet agent."}/>}
           </Card>
+          {source && <SpecialistDecisionSupport agent={selectedAgent}
+            support={selectedAgent==="revenue"?revenueResult?.decisionSupport:specialist?.decisionSupport}
+            source={source} from={sharedFilters.from} to={sharedFilters.to}
+            snapshotId={sharedOverview?.snapshotId}/>}
           {specialist && <Card title="Scénarios de sensibilité">{specialist.scenarios.length ? specialist.scenarios.map((scenario)=>
             <div className="decision-short" key={scenario.id}><Avatar agent={selectedAgent}/><div><b>{scenario.label}</b><small>{scenario.assumption}</small></div><Pill tone="blue">{scenario.valueTnd===null?"N/D":scenario.valueTnd.toLocaleString("fr-FR",{minimumFractionDigits:3})+" TND"}</Pill></div>
           ) : <Empty title="Aucun scénario" text="Pas d'hypothèse validée pour cette analyse."/>}<p className="muted-text small">Hypothèses de calcul, pas de prévision ni d'engagement financier.</p></Card>}
