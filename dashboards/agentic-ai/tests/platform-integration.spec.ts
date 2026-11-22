@@ -168,10 +168,13 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
     return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
       kind:body.kind,status:"hypothesis_only",agency:body.agency,asOf:body.inputs.asOf,
       erpWrites:0,modelCalls:0,executionMode:"read_only",
-      result:isStock?
+      result:body.kind==="expansion_investment"?
+         {upfrontInvestmentTnd:120000,monthlyNetContributionTnd:7000,
+          npvTnd:48000,paybackMonth:18,cashAfterInitialInvestmentTnd:80000,
+          breachesAssumedCashFloor:true}:isStock?
         {coverageDays:6,leadTimeDays:10,shortfallDays:4,shortageUnits:80,beforeReplenishment:true}:
         {projectedCashTnd:150000,shortfallToFloorTnd:100000,breachesFloor:true},
-      explanation:isStock?"Couverture = disponible / consommation":"Solde = initial + entrées - sorties",
+      explanation:body.kind==="expansion_investment"?"VAN hypothétique":isStock?"Couverture = disponible / consommation":"Solde = initial + entrées - sorties",
       warnings:["Hypothèses non rapprochées de l’ERP"],
       sourceContext:{source:"Synthetic QA",asOf:"2026-10-31",usedForCalculations:false},
     })})
@@ -210,6 +213,14 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await page.getByRole("button",{name:"Calculer et expliquer"}).click()
   await expect(page.getByText("Couverture de stock hypothétique")).toBeVisible()
   await expect(page.getByText("6 jours",{exact:true})).toBeVisible()
+   await page.getByRole("button",{name:"Expansion · VAN / cash"}).click()
+   await page.getByRole("button",{name:"Calculer et expliquer"}).click()
+   await expect(page.getByText("Expansion · VAN hypothétique, sans étude de marché")).toBeVisible()
+   await expect(page.getByText("Sous le plancher",{exact:true})).toBeVisible()
+   await expect(page.getByText("18 mois",{exact:true})).toBeVisible()
+   const investmentExport=page.waitForEvent("download")
+   await page.getByRole("button",{name:"Exporter le calcul et les hypothèses · JSON"}).click()
+   expect((await investmentExport).suggestedFilename()).toContain("expansion_investment")
 
   await bi.getByRole("button",{name:"Sources & statut"}).click()
   await expect(bi.getByText("Provenance du snapshot API partagé")).toBeVisible()

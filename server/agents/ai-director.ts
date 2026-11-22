@@ -106,6 +106,32 @@ export function investigateWithDirector(input: {
     })),
     sections,
     highlights,
+    decisionDossier:{
+      status:"requires_human_review" as const,
+      dataAsOf:snap.asOf,source:snap.source,scope:snap.scope,period:snap.period,
+      snapshotRevision:input.dataset.metadata.snapshotRevision??null,
+      domainCoverage:sections.map(s=>({
+        agent:s.agent,status:s.status,findings:s.findings.length,
+        evidenceCount:s.findings.reduce((n,f)=>n+f.evidence.length,0),
+        limitations:s.warnings.slice(0,4),
+      })),
+      proposals:highlights.map(h=>({
+        agent:h.agent,action:h.action.type,priority:h.priority,
+        title:h.title,evidence:h.evidence,requiresHumanApproval:true as const,
+      })),
+      safeguards:{
+        erpWrites:0 as const,productionModelCertified:false as const,
+        bankCashVerified:false as const,expansionRoiVerified:false as const,
+        stockAvailabilityVerified:false as const,
+      },
+      unresolvedDependencies:[
+        "Vérifier l'identité et les droits de l'approbateur.",
+        "Confirmer les documents ERP, la fraîcheur du snapshot et l'absence de litige.",
+        "Rapprocher les budgets, la trésorerie bancaire, les réceptions et la capacité avant décision.",
+        ...(sections.some(s=>s.status==="no_data")?["Certaines analyses ne disposent pas d'un historique admissible."]:[]),
+      ],
+      nextStep:"human_review_and_revalidate_snapshot" as const,
+    },
     summary:{
       agentsInvoked:sections.length,
       totalFindings:sections.reduce((sum,s)=>sum+s.findings.length,0),

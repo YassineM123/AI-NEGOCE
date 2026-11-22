@@ -33,6 +33,7 @@ export type RevenueResult = {
   analysis: { customersAnalyzed: number; opportunitiesFound: number; returned: number }
   opportunities: RevenueOpportunity[]
   warnings: string[]
+  decisionSupport?:Record<string,unknown>
 }
 
 // This is the existing server contract. No fake backend is called and no secrets are persisted.
@@ -125,6 +126,7 @@ export type SpecialistReport = {
     action: { type: string; status: "draft_only"; requiresHumanApproval: true }
   }>
   scenarios: Array<{ id: string; label: string; assumption: string; valueTnd: number | null }>
+  decisionSupport?:Record<string,unknown>
   warnings: string[]
 }
 export type DirectorReport = {
@@ -143,6 +145,11 @@ export type DirectorReport = {
   }>
   highlights: Array<SpecialistReport["findings"][number] & { agent: string }>
   summary: { agentsInvoked: number; totalFindings: number; requiresHumanReview: boolean; erpWrites: number }
+  decisionDossier?:{
+    status:string;dataAsOf:string;source:string;snapshotRevision:number|null
+    domainCoverage:Array<{agent:string;status:string;findings:number;evidenceCount:number;limitations:string[]}>
+    unresolvedDependencies:string[];nextStep:string
+  }
   warnings: string[]
 }
 const SPECIALIST_PATHS: Record<SpecialistAgent,string> = {

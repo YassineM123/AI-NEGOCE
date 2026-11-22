@@ -1,5 +1,6 @@
 import type { AgencyScope } from "../auth.js"
 import { proposeTransferCandidates } from "./decision-support.js"
+import {replenishmentReviewPlan} from "./specialist-action-plans.js"
 import type { Dataset } from "../services.js"
 import {
   amount, ensureLimit, finding, inventoryInScope, snapshot, sumMoney, periodContainsSnapshot,
@@ -78,7 +79,8 @@ export function analyzeSupplyChain(input: {
     },
     findings,
     scenarios,
-    decisionSupport:{transferCandidates:transferOptions},
+    decisionSupport:{transferCandidates:transferOptions,
+      replenishment:replenishmentReviewPlan(input.dataset,input.scope,input.period,limit)},
     warnings:[
       ...(!rows.length && (input.period?.from||input.period?.to) ? ["Stock historique non disponible : le snapshot au "+snap.asOf+" est hors de la période demandée."] : []),
       "Réapprovisionnement calculé sur seuil existant ; pas de prévision de demande, de délai fournisseur ou de disponibilité réservée.",

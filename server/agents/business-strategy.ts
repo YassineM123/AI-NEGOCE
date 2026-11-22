@@ -1,5 +1,6 @@
 import type { AgencyScope } from "../auth.js"
 import { compareThreeStrategyScenarios } from "./decision-support.js"
+import {expansionReadinessReview} from "./specialist-action-plans.js"
 import type { Dataset } from "../services.js"
 import {
  amount, ensureLimit, finding, inventoryInScope, percent,
@@ -82,7 +83,8 @@ export function analyzeBusinessStrategy(input: {
        valueTnd:s.revenueTnd,
      })),
    ],
-   decisionSupport:{strategicScenarios:strategic},
+   decisionSupport:{strategicScenarios:strategic,
+     expansionReadiness:expansionReadinessReview(input.dataset,input.scope,input.period)},
    warnings:[
      "Créances à la date d'arrêté sur factures émises dans la période ; stocks seulement si le snapshot date de la période.",
      "Scénarios limités à la sensibilité arithmétique du CA ; aucun coût d'investissement, marché ou ROI fiable n'est disponible.",

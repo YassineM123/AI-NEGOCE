@@ -98,17 +98,25 @@ describe.skipIf(!url)("REAL POSTGRES — five-scenario reproducible decision rec
   const customer=growth.body.opportunities.find((r:{customerId:string})=>r.customerId==="CL-GROW")
   expect(customer.metrics.growthPercent).toBe(50)
   expect(customer.evidence.invoiceIds).toEqual(["F-SF-PREV","F-SF-CUR"])
+  expect(growth.body.decisionSupport.accountPlans.method).toBe("observed_category_peer_penetration_not_affinity_ml")
   const finance=await request(app).get(api+"/financial-strategy/analysis")
     .set(adminToken).query(filter)
   expect(finance.status).toBe(200)
   expect(finance.body.metrics.overdueTnd).toBe(9000)
   expect(finance.body.metrics.overdueSharePercent).toBe(90)
   expect(finance.body.findings[0].evidence[0].id).toBe("D-SF-LATE")
+  expect(finance.body.decisionSupport.collectionQueue.plans[0]).toMatchObject({
+    invoiceId:"D-SF-LATE",outstandingTnd:9000,requiresHumanApproval:true,
+  })
   const stock=await request(app).get(api+"/supply-chain/recommendations")
     .set(adminToken).query(filter)
   expect(stock.status).toBe(200)
   expect(stock.body.metrics.emptyStockPositions).toBe(1)
   expect(stock.body.metrics.indicativeReorderCostTnd).toBe(600)
+  expect(stock.body.decisionSupport.replenishment.proposals[0]).toMatchObject({
+    sku:"SKU-A",minimumUnits:10,purchaseBudgetEstimateTnd:600,
+    proposedAction:{status:"draft_only",requiresHumanApproval:true},
+  })
   const allStock=await request(app).get(api+"/supply-chain/recommendations")
     .set(adminToken).query(finalDemoScope)
   expect(allStock.status).toBe(200)
@@ -118,6 +126,7 @@ describe.skipIf(!url)("REAL POSTGRES — five-scenario reproducible decision rec
   expect(strategy.status).toBe(200)
   expect(strategy.body.metrics.agenciesCompared).toBe(2)
   expect(strategy.body.metrics.revenueTnd).toBe(6500)
+  expect(strategy.body.decisionSupport.expansionReadiness.openingNewAgencyValidated).toBe(false)
   expect(strategy.body.decisionSupport.strategicScenarios.scenarios.every(
     (s:{feasible:null;capexTnd:null})=>s.feasible===null&&s.capexTnd===null)).toBe(true)
   const director=await request(app).post(api+"/ai-director/investigate")
@@ -127,6 +136,8 @@ describe.skipIf(!url)("REAL POSTGRES — five-scenario reproducible decision rec
    "revenue_growth","financial_strategy","supply_chain_intelligence","business_strategy",
   ])
   expect(director.body.summary.erpWrites).toBe(0)
+  expect(director.body.decisionDossier.domainCoverage).toHaveLength(4)
+  expect(director.body.decisionDossier.safeguards.erpWrites).toBe(0)
   const created=await request(app).post(workspace+"/missions")
     .set(adminToken).send({agency:"Sfax",agent:"director",
      title:"Recette PostgreSQL CEO croissance 15%",
@@ -179,6 +190,28 @@ describe.skipIf(!url)("REAL POSTGRES — five-scenario reproducible decision rec
   expect(packets.status).toBe(200)
   expect(packets.body.actions).toHaveLength(1)
   expect(packets.body.actions[0].missionId).toBe(newMission.body.mission.id)
+  // Payment-evidence revision alone invalidates an open approval.
+  const pendingEvidence=await request(app).post(workspace+"/missions").set(adminToken)
+    .send({agency:"Sfax",agent:"financial_strategy",
+      title:"Contrôle règlement pour approbation",
+      objective:"Examiner les créances et les règlements de Sfax",...finalDemoScope})
+  expect(pendingEvidence.status).toBe(201)
+  const evidenceRun=await request(app)
+    .post(workspace+"/missions/"+pendingEvidence.body.mission.id+"/run")
+    .set(adminToken).send({expectedVersion:1})
+  expect(evidenceRun.status).toBe(200)
+  expect(evidenceRun.body.approval?.status).toBe("pending")
+  const third={...replacement,
+    collections:[{id:"PAY-NEW",agency:"Sfax",invoiceId:"D-SF-LATE",
+      date:"2026-08-01",amountTnd:250}],
+    metadata:{...replacement.metadata,lastUpdated:"2026-10-20T12:00:00.000Z"},
+  }
+  expect((await saveAnalyticalDataset(tenant,third,"synthetic",true)).revision).toBe(3)
+  const stalePayment=await request(app)
+    .post(workspace+"/approvals/"+evidenceRun.body.approval.id+"/review")
+    .set(bearer("dev-manager-sfax"))
+    .send({expectedVersion:1,decision:"approved",comment:"Historique règlement modifié"})
+  expect(stalePayment.status).toBe(409)
   const foreign=await readAnalyticalDataset(store.forTenant("tenant-other"))
   expect(foreign).toBeNull()
  })

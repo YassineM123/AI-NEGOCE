@@ -19,6 +19,19 @@ export const decisionSimulationSchema=z.discriminatedUnion("kind",[
     }).strict(),
   }).strict(),
   z.object({
+    kind:z.literal("expansion_investment"),agency:z.string().trim().min(1).max(80),
+    from:date.optional(),to:date.optional(),
+    inputs:z.object({
+      asOf:date,locationName:z.string().trim().min(2).max(120),
+      capexTnd:money,additionalWorkingCapitalTnd:money,
+      monthlyIncrementalRevenueTnd:money,expectedGrossMarginPercent:z.number().finite().min(0).max(100),
+      monthlyOperatingCostTnd:money,monthlyCannibalizedMarginTnd:money,
+      annualDiscountRatePercent:z.number().finite().min(0).max(100),
+      horizonMonths:z.number().int().min(1).max(120),
+      cashAvailableForInvestmentTnd:money,cashFloorTnd:money,
+    }).strict(),
+  }).strict(),
+  z.object({
     kind:z.literal("stock_coverage"),agency:z.string().trim().min(1).max(80),
     from:date.optional(),to:date.optional(),
     inputs:z.object({
@@ -68,6 +81,48 @@ export function simulateDecision(input:SimulationInput) {
         "Aucun ordre bancaire ni écriture ERP n'est exécuté.",
       ],
       erpWrites:0 as const,
+    }
+  }
+  if(input.kind==="expansion_investment"){
+    const x=input.inputs
+    const initial=toMilli(x.capexTnd)+toMilli(x.additionalWorkingCapitalTnd)
+    const monthlyGross=toMilli(x.monthlyIncrementalRevenueTnd*x.expectedGrossMarginPercent/100)
+    const contributionMilli=monthlyGross-toMilli(x.monthlyOperatingCostTnd)-toMilli(x.monthlyCannibalizedMarginTnd)
+    const monthlyRate=Math.pow(1+x.annualDiscountRatePercent/100,1/12)-1
+    let discounted=0,firstPayback:null|number=null
+    for(let month=1;month<=x.horizonMonths;month++){
+      discounted+=contributionMilli/Math.pow(1+monthlyRate,month)
+      if(firstPayback===null&&contributionMilli>0&&contributionMilli*month>=initial)
+        firstPayback=month
+    }
+    const cashPostInvestmentMilli=toMilli(x.cashAvailableForInvestmentTnd)-initial
+    const floorBreached=cashPostInvestmentMilli<toMilli(x.cashFloorTnd)
+    return {
+      kind:input.kind,status:"hypothesis_only" as const,agency:input.agency,
+      from:input.from??null,to:input.to??null,asOf:x.asOf,unit:"TND" as const,
+      inputs:x,
+      result:{
+        upfrontInvestmentTnd:fromMilli(initial),
+        monthlyGrossContributionTnd:fromMilli(monthlyGross),
+        monthlyNetContributionTnd:fromMilli(contributionMilli),
+        npvTnd:amount((discounted-initial)/1000),
+        paybackMonth:firstPayback,expectedHorizonMonths:x.horizonMonths,
+        cashAfterInitialInvestmentTnd:fromMilli(cashPostInvestmentMilli),
+        breachesAssumedCashFloor:floorBreached,
+        reviewRequired:true as const,
+      },
+      explanation:"VAN = -CAPEX - BFR initial + somme des contributions mensuelles actualisées. Contribution = CA additionnel × marge brute hypothétique - OPEX - cannibalisation. Sans valeur terminale ni impôt.",
+      evidence:{type:"user_supplied_assumptions" as const,documentIds:[] as string[]},
+      suggestedReviews:[
+        {id:"market",label:"Valider demande et concurrence locales",requiresHumanApproval:true},
+        {id:"finance",label:"Confirmer CAPEX, BFR, cash disponible et marge",requiresHumanApproval:true},
+        {id:"operations",label:"Vérifier disponibilité opérationnelle et autorisations",requiresHumanApproval:true},
+      ],
+      warnings:[
+        "Scénario d'investissement fictif, ni étude de marché ni prévision certifiée.",
+        "Pas de fiscalité, valeur terminale, ramp-up, loyers variables, inflation ou engagements financiers réels.",
+        "La VAN positive ne prouve pas la faisabilité; aucune ouverture ni écriture ERP automatique.",
+      ],erpWrites:0 as const,
     }
   }
   const x=input.inputs
