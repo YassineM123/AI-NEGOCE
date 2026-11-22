@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test"
+import path from "node:path"
 
 /** Optional real loopback API for the full UI recipe.
  * Individual browser contract tests can still mock selected backend requests;
@@ -19,6 +20,7 @@ export default defineConfig({
   webServer: [
     ...(realApi ? [{
       command: "npx tsx server/index.ts",
+      cwd: path.resolve(import.meta.dirname, "../.."),
       url: "http://127.0.0.1:3001/api/v1/livez",
       env: {
         ...process.env,
