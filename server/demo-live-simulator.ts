@@ -78,6 +78,7 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
     productId,sku:s.reference,type:"sale",quantity:-quantity,reference:identifier})
   }
   debts.push({invoiceId:identifier,agency:selected,customer:existing.customer,
+   customerId:existing.customerId,
    date,dueDate:addDays(date,30),outstanding:value})
   event={id:identifier,kind:eventType,agency:selected,date,reference:identifier,
    amountTnd:value,units:quantity,
