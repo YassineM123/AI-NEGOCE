@@ -81,6 +81,7 @@ export async function readAnalyticalDataset(tenant:TenantStore):Promise<Persiste
 /** Offline seed only; deny accidental replacement unless explicitly authorized. */
 export async function saveAnalyticalDataset(
   tenant:TenantStore,data:Dataset,sourceKind:AnalyticalSourceKind,replace=false,
+  expectedRevision?:number,
 ):Promise<{revision:number;sourceHash:string;rows:number}>{
   const dataset=validate(data)
   if(sourceKind==="extractions"&&!dataset.metadata.source.includes("Database/extractions"))
@@ -96,7 +97,10 @@ export async function saveAnalyticalDataset(
       "SELECT revision FROM analytics_datasets WHERE organization_id=$1 FOR UPDATE",
       [tenant.organizationId])
     if(existing.rows.length&&!replace)throw new Error("ANALYTICS_EXISTS: explicit --replace required")
-    const next=existing.rows.length?Number(existing.rows[0].revision)+1:1
+    const actual=existing.rows.length?Number(existing.rows[0].revision):0
+    if(expectedRevision!==undefined&&actual!==expectedRevision)
+      throw new Error("ANALYTICS_REVISION_CONFLICT: source changed; reload before writing")
+    const next=actual+1
     await c.query(
       "INSERT INTO analytics_datasets (organization_id,revision,source_kind,source_hash,payload,imported_at) VALUES($1,$2,$3,$4,$5::jsonb,now()) ON CONFLICT (organization_id) DO UPDATE SET revision=EXCLUDED.revision,source_kind=EXCLUDED.source_kind,source_hash=EXCLUDED.source_hash,payload=EXCLUDED.payload,imported_at=now()",
       [tenant.organizationId,next,sourceKind,sourceHash,json])
