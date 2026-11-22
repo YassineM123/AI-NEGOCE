@@ -302,6 +302,23 @@ export function datasetFrom(db: ErpDatabase): Dataset {
   )
   // PO-line invoicing is linked by PO + product + supplier + agency. Summing
   // invoice quantities cannot be interpreted as physical goods received.
+  const invoicedLinks=db.all<{orderId:string;productId:string;invoiceId:string}>(
+    `SELECT DISTINCT si.purchase_order_id orderId,sil.product_id productId,
+            si.id invoiceId
+       FROM supplier_invoices si
+       JOIN supplier_invoice_lines sil ON sil.supplier_invoice_id=si.id
+       JOIN purchase_orders po ON po.id=si.purchase_order_id
+      WHERE si.status='posted' AND si.currency='TND' AND
+        si.invoice_date<=? AND si.agency_id=po.agency_id AND
+        si.supplier_id=po.supplier_id
+      ORDER BY si.purchase_order_id,sil.product_id,si.id`,
+    db.asOf(),
+  )
+  const invoiceRefs=new Map<string,string[]>()
+  for(const row of invoicedLinks){
+    const k=JSON.stringify([row.orderId,row.productId])
+    invoiceRefs.set(k,[...(invoiceRefs.get(k)??[]),row.invoiceId])
+  }
   const procurementLines = db.all<NonNullable<Dataset["procurementLines"]>[number]>(
     `SELECT pol.id orderLineId,po.id orderId,a.name agency,p.sku,
             p.id productId,sup.id supplierId,sup.name supplier,
@@ -320,15 +337,7 @@ export function datasetFrom(db: ErpDatabase): Dataset {
       WHERE po.status!='cancelled' AND po.order_date<=?
       ORDER BY po.order_date,pol.id`,
     db.asOf(),db.asOf(),
-  ).map(row=>({...row,supplierInvoiceIds:db.all<{id:string}>(
-    `SELECT DISTINCT si.id FROM supplier_invoices si
-       JOIN supplier_invoice_lines sil ON sil.supplier_invoice_id=si.id
-      WHERE si.purchase_order_id=? AND si.agency_id=
-        (SELECT agency_id FROM purchase_orders WHERE id=?)
-        AND si.supplier_id=? AND sil.product_id=? AND si.status='posted'
-        AND si.invoice_date<=? ORDER BY si.id`,
-    row.orderId,row.orderId,row.supplierId,row.productId,db.asOf(),
-  ).map(x=>x.id)}))
+  ).map(row=>({...row,supplierInvoiceIds:invoiceRefs.get(JSON.stringify([row.orderId,row.productId]))??[]}))
   const customerProfiles = db.all<NonNullable<Dataset["customerProfiles"]>[number]>(
     `SELECT c.id,c.name,a.name agency,coalesce(c.segment,'Non classé') segment,
             coalesce(c.credit_limit,0) creditLimitTnd,
