@@ -22,8 +22,8 @@ jobs:
       - run: npm run agentic:typecheck
       - name: Install Chrome for Playwright
         run: npx playwright install --with-deps chromium
-      - name: Execute page-by-page Agentic / BI / Data Science UI acceptance
-        run: npx playwright test --config dashboards/agentic-ai/playwright.config.ts dashboards/agentic-ai/tests/recette-all-pages.spec.ts --reporter=list
+      - name: Execute all UI functional suites plus 45-page navigation acceptance
+        run: npx playwright test --config dashboards/agentic-ai/playwright.config.ts --reporter=list
       - name: Upload UI screenshots and failure traces
         if: always()
         uses: actions/upload-artifact@v4
