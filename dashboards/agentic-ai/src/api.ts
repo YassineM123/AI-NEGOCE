@@ -33,6 +33,7 @@ export type RevenueResult = {
   analysis: { customersAnalyzed: number; opportunitiesFound: number; returned: number }
   opportunities: RevenueOpportunity[]
   warnings: string[]
+  decisionSupport?:Record<string,unknown>
 }
 
 // This is the existing server contract. No fake backend is called and no secrets are persisted.
@@ -125,6 +126,7 @@ export type SpecialistReport = {
     action: { type: string; status: "draft_only"; requiresHumanApproval: true }
   }>
   scenarios: Array<{ id: string; label: string; assumption: string; valueTnd: number | null }>
+  decisionSupport?:Record<string,unknown>
   warnings: string[]
 }
 export type DirectorReport = {
