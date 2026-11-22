@@ -1,10 +1,12 @@
 import {useEffect,useState,type FormEvent} from "react"
 
-type Mode="liquidity"|"stock_coverage"
+type Mode="liquidity"|"stock_coverage"|"expansion_investment"
 type Outcome={
  kind:Mode;status:"hypothesis_only";agency:string;asOf:string;erpWrites:0
  result:{projectedCashTnd?:number;shortfallToFloorTnd?:number;breachesFloor?:boolean;
-   coverageDays?:number;shortfallDays?:number;shortageUnits?:number;beforeReplenishment?:boolean}
+   coverageDays?:number;shortfallDays?:number;shortageUnits?:number;beforeReplenishment?:boolean;
+   upfrontInvestmentTnd?:number;monthlyNetContributionTnd?:number;npvTnd?:number;
+   paybackMonth?:number|null;cashAfterInitialInvestmentTnd?:number;breachesAssumedCashFloor?:boolean}
  explanation:string;warnings:string[]
  sourceContext:{source:string;asOf:string;usedForCalculations:false}
 }
@@ -18,6 +20,13 @@ export default function DecisionScenarioLab({
    outflowsTnd:800000,floorTnd:250000,days:30})
  const [stock,setStock]=useState({sku:"SKU-A",availableUnits:120,
    dailyDemandUnits:20,replenishmentLeadDays:10})
+ const [expansion,setExpansion]=useState({
+   locationName:"Sousse Démo",capexTnd:100000,additionalWorkingCapitalTnd:20000,
+   monthlyIncrementalRevenueTnd:30000,expectedGrossMarginPercent:40,
+   monthlyOperatingCostTnd:4000,monthlyCannibalizedMarginTnd:1000,
+   annualDiscountRatePercent:0,horizonMonths:24,
+   cashAvailableForInvestmentTnd:200000,cashFloorTnd:100000,
+ })
  const [outcome,setOutcome]=useState<Outcome|null>(null)
  const [working,setWorking]=useState(false)
  const [error,setError]=useState("")
@@ -27,7 +36,7 @@ export default function DecisionScenarioLab({
   if(!token||agency==="all"){setError("Sélectionnez une agence et connectez la session.");return}
   setWorking(true);setError("");setOutcome(null)
   try{
-   const body={kind:mode,agency,from,to,inputs:{asOf,...(mode==="liquidity"?cash:stock)}}
+   const body={kind:mode,agency,from,to,inputs:{asOf,...(mode==="liquidity"?cash:mode==="stock_coverage"?stock:expansion)}}
    const response=await fetch("/api/v1/agentic/simulations/explain",{
     method:"POST",
     headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
@@ -54,6 +63,10 @@ export default function DecisionScenarioLab({
    <span>{label}</span><input type="number" min="0" step={step} value={cash[key]}
      onChange={e=>setCash(previous=>({...previous,[key]:Number(e.target.value)}))} required/>
  </label>
+ const expansionNum=(label:string,key:Exclude<keyof typeof expansion,"locationName">)=>
+  <label className="scenario-field"><span>{label}</span><input type="number" required min="0"
+   step={key==="horizonMonths"?"1":"0.001"} value={expansion[key]}
+   onChange={e=>setExpansion(v=>({...v,[key]:Number(e.target.value)}))}/></label>
  const stockNum=(label:string,key:"availableUnits"|"dailyDemandUnits"|"replenishmentLeadDays")=>
   <label className="scenario-field"><span>{label}</span><input type="number"
     min={key==="replenishmentLeadDays"?"1":key==="dailyDemandUnits"?"0.001":"0"}
@@ -70,6 +83,8 @@ export default function DecisionScenarioLab({
      onClick={()=>setMode("liquidity")}>Trésorerie · J+30</button>
    <button type="button" aria-pressed={mode==="stock_coverage"}
      onClick={()=>setMode("stock_coverage")}>Couverture stock</button>
+   <button type="button" aria-pressed={mode==="expansion_investment"}
+     onClick={()=>setMode("expansion_investment")}>Expansion · VAN / cash</button>
   </div>
   <form onSubmit={e=>{void simulation(e)}}>
    <div className="scenario-inputs">
@@ -79,12 +94,26 @@ export default function DecisionScenarioLab({
      {num("Décaissements prévus · TND","outflowsTnd")}
      {num("Plancher de sécurité · TND","floorTnd")}
      {num("Horizon · jours","days","1")}
-    </>:<>
+    </>:mode==="stock_coverage"?<>
      <label className="scenario-field"><span>Référence SKU</span><input required
        value={stock.sku} onChange={e=>setStock(v=>({...v,sku:e.target.value}))}/></label>
      {stockNum("Stock disponible · unités","availableUnits")}
      {stockNum("Consommation · unités / jour","dailyDemandUnits")}
      {stockNum("Délai de réapprovisionnement · jours","replenishmentLeadDays")}
+    </>:<>
+     <label className="scenario-field"><span>Implantation envisagée</span><input required
+       value={expansion.locationName}
+       onChange={e=>setExpansion(v=>({...v,locationName:e.target.value}))}/></label>
+     {expansionNum("CAPEX initial · TND","capexTnd")}
+     {expansionNum("BFR initial · TND","additionalWorkingCapitalTnd")}
+     {expansionNum("CA additionnel mensuel · TND","monthlyIncrementalRevenueTnd")}
+     {expansionNum("Marge brute estimée · %","expectedGrossMarginPercent")}
+     {expansionNum("OPEX mensuels · TND","monthlyOperatingCostTnd")}
+     {expansionNum("Cannibalisation de marge · TND / mois","monthlyCannibalizedMarginTnd")}
+     {expansionNum("Taux d'actualisation annuel · %","annualDiscountRatePercent")}
+     {expansionNum("Horizon · mois","horizonMonths")}
+     {expansionNum("Trésorerie disponible hypothétique · TND","cashAvailableForInvestmentTnd")}
+     {expansionNum("Plancher de trésorerie · TND","cashFloorTnd")}
     </>}
    </div>
    <div className="scenario-footer">
@@ -96,14 +125,21 @@ export default function DecisionScenarioLab({
   </form>
   {error&&<p className="scenario-error" role="alert">{error}</p>}
   {outcome&&<div className="scenario-answer" role="status">
-   <strong>{mode==="liquidity"?"Projection de liquidité hypothétique":"Couverture de stock hypothétique"}</strong>
+   <strong>{mode==="liquidity"?"Projection de liquidité hypothétique":mode==="stock_coverage"?
+    "Couverture de stock hypothétique":"Expansion · VAN hypothétique, sans étude de marché"}</strong>
    <div className="scenario-results">
     {mode==="liquidity"?<>
      <div><small>Solde estimé · J+30</small><b>{tnd(outcome.result.projectedCashTnd)}</b></div>
      <div><small>Déficit sous le plancher</small><b>{tnd(outcome.result.shortfallToFloorTnd)}</b></div>
-    </>:<>
+    </>:mode==="stock_coverage"?<>
      <div><small>Couverture disponible</small><b>{outcome.result.coverageDays} jours</b></div>
      <div><small>Écart avant réception</small><b>{outcome.result.shortfallDays} jours / {outcome.result.shortageUnits} unités</b></div>
+    </>:<>
+     <div><small>VAN fictive (sans impôt ni valeur terminale)</small><b>{tnd(outcome.result.npvTnd)}</b></div>
+     <div><small>Contribution nette mensuelle</small><b>{tnd(outcome.result.monthlyNetContributionTnd)}</b></div>
+     <div><small>Retour simple</small><b>{outcome.result.paybackMonth==null?"N/D":outcome.result.paybackMonth+" mois"}</b></div>
+     <div><small>Cash post-investissement</small><b>{tnd(outcome.result.cashAfterInitialInvestmentTnd)}</b></div>
+     <div><small>Plancher de cash</small><b>{outcome.result.breachesAssumedCashFloor?"Sous le plancher":"Non franchi"}</b></div>
     </>}
    </div>
    <p>{outcome.explanation}</p>
