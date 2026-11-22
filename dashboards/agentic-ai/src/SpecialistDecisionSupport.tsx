@@ -23,7 +23,7 @@ function planCards(agent:AgentKey,support:Support):{title:string;status:string;i
       const p=record(entry);if(!p)return []
       const candidate=record(array(p.crossSellCandidates)[0])??{}
       return [{id:"REV-"+i,title:str(p.customerName)+" · "+str(p.agency),
-        detail:"Catégorie à vérifier : "+str(candidate.family)+" · "+str(candidate.peerCustomers,"0")+" clients pairs observés.",
+        detail:"Catégorie à vérifier : "+str(candidate.family)+" · "+String(numeric(candidate.peerCustomers)??0)+" clients pairs observés.",
         amount:money(p.revenueTnd),status:"Brouillon à vérifier",
         evidence:[...limited(p.invoiceIds),...limited(candidate.sampleInvoiceIds)],
         warning:"Compatibilité et consentement commercial non vérifiés."}]
@@ -35,7 +35,7 @@ function planCards(agent:AgentKey,support:Support):{title:string;status:string;i
     items:array(result.plans).slice(0,8).flatMap((entry,i)=>{
       const p=record(entry);if(!p)return []
       return [{id:"FIN-"+i,title:str(p.invoiceId)+" · "+str(p.customer),
-        detail:"Retard : "+str(p.overdueDays,"0")+" jours · Paiements liés : "+money(p.linkedCollectionsTnd),
+        detail:"Retard : "+String(numeric(p.overdueDays)??0)+" jours · Paiements liés : "+money(p.linkedCollectionsTnd),
         amount:money(p.outstandingTnd),status:str(p.classification),
         evidence:[str(p.invoiceId),...limited(p.linkedPaymentIds)],
         warning:"Litige, avoirs et rapprochement bancaire à confirmer."}]
@@ -47,7 +47,7 @@ function planCards(agent:AgentKey,support:Support):{title:string;status:string;i
     status:str(result.status),items:array(result.proposals).slice(0,8).flatMap((entry,i)=>{
      const p=record(entry);if(!p)return []
      return [{id:"SCA-"+i,title:str(p.product)+" · "+str(p.agency),
-       detail:"Référence : "+str(p.sku)+" · manque minimal "+str(p.minimumUnits,"0")+" unité(s) · prévision pilote : "+
+       detail:"Référence : "+str(p.sku)+" · manque minimal "+String(numeric(p.minimumUnits)??0)+" unité(s) · prévision pilote : "+
         (numeric(p.forecastQuantityNextMonth)===null?"N/D":String(p.forecastQuantityNextMonth)),
        amount:money(p.purchaseBudgetEstimateTnd),status:"Brouillon, validation obligatoire",
        evidence:[str(p.sku)],warning:"Seuil indicatif ; MOQ, stock réservé et délai fournisseur non validés."}]
