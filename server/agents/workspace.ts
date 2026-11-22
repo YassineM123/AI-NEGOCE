@@ -72,6 +72,11 @@ export type WorkspaceMission = {
   version: number; createdAt: string; updatedAt: string
   steps?: WorkspaceStep[]
   execution?: MissionExecution
+  origin?: "manual" | "snapshot_change"
+  analyticsSnapshotId?: string
+  analyticsSnapshotRevision?: number | null
+  supersedesMissionId?: string
+  trigger?: {type:"snapshot_changed";previousSnapshotId:string|null;currentSnapshotId:string}
   lastRun: null | { asOf: string; source: string; summary: string; findings: number; evidence: string[];
     trace?: ExecutionTrace;
     prediction?: {status:string;modelVersion:string;month:string|null;revenueTnd:number|null;wape:number|null} }
@@ -218,6 +223,33 @@ export class AgenticWorkspace {
       note(w,"mission.created:"+mission.id,input.agency,"user",actor.id,
         "mission","Mission enregistrée",mission.title,mission.id)
       return mission
+    })
+  }
+  createSnapshotMission(org:string,actor:Actor,input:{
+    agency:string;from?:string;to?:string;objective:string
+    snapshotId:string;snapshotRevision:number|null;previousSnapshotId:string|null
+    supersedesMissionId?:string
+  }) {
+    if(!visibleAgency(input.agency,actor))throw new WorkspaceForbidden()
+    return this.visit(org,true,w=>{
+      const existing=w.missions.find(m=>m.origin==="snapshot_change"&&m.analyticsSnapshotId===input.snapshotId&&
+        m.agency===input.agency&&m.from===input.from&&m.to===input.to)
+      if(existing)return {mission:existing,created:false as const}
+      if(w.missions.length>=500)throw new WorkspaceFull()
+      if(input.supersedesMissionId&&!w.missions.some(m=>m.id===input.supersedesMissionId&&visibleMission(m,actor)))
+        throw new WorkspaceMissing()
+      const at=now()
+      const mission:WorkspaceMission={id:uuid(),agency:input.agency,agent:"director",
+        title:"Dossier de décision · snapshot "+input.snapshotId.slice(0,8),objective:input.objective,
+        from:input.from,to:input.to,createdBy:actor.id,status:"draft",dueAt:null,version:1,
+        createdAt:at,updatedAt:at,lastRun:null,steps:createSteps(at,actor.id),origin:"snapshot_change",
+        analyticsSnapshotId:input.snapshotId,analyticsSnapshotRevision:input.snapshotRevision,
+        supersedesMissionId:input.supersedesMissionId,
+        trigger:{type:"snapshot_changed",previousSnapshotId:input.previousSnapshotId,currentSnapshotId:input.snapshotId}}
+      w.missions.unshift(mission)
+      note(w,"snapshot.mission:"+input.snapshotId+":"+input.agency,input.agency,"user",actor.id,"mission",
+        "Nouveau dossier de décision",mission.title,mission.id)
+      return {mission,created:true as const}
     })
   }
   cancelMission(org:string,actor:Actor,id:string,expectedVersion:number,reason:string) {

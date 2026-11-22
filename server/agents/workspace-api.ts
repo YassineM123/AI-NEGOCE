@@ -4,6 +4,8 @@ import { z } from "zod"
 import { requireRoles, scopedAgencies, type AgencyScope } from "../auth.js"
 import type { Store } from "../store.js"
 import type { Dataset } from "../services.js"
+import type { Organization } from "../store.js"
+import { buildAnalyticsOverview } from "../analytics-platform.js"
 import type {ReportPeriod} from "./common.js"
 import type { LlmProvider } from "../llm/types.js"
 import { analyzeRevenueGrowth } from "./revenue-growth.js"
@@ -128,6 +130,71 @@ export function registerAgenticWorkspaceRoutes(app:express.Express,deps:AgentDep
     error:{code:"AGENCY_FORBIDDEN",message:"Agence non autorisée"},
   })
   const base="/api/v1/agentic/workspace"
+
+  app.post(base+"/snapshot-dossiers",requireRoles("admin","manager"),
+    requirePermission("analytics.ds.read"),deps.requireErpData,async(req,res)=>{
+    const parsed=z.object({agency:agencySchema.default("all"),from:z.iso.date().optional(),to:z.iso.date().optional(),
+      previousSnapshotId:z.string().min(8).max(128).nullable().optional(),supersedesMissionId:uuid.optional(),
+      objective:z.string().trim().min(5).max(1200).default("Réévaluer les ventes, créances, stocks et options stratégiques après changement des données")
+    }).strict().safeParse(req.body)
+    if(!parsed.success||!withPeriod.safeParse(parsed.success?parsed.data:{}).success)
+      return res.status(400).json({error:{code:"INVALID_REQUEST"}})
+    const s=scope(req,parsed.data.agency)
+    if(!s)return fail(res)
+    try{
+      const dataset=deps.dataset()
+      const overview=buildAnalyticsOverview({principal:req.principal!,
+        organization:res.locals.organization as Organization,scope:s,from:parsed.data.from,to:parsed.data.to,
+        dataset,sourceKind:"sandbox"})
+      if(parsed.data.previousSnapshotId===overview.snapshotId)
+        return res.status(409).json({error:{code:"SNAPSHOT_UNCHANGED",message:"Aucune nouvelle donnée à réconcilier"}})
+      const created=await workspace.createSnapshotMission(org(req),actor(req),{
+        agency:parsed.data.agency,from:parsed.data.from,to:parsed.data.to,objective:parsed.data.objective,
+        snapshotId:overview.snapshotId,snapshotRevision:overview.snapshot.revision??null,
+        previousSnapshotId:parsed.data.previousSnapshotId??null,supersedesMissionId:parsed.data.supersedesMissionId,
+      })
+      if(!created.created){
+        const approvals=await workspace.listApprovals(org(req),actor(req))
+        return res.json({changed:true,idempotent:true,snapshot:{id:overview.snapshotId,revision:overview.snapshot.revision??null},
+          bi:overview.bi.data,dataScience:overview.dataScience.analysis,
+          dossier:{mission:created.mission,approval:approvals.find(a=>a.missionId===created.mission.id)??null},erpWrites:0})
+      }
+      const mission=created.mission
+      // A snapshot dossier is deliberately cross-functional: a data change may
+      // affect any domain even when the user's wording mentions only one KPI.
+      const plan=previewMissionPlan({agent:"director",objective:"Diagnostic complet des nouvelles données",
+        scope:s,dataset,period:periodOf(mission)})
+      const session=await workspace.beginExecution(org(req),actor(req),mission.id,1,{
+        source:dataset.metadata.source,asOf:dataset.metadata.asOf,sourceFingerprint:scopedFingerprint(dataset,s,periodOf(mission)),
+        tools:plan.tools.map(t=>({id:t.id,agent:t.agent,tool:t.tool}))})
+      for(const task of session.execution.steps){
+        const report=extractReport(task.agent,s,dataset,mission.objective,periodOf(mission))
+        await workspace.checkpointExecution(org(req),actor(req),mission.id,session.execution.id,task.id,{
+          status:report.facts.length||report.findings?"completed":"no_data",findings:report.findings,
+          facts:report.facts,warnings:report.warnings})
+      }
+      const execution=(await workspace.getMission(org(req),actor(req),mission.id)).execution!
+      const findings=execution.steps.reduce((n,t)=>n+t.findings,0)
+      const facts=execution.steps.flatMap(t=>t.facts)
+      const trace=buildExecutionTrace({objective:mission.objective,scope:s,period:periodOf(mission),
+        startedAt:execution.startedAt,finishedAt:new Date().toISOString(),
+        runs:execution.steps.map(t=>({agent:t.agent,tool:t.tool,findings:t.findings,status:t.status==="no_data"?"no_data":"ok"})),
+        findings,warnings:execution.steps.flatMap(t=>t.warnings)})
+      const prediction=evaluateAgenticForecast(dataset,{agencies:s,...periodOf(mission)})
+      const completed=await workspace.submitRun(org(req),actor(req),mission.id,1,{
+        asOf:dataset.metadata.asOf,source:dataset.metadata.source,
+        summary:"Dossier recalculé sur le snapshot "+overview.snapshotId+" : "+findings+" constat(s)",
+        findings,evidence:facts.flatMap(f=>f.evidence).slice(0,25),actionType:facts[0]?.actionType,trace,
+        prediction:{status:prediction.status,modelVersion:prediction.model.version,month:prediction.predictions[0]?.month??null,
+          revenueTnd:prediction.predictions[0]?.revenueTnd??null,wape:prediction.backtest.wape}},session.execution.id)
+      await audit(req,"snapshot.dossier.reconciled",mission.id,{snapshotId:overview.snapshotId,
+        revision:overview.snapshot.revision??null,previousSnapshotId:parsed.data.previousSnapshotId??null,
+        findings,toolCalls:execution.steps.length,erpWrites:0})
+      return res.status(201).json({changed:true,idempotent:false,snapshot:{id:overview.snapshotId,revision:overview.snapshot.revision??null},
+        bi:overview.bi.data,dataScience:overview.dataScience.analysis,
+        dossier:{mission:completed.mission,approval:completed.approval},erpWrites:0})
+    }catch(error){return apiError(res,error)}
+  })
 
   app.get(base+"/usage",allAgents,async(req,res)=>{
     const usage=await workspace.getLlmUsage(org(req),actor(req))
