@@ -15,6 +15,7 @@ import {
 import UnifiedExperience from "./UnifiedExperience"
 import DecisionScenarioLab from "./DecisionScenarioLab"
 import SpecialistDecisionSupport from "./SpecialistDecisionSupport"
+import DecisionIntelligencePanel from "./DecisionIntelligencePanel"
 import { AGENT_DOMAIN, AdvancedMissions, AdvancedApprovals, AdvancedNotifications, AdvancedAgentChat, AdvancedOverview } from "./AdvancedWorkspace"
 
 type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "notifications" | "platforms" | "connections" | "audit" | "settings"
@@ -503,6 +504,9 @@ export default function App() {
   }
   function overview() {
     if (token) return <>
+      <DecisionIntelligencePanel overview={sharedOverview} revenue={revenue}
+        specialists={specialistReports} errors={specialistErrors} filters={sharedFilters}
+        connected={backendStatus==="connected"} onOpenAgent={agent=>navigate("agent",agent)}/>
       <AdvancedOverview token={token} agency={agency} role={platform?.principal.role} from={sharedFilters.from} to={sharedFilters.to} onNavigate={(dest) => navigate(dest)}/>
       <Card title="AI Director — Coordination read-only" action={<Pill tone="blue">4 moteurs métier</Pill>}>
         <p className="card-sub">Les dossiers et événements en haut proviennent du backend. Aucune action ERP automatique.</p>
@@ -593,6 +597,9 @@ export default function App() {
   }
   function agentsPage() {
     return <>
+      {token&&<DecisionIntelligencePanel overview={sharedOverview} revenue={revenue}
+        specialists={specialistReports} errors={specialistErrors} filters={sharedFilters}
+        connected={backendStatus==="connected"} onOpenAgent={agent=>navigate("agent",agent)}/>}
       <div className="stats-row stats-four">
         <Stat icon="layers" label="Agents développés" value="4 / 4" detail="Quatre moteurs métier read-only" />
         <Stat icon="bell" label="Alertes ouvertes" value={unread} detail="Notifications illustratives" tone="amber" />
