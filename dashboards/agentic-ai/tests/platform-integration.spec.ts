@@ -160,6 +160,22 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
     return route.fulfill({status:200,contentType:"application/json",
       body:JSON.stringify({mission:{lastRun:{findings:3}},approval:{id:"approval-revision-2"}})})
   })
+  await page.route("**/api/v1/agentic/simulations/explain",async route=>{
+    expect(route.request().headers().authorization).toBe("Bearer qa-parent-only-token")
+    const body=route.request().postDataJSON() as {kind:string;agency:string;inputs:Record<string,unknown>}
+    expect(body.agency).toBe("Sfax")
+    const isStock=body.kind==="stock_coverage"
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      kind:body.kind,status:"hypothesis_only",agency:body.agency,asOf:body.inputs.asOf,
+      erpWrites:0,modelCalls:0,executionMode:"read_only",
+      result:isStock?
+        {coverageDays:6,leadTimeDays:10,shortfallDays:4,shortageUnits:80,beforeReplenishment:true}:
+        {projectedCashTnd:150000,shortfallToFloorTnd:100000,breachesFloor:true},
+      explanation:isStock?"Couverture = disponible / consommation":"Solde = initial + entrées - sorties",
+      warnings:["Hypothèses non rapprochées de l’ERP"],
+      sourceContext:{source:"Synthetic QA",asOf:"2026-10-31",usedForCalculations:false},
+    })})
+  })
   await page.goto("/")
   await page.getByRole("button", { name: "Plateformes BI / DS" }).click()
   await page.getByRole("button", { name: "Connecter la session sandbox" }).click()
@@ -183,6 +199,18 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(bi.locator('[data-shared-kpi="revenue"]')).toHaveText("100.000")
   await expect(bi.locator('[data-shared-kpi="receivables"]')).toHaveText("10.000")
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveAttribute("data-platform-snapshot", "snap-Sfax-2026-10-01")
+  // Explicit CDC what-if: two visible calculations, read-only and exportable.
+  await page.getByRole("button",{name:"Calculer et expliquer"}).click()
+  await expect(page.getByText("Déficit sous le plancher")).toBeVisible()
+  await expect(page.getByText("Projection de liquidité hypothétique")).toBeVisible()
+  const scenarioExport=page.waitForEvent("download")
+  await page.getByRole("button",{name:"Exporter le calcul et les hypothèses · JSON"}).click()
+  expect((await scenarioExport).suggestedFilename()).toContain("liquidity")
+  await page.getByRole("button",{name:"Couverture stock"}).click()
+  await page.getByRole("button",{name:"Calculer et expliquer"}).click()
+  await expect(page.getByText("Couverture de stock hypothétique")).toBeVisible()
+  await expect(page.getByText("6 jours",{exact:true})).toBeVisible()
+
   await bi.getByRole("button",{name:"Sources & statut"}).click()
   await expect(bi.getByText("Provenance du snapshot API partagé")).toBeVisible()
   await bi.locator("#closeDrawer").click()
@@ -231,6 +259,10 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await page.getByRole("button", { name: "Créer nouveau dossier AI Director" }).click()
   await expect.poll(()=>createdMissions).toBe(1)
   await expect.poll(()=>executedMissions).toBe(1)
+  // Creating a Director mission navigates to the missions workspace. Return to
+  // the platform settings before using the disconnect control.
+  await page.getByRole("button", { name: "Plateformes BI / DS" }).click()
+  await expect(page.getByRole("button", { name: "Déconnecter les 3 plateformes" })).toBeVisible()
   await page.getByRole("button", { name: "Déconnecter les 3 plateformes" }).click()
   await expect(agentic).toHaveCount(0)
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveCount(0)

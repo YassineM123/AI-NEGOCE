@@ -19,10 +19,13 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
   const clients=new Map<string,{id:string;name:string;last:string;total:number;docs:Set<string>}>()
   for(const s of sales){
     const id=s.customerId??s.customer
-    const x=clients.get(id)??{id,name:s.customer,last:s.date,total:0,docs:new Set<string>()}
+    // The same customer identifier can be reused by different agencies in
+    // synthetic or incomplete exports. Never merge their aggregates.
+    const key=JSON.stringify([s.agency,id])
+    const x=clients.get(key)??{id,name:s.customer,last:s.date,total:0,docs:new Set<string>()}
     x.total+=m(s.revenue);x.docs.add(s.invoiceId)
     if(s.date>x.last)x.last=s.date
-    clients.set(id,x)
+    clients.set(key,x)
   }
   const customers=[...clients.values()].map(x=>{
     const days=age(x.last,i.referenceDate)
@@ -31,9 +34,11 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
       segment:days>=90?"inactive_90" as const:days>=30?"watch_30_89" as const:"recent_0_29" as const}
   }).sort((a,b)=>b.revenueTnd-a.revenueTnd||a.customerId.localeCompare(b.customerId))
   const pilot=evaluateAgenticForecast(data,filters)
-  const stock=pseudo?[]:data.inventory.filter(s=>allowed(s.agency,filters))
+  const stockPeriodApplicable=(!filters.from||filters.from<=data.metadata.asOf)&&
+    (!filters.to||filters.to>=data.metadata.asOf)
+  const stock=pseudo||!stockPeriodApplicable?[]:data.inventory.filter(s=>allowed(s.agency,filters))
   const stockKnown=stock.filter(s=>Number.isFinite(s.reorderPoint)&&s.reorderPoint>0)
-  const under=stockKnown.filter(s=>s.quantity<=s.reorderPoint)
+  const under=stockKnown.filter(s=>s.quantity<s.reorderPoint)
     .sort((a,b)=>(a.quantity-a.reorderPoint)-(b.quantity-b.reorderPoint))
   const invoices=pseudo?[]:data.receivables.filter(r=>
     allowed(r.agency,filters)&&between(r.date,filters)&&r.outstanding>0)
@@ -74,7 +79,7 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
       backtest:pilot.backtest,predictions:pilot.predictions,
       verifiedProduction:false as const,warnings:pilot.warnings},
     inventory:{status:stock.length?"observed_current_snapshot" as const:"not_available" as const,
-      periodApplicable:false as const,positions:stock.length,positionsWithThreshold:stockKnown.length,
+      periodApplicable:stockPeriodApplicable&&!pseudo,positions:stock.length,positionsWithThreshold:stockKnown.length,
       belowReorder:under.length,topBelow:under.slice(0,10).map(s=>({
         reference:s.reference,agency:s.agency,quantity:s.quantity,reorderPoint:s.reorderPoint}))},
     cash:{status:invoices.length?"observed_receivables" as const:"not_available" as const,
@@ -97,6 +102,7 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
       "Prévision SKU calculée uniquement si quantité et historique vérifiables; aucun chiffre de quantité déduit du CA.",
       "Prévision CA ridge expérimentale; sans backtest admissible, aucun chiffre prédit.",
       "Stock = position actuelle, non reconstituée pour une période historique.",
+      ...(!stockPeriodApplicable?["Stock historique indisponible : aucune position actuelle ne peut être extrapolée à la période filtrée."]:[]),
       "Créances = encours arrêté sur factures émises dans la période; pas prévision cash.",
       "Scénarios = sensibilités arithmétiques, sans marge/CAPEX/cash certifiés.",
       ...(pseudo?["Extraits IAINEG : encours détaillés, coûts et stock non validés; analyses correspondantes désactivées."]:[]),

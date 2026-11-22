@@ -13,6 +13,7 @@ import {
   type SpecialistAgent, type DirectorReport,
 } from "./api"
 import UnifiedExperience from "./UnifiedExperience"
+import DecisionScenarioLab from "./DecisionScenarioLab"
 import { AGENT_DOMAIN, AdvancedMissions, AdvancedApprovals, AdvancedNotifications, AdvancedAgentChat, AdvancedOverview } from "./AdvancedWorkspace"
 
 type Page = "overview" | "missions" | "agents" | "agent" | "director" | "decisions" | "notifications" | "platforms" | "connections" | "audit" | "settings"
@@ -462,6 +463,8 @@ export default function App() {
       <UnifiedExperience overview={sharedOverview} agency={agency}
         from={sharedFilters.from} to={sharedFilters.to} connected={Boolean(token)}
         onNavigate={(target)=>target==="agentic"?navigate("missions"):setPortalTab(target)}/>
+      <DecisionScenarioLab token={token} agency={agency} asOf={sharedOverview?.snapshot.asOf??""}
+        from={sharedFilters.from} to={sharedFilters.to}/>
       <Card title="Accès unifié aux trois applications" action={<Pill tone={token ? "green" : "amber"}>{token ? "Session centrale ouverte" : "Session déconnectée"}</Pill>}>
         <p className="muted-text">Même origine, même identité et même période / agence. Les cartes API partagées ont la même source, tandis que les anciens graphiques locaux BI/DS restent clairement distincts et non certifiés ERP.</p>
         {!token && <label className="aw-identity">Identité de test

@@ -34,14 +34,15 @@ export function buildAnalyticsInsights(dataset: Dataset, filters: Filters = {}) 
     monthly.documents.add(row.invoiceId)
     monthly.customers.add(customerId)
     byMonth.set(month, monthly)
-    const customer = byCustomer.get(customerId) ?? {
+    const customerKey = JSON.stringify([row.agency,customerId])
+    const customer = byCustomer.get(customerKey) ?? {
       id: customerId, name: row.customer, total: 0,
       documents: new Set<string>(), lastPurchase: row.date,
     }
     customer.total += value
     customer.documents.add(row.invoiceId)
     if (row.date > customer.lastPurchase) customer.lastPurchase = row.date
-    byCustomer.set(customerId, customer)
+    byCustomer.set(customerKey, customer)
   }
   const allMonths = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b))
   const months = allMonths.slice(-36).map(([month, v]) => ({

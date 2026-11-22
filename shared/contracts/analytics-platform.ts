@@ -153,7 +153,7 @@ export const governedDataScienceSchema=z.object({
   }),
   inventory:z.object({
     status:z.enum(["observed_current_snapshot","not_available"]),
-    periodApplicable:z.literal(false),
+    periodApplicable:z.boolean(),
     positions:z.number().int().nonnegative(),
     positionsWithThreshold:z.number().int().nonnegative(),
     belowReorder:z.number().int().nonnegative(),

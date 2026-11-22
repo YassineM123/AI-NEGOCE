@@ -58,14 +58,43 @@ describe("Data Science governed by exact same BI dataset, agency and period",()=
       agencies:"*",from:"2026-01-01",to:"2026-05-31"})
     expect(short.forecast.predictions).toEqual([])
   })
+  it("does not combine equal customer IDs across agencies in BI or Data Science",()=>{
+    const baseline=defaultDataset()
+    const fixture:Dataset={...baseline,
+      metadata:{...baseline.metadata,asOf:"2026-10-20",source:"Synthetic collision QA"},
+      sales:[
+        {id:"SF-C1",invoiceId:"SF-C1",date:"2026-09-01",agency:"Sfax",
+          customer:"Client SF",customerId:"CLIENT-001",product:"Item",family:"Demo",
+          representative:"QA",revenue:100,cost:60,status:"posted"},
+        {id:"TU-C1",invoiceId:"TU-C1",date:"2026-09-02",agency:"Tunis Centre",
+          customer:"Client TU",customerId:"CLIENT-001",product:"Item",family:"Demo",
+          representative:"QA",revenue:900,cost:500,status:"posted"},
+      ],receivables:[],inventory:[]}
+    const allDs=buildDataScienceAnalysis(fixture,{agencies:"*"})
+    const allBi=buildAnalyticsInsights(fixture,{agencies:"*"})
+    expect(allDs.portfolio.customers).toBe(2)
+    expect(allBi.summary.customerCount).toBe(2)
+    expect(allBi.topCustomers.map(c=>c.revenue)).toEqual([900,100])
+    expect(allDs.portfolio.top.map(c=>c.revenueTnd)).toEqual([900,100])
+    const sf=buildDataScienceAnalysis(fixture,{agencies:["Sfax"]})
+    expect(sf.portfolio.customers).toBe(1)
+    expect(sf.portfolio.top[0].revenueTnd).toBe(100)
+    expect(JSON.stringify(sf.portfolio)).not.toContain("Client TU")
+  })
   it("does not pretend a filtered historical period includes the present stock snapshot",()=>{
     const data=defaultDataset()
     const ds=buildDataScienceAnalysis(data,{agencies:"*",from:"2024-01-01",to:"2024-12-31"})
     expect(ds.inventory.periodApplicable).toBe(false)
-    expect(ds.inventory.status).toBe("observed_current_snapshot")
+    expect(ds.inventory.status).toBe("not_available")
+    expect(ds.inventory.positions).toBe(0)
+    expect(ds.inventory.topBelow).toEqual([])
+    expect(ds.warnings.join(" ")).toContain("Stock historique indisponible")
     expect(ds.scenarios.basisRevenueTnd).toBe(overview({
       agencies:"*",from:"2024-01-01",to:"2024-12-31"},data).revenue)
     expect(ds.cash.basis).toBe("outstanding_for_invoices_issued_in_selected_period")
+    const today=buildDataScienceAnalysis(data,{agencies:"*",from:data.metadata.asOf,to:data.metadata.asOf})
+    expect(today.inventory.periodApplicable).toBe(true)
+    expect(today.inventory.status).toBe("observed_current_snapshot")
   })
   it("uses an explicit no-data state instead of fabricating client or scenario figures",()=>{
     const ds=buildDataScienceAnalysis(defaultDataset(),{

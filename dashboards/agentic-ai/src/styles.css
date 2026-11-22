@@ -575,3 +575,32 @@ td b { font-weight: 690; color: #173050; }
 .ux-empty{margin:15px 0 0;color:#718198;font-size:12px}
 @media(max-width:1000px){.ux-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ux-sections{grid-template-columns:1fr}}
 @media(max-width:600px){.ux-panel{padding:14px}.ux-kpis{grid-template-columns:1fr}.ux-evidence{grid-template-columns:100px minmax(0,1fr)}}
+
+
+/* Governed business simulation lab — same visual language as BI/DS evidence. */
+.scenario-lab{background:#fff;border:1px solid #dfe8f2;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 6px 24px rgba(24,47,81,.045)}
+.scenario-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.scenario-head strong{font-size:16px;color:#172e4e}.scenario-head p{color:#667a91;font-size:12px;margin:5px 0 0}
+.scenario-head>span{font-size:10px;letter-spacing:.03em;font-weight:800;border-radius:20px;padding:6px 10px;background:#fff5de;color:#855b17}
+.scenario-modes{display:flex;flex-wrap:wrap;gap:8px;margin:17px 0}
+.scenario-modes button,.scenario-answer button{border:1px solid #d4dfec;border-radius:8px;background:#f6faff;color:#245eab;font-weight:700;font-size:12px;cursor:pointer;padding:9px 13px}
+.scenario-modes button[aria-pressed="true"]{background:#176be0;color:white;border-color:#176be0}
+.scenario-inputs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin-bottom:13px}
+.scenario-field{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:700;color:#586e86;min-width:0}
+.scenario-field>input{font:inherit;font-weight:600;min-width:0;max-width:100%;background:#fff;border:1px solid #cfdaea;color:#243b58;padding:10px;border-radius:8px}
+.scenario-field>input:focus-visible,.scenario-modes button:focus-visible,.scenario-answer button:focus-visible,.scenario-footer button:focus-visible{outline:3px solid #b4d2fa;outline-offset:2px}
+.scenario-footer{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap;border-top:1px solid #edf2f6;padding-top:13px}
+.scenario-footer small{font-size:11px;color:#637991}.scenario-footer button{border:0;background:#176be0;color:#fff;border-radius:8px;padding:10px 14px;font-weight:750;cursor:pointer}
+.scenario-footer button:disabled{opacity:.55;cursor:not-allowed}
+.scenario-answer{border:1px solid #d1e2f4;background:#f6faff;border-radius:11px;margin-top:15px;padding:16px;display:grid;gap:10px}
+.scenario-answer>strong{font-size:14px;color:#173c74}
+.scenario-answer p,.scenario-answer small{margin:0;color:#526a86;font-size:12px;line-height:1.5}
+.scenario-answer button{justify-self:start;background:#fff}
+.scenario-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.scenario-results>div{border:1px solid #dce7f3;border-radius:9px;background:#fff;padding:13px;display:grid;gap:7px}
+.scenario-results small{font-size:11px;color:#667f9a}
+.scenario-results b{font-size:20px;color:#19385e;font-variant-numeric:tabular-nums}
+.scenario-error{margin-top:10px;color:#ad2834;font-weight:650}
+@media(max-width:1100px){.scenario-inputs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.scenario-lab{padding:14px}.scenario-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}.scenario-results{grid-template-columns:1fr}}
+@media(max-width:420px){.scenario-inputs{grid-template-columns:1fr}}
