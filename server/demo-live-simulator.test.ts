@@ -70,6 +70,11 @@ describe("Living synthetic company: deterministic and coherent 4-event lifecycle
   const first=applySyntheticDemoEvent(d,{kind:"sale",sequence:1,agency:"Sfax"})
   expect(()=>applySyntheticDemoEvent(first.dataset,{kind:"sale",sequence:1,agency:"Sfax"}))
    .toThrow("DEMO_ALREADY_APPLIED")
+  for(const kind of ["collection","restock","supplier"] as const){
+   const once=applySyntheticDemoEvent(d,{kind,sequence:4,agency:"Sfax"})
+   expect(()=>applySyntheticDemoEvent(once.dataset,{kind,sequence:4,agency:"Sfax"}))
+    .toThrow("DEMO_ALREADY_APPLIED")
+  }
   expect(d).toEqual(copy)
   expect(()=>applySyntheticDemoEvent({...d,inventory:[]},{kind:"sale",sequence:1,agency:"Sfax"}))
    .toThrow("DEMO_STOCK_REQUIRED")
