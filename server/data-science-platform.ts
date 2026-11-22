@@ -19,10 +19,13 @@ export function buildDataScienceAnalysis(data:Dataset,filters:Filters={}){
   const clients=new Map<string,{id:string;name:string;last:string;total:number;docs:Set<string>}>()
   for(const s of sales){
     const id=s.customerId??s.customer
-    const x=clients.get(id)??{id,name:s.customer,last:s.date,total:0,docs:new Set<string>()}
+    // The same customer identifier can be reused by different agencies in
+    // synthetic or incomplete exports. Never merge their aggregates.
+    const key=JSON.stringify([s.agency,id])
+    const x=clients.get(key)??{id,name:s.customer,last:s.date,total:0,docs:new Set<string>()}
     x.total+=m(s.revenue);x.docs.add(s.invoiceId)
     if(s.date>x.last)x.last=s.date
-    clients.set(id,x)
+    clients.set(key,x)
   }
   const customers=[...clients.values()].map(x=>{
     const days=age(x.last,i.referenceDate)
