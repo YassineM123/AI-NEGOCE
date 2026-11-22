@@ -30,6 +30,7 @@
     "dataset:export": "tsx tools/dataset/export.ts --source fixture",
     "dataset:audit:invoices": "tsx tools/dataset/invoice-audit.ts Dataset reports/evidence/invoice-dataset-audit.json",
     "qa:data": "python tools/qa/data_quality.py datasets/synthetic/v1",
+    "qa:linked-data": "tsx --env-file-if-exists=.env scripts/qa-linked-data.ts",
     "qa:oracle": "python tools/qa/bi_oracle.py datasets/synthetic/v1 reports/evidence/bi_expected.json",
     "qa:perf": "tsx tools/qa/perf.ts reports/evidence/performance.json",
     "agentic:dev": "vite --config dashboards/agentic-ai/vite.config.ts",

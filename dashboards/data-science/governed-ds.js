@@ -109,6 +109,32 @@ global.AINegoceGovernedDataScience=function(x,page,h){
   ],adv.suppliers.results):warn("Pas assez de jalons commande–facture fournisseur pour une évaluation admissible."))+
   warn("Churn : non-réachat observé, pas résiliation. Encaissements ≠ trésorerie bancaire. Factures fournisseurs ≠ réceptions. Modèles non homologués."),
   {icon:"database"});
+ const linked=ds.linkedEvidence;
+ const linkedPanel=fCard("Relations métier · rapprochement des pièces",
+   !linked?warn("Historiques liés non présents dans ce snapshot."):
+   table([{label:"Domaine",key:"name"},{label:"Preuves analysées",key:"rows"},
+     {label:"Contrôle",key:"status"}],[
+     {name:"Stocks : mouvements vérifiés",rows:fmt(linked.stock.movementRows),
+      status:linked.stock.reconciledPositions+" / "+linked.stock.positions+" positions réconciliées"},
+     {name:"Achats : lignes commandes",rows:fmt(linked.procurement.orderLines),
+      status:linked.procurement.incompleteLines+" sous-facturées, "+linked.procurement.overInvoicedLines+" sur-facturées"},
+     {name:"CRM : fiches clients",rows:fmt(linked.customers.masterProfiles),
+      status:linked.customers.profilesWithOpenReceivables+" avec encours identifié"},
+   ])+
+   (linked&&linked.stock.historicalExamples.length?table([
+     {label:"Agence",key:"agency"},{label:"Article",key:"sku"},
+     {label:"Stock arrêté période",format:r=>r.historicalAtEnd==null?"N/D":fmt(r.historicalAtEnd)},
+     {label:"Stock actuel",format:r=>fmt(r.stockNow)},
+     {label:"Réconciliation",format:r=>r.reconciled?"Validée":"Écart"},
+   ],linked.stock.historicalExamples):"")+
+   (linked&&linked.procurement.supplierExamples.length?table([
+     {label:"Fournisseur",key:"supplier"},{label:"Agence",key:"agency"},
+     {label:"Commandé",format:r=>fmt(r.orderedUnits)},
+     {label:"Facturé",format:r=>fmt(r.invoicedUnits)},
+     {label:"Couverture documentaire",format:r=>r.documentaryFillPercent==null?"N/D":fmt(r.documentaryFillPercent)+" %"},
+   ],linked.procurement.supplierExamples):"")+
+   warn("Sources 100 % fictives : le rapprochement des factures fournisseurs ne prouve pas une réception. Les stocks historiques ne sont affichés que si les mouvements réconcilient l'ouverture et la position actuelle."),
+   {icon:"database"});
  const seg=fCard("Récence des clients · constat, pas churn ML",
   table([{label:"Segment",key:"label"},{label:"Clients",key:"count"}],[
     {label:"Récent : 0–29 jours",count:portfolio.recent0to29},
@@ -154,17 +180,17 @@ global.AINegoceGovernedDataScience=function(x,page,h){
     {icon:"shield"});
  const grid=(...parts)=>'<div class="f-grid f-halves">'+parts.join("")+"</div>";
  let body=scope;
- if(page==="home")body+=grid(history,clients,seg,advancedPanel,scenariosTable,sourcePanel);
+ if(page==="home")body+=grid(history,clients,seg,advancedPanel,linkedPanel,scenariosTable,sourcePanel);
  else if(page==="clients")body+=grid(clients,seg);
  else if(page==="churn")body+=grid(seg,advancedPanel,clients);
  else if(page==="forecast")body+=grid(history,forecastInfo,skuPanel)+trendTable;
- else if(page==="inventory")body+=grid(inventoryPanel,skuPanel,sourcePanel);
+ else if(page==="inventory")body+=grid(inventoryPanel,skuPanel,linkedPanel,sourcePanel);
  else if(page==="cash")body+=grid(cashPanel,advancedPanel,sourcePanel);
  else if(page==="optim")body+=grid(scenariosTable,forecastInfo);
- else if(page==="quality"||page==="data")body+=grid(sourcePanel,history);
- else if(page==="models")body+=grid(forecastInfo,skuPanel,advancedPanel,sourcePanel);
+ else if(page==="quality"||page==="data")body+=grid(sourcePanel,linkedPanel,history);
+ else if(page==="models")body+=grid(forecastInfo,skuPanel,advancedPanel,linkedPanel,sourcePanel);
  else if(page==="affinity")body+=availability("Affinité et recommandations croisées : liens article–panier et catalogue vérifié nécessaires.");
- else if(page==="suppliers")body+=grid(advancedPanel,sourcePanel);
+ else if(page==="suppliers")body+=grid(advancedPanel,linkedPanel,sourcePanel);
  else if(page==="production")body+=availability("Planification production : nomenclatures, capacités et besoins matières indisponibles.");
  else if(page==="impact")body+=availability("Impact observé : interventions historiques et groupes de comparaison absents.");
  else if(page==="tasks")body+=availability("Les tâches locales du prototype ne sont pas des missions Agentic persistantes ; utilisez le Command Center pour les missions réelles de démo.");

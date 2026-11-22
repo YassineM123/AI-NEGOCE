@@ -42,6 +42,8 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
  const debts=data.receivables.map(x=>({...x}))
  const collections=(data.collections??[]).map(x=>({...x}))
  const supplierDocuments=(data.supplierDocuments??[]).map(x=>({...x}))
+ const stockMovements=data.stockMovements?.map(x=>({...x}))
+ const procurementLines=data.procurementLines?.map(x=>({...x,supplierInvoiceIds:[...x.supplierInvoiceIds]}))
  if(data.metadata.demoEvents?.some(x=>x.id===identifier)||
    lines.some(x=>x.id===identifier||x.invoiceId===identifier)||
    collections.some(x=>x.id===identifier)||
@@ -70,7 +72,13 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
    representative:"Simulateur (fictif)",revenue:value,cost,
    kind:"invoice",status:"posted"})
   s.quantity=tnd(s.quantity-quantity)
+  if(stockMovements){
+   const productId=productLine?.productId??s.reference
+   stockMovements.push({id:"MOVE-"+identifier,date,agency:selected,
+    productId,sku:s.reference,type:"sale",quantity:-quantity,reference:identifier})
+  }
   debts.push({invoiceId:identifier,agency:selected,customer:existing.customer,
+   customerId:existing.customerId,
    date,dueDate:addDays(date,30),outstanding:value})
   event={id:identifier,kind:eventType,agency:selected,date,reference:identifier,
    amountTnd:value,units:quantity,
@@ -95,6 +103,12 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
   const target=sorted[0]
   const units=Math.max(5,Math.ceil(target.reorderPoint-target.quantity)+5)
   target.quantity=tnd(target.quantity+units)
+  if(stockMovements){
+   const productId=lines.find(x=>x.agency===selected&&
+     (x.productId===target.reference||x.product===target.product))?.productId??target.reference
+   stockMovements.push({id:"MOVE-"+identifier,date,agency:selected,
+    productId,sku:target.reference,type:"receipt",quantity:units,reference:identifier})
+  }
   event={id:identifier,kind:eventType,agency:selected,date,reference:target.reference,
    amountTnd:tnd(units*target.unitCost),units,
    description:"Réception de stock fictive (sans prétendre à une réception ERP réelle)",erpWrites:0}
@@ -109,6 +123,21 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
   supplierDocuments.push({orderId:"PO-"+id,invoiceId:"SI-"+id,
    agency:selected,supplier,supplierId,orderDate:from,invoiceDate:date,
    lagDays:days,amountTnd:amount})
+  if(procurementLines){
+   const product=stock.find(x=>x.agency===selected)??stock[0]
+   if(product){
+    const qty=5
+    procurementLines.push({
+     orderLineId:"POL-"+id,orderId:"PO-"+id,agency:selected,
+     sku:product.reference,productId:lines.find(x=>
+       x.agency===selected&&(x.productId===product.reference||x.product===product.product)
+     )?.productId??product.reference,
+     supplierId,supplier,orderDate:from,orderedUnits:qty,
+     invoicedUnits:qty,unitCostTnd:tnd(amount/qty),status:"invoiced",
+     supplierInvoiceIds:["SI-"+id],
+    })
+   }
+  }
   event={id,kind:eventType,agency:selected,date,reference:"SI-"+id,
    amountTnd:amount,units:null,
    description:"Jalon commande → facture fournisseur fictif (pas une livraison)",erpWrites:0}
@@ -120,6 +149,8 @@ export function applySyntheticDemoEvent(data:Dataset,args:{
   event,
   dataset:{
    ...data,sales:lines,inventory:stock,receivables:debts,collections,supplierDocuments,
+   ...(stockMovements?{stockMovements}:{}),
+   ...(procurementLines?{procurementLines}:{}),
    metadata:{...data.metadata,asOf:date,lastUpdated:date+"T12:00:00.000Z",
     demoEvents,demoLastEvent:event,simulationMode:"synthetic_live_demo",
     // Revision is supplied by the DB; don't persist an obsolete read revision.

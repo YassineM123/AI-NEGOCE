@@ -25,6 +25,7 @@ export type Receivable = {
   invoiceId: string
   agency: string
   customer: string
+  customerId?:string
   date: string
   dueDate: string
   outstanding: number
@@ -37,6 +38,9 @@ export type InventoryItem = {
   quantity: number
   reorderPoint: number
   unitCost: number
+  /** Present only when the source supplies a complete stock-movement ledger. */
+  openingDate?:string
+  openingQuantity?:number
 }
 
 export const sales: Sale[] = [

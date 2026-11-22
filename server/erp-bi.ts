@@ -250,14 +250,15 @@ export function datasetFrom(db: ErpDatabase): Dataset {
        LEFT JOIN representatives r ON r.id = s.representative_id`,
   )
   const receivables = db.all<Receivable>(
-    `SELECT s.number invoiceId, a.name agency, c.name customer, r.invoice_date date, r.due_date dueDate, r.outstanding
+    `SELECT s.number invoiceId, a.name agency, c.name customer, c.id customerId, r.invoice_date date, r.due_date dueDate, r.outstanding
        FROM receivables r JOIN sales_invoices s ON s.id = r.sales_invoice_id
        JOIN agencies a ON a.id = r.agency_id JOIN customers c ON c.id = r.customer_id
       WHERE r.outstanding > 0`,
   )
   const inventory = db.all<InventoryItem>(
     `SELECT p.sku reference, p.name product, a.name agency, i.current_quantity quantity,
-            coalesce(i.reorder_point, 0) reorderPoint, i.unit_cost unitCost
+            coalesce(i.reorder_point, 0) reorderPoint, i.unit_cost unitCost,
+            i.opening_date openingDate, i.opening_quantity openingQuantity
        FROM inventory i JOIN products p ON p.id = i.product_id JOIN agencies a ON a.id = i.agency_id`,
   )
   const collections = db.all<{id:string;invoiceId:string;agency:string;customerId?:string;date:string;amountTnd:number}>(
@@ -288,12 +289,73 @@ export function datasetFrom(db: ErpDatabase): Dataset {
         AND si.invoice_date <= ?`,
     db.asOf(),
   )
+  // Source stock ledger: every movement has a documented reference and
+  // joins both the agency and SKU. Never reconstruct delivery from invoice lag.
+  const stockMovements = db.all<NonNullable<Dataset["stockMovements"]>[number]>(
+    `SELECT m.id,m.date,a.name agency,m.product_id productId,p.sku,
+            m.type,m.quantity,coalesce(m.reference,'') reference
+       FROM stock_movements m
+       JOIN agencies a ON a.id=m.agency_id
+       JOIN products p ON p.id=m.product_id
+      WHERE m.date <= ?
+      ORDER BY m.date,m.id`,
+    db.asOf(),
+  )
+  // PO-line invoicing is linked by PO + product + supplier + agency. Summing
+  // invoice quantities cannot be interpreted as physical goods received.
+  const invoicedLinks=db.all<{orderId:string;productId:string;invoiceId:string}>(
+    `SELECT DISTINCT si.purchase_order_id orderId,sil.product_id productId,
+            si.id invoiceId
+       FROM supplier_invoices si
+       JOIN supplier_invoice_lines sil ON sil.supplier_invoice_id=si.id
+       JOIN purchase_orders po ON po.id=si.purchase_order_id
+      WHERE si.status='posted' AND si.currency='TND' AND
+        si.invoice_date<=? AND si.agency_id=po.agency_id AND
+        si.supplier_id=po.supplier_id
+      ORDER BY si.purchase_order_id,sil.product_id,si.id`,
+    db.asOf(),
+  )
+  const invoiceRefs=new Map<string,string[]>()
+  for(const row of invoicedLinks){
+    const k=JSON.stringify([row.orderId,row.productId])
+    invoiceRefs.set(k,[...(invoiceRefs.get(k)??[]),row.invoiceId])
+  }
+  const procurementLines = db.all<NonNullable<Dataset["procurementLines"]>[number]>(
+    `SELECT pol.id orderLineId,po.id orderId,a.name agency,p.sku,
+            p.id productId,sup.id supplierId,sup.name supplier,
+            po.order_date orderDate,pol.quantity orderedUnits,
+            coalesce((SELECT sum(sil.quantity) FROM supplier_invoice_lines sil
+              JOIN supplier_invoices si ON si.id=sil.supplier_invoice_id
+              WHERE si.purchase_order_id=po.id AND sil.product_id=pol.product_id
+                AND si.agency_id=po.agency_id AND si.supplier_id=po.supplier_id
+                AND si.status='posted' AND si.invoice_date<=?),0) invoicedUnits,
+            pol.unit_cost unitCostTnd,po.status
+       FROM purchase_order_lines pol
+       JOIN purchase_orders po ON po.id=pol.purchase_order_id
+       JOIN suppliers sup ON sup.id=po.supplier_id
+       JOIN agencies a ON a.id=po.agency_id
+       JOIN products p ON p.id=pol.product_id
+      WHERE po.status!='cancelled' AND po.order_date<=?
+      ORDER BY po.order_date,pol.id`,
+    db.asOf(),db.asOf(),
+  ).map(row=>({...row,supplierInvoiceIds:invoiceRefs.get(JSON.stringify([row.orderId,row.productId]))??[]}))
+  const customerProfiles = db.all<NonNullable<Dataset["customerProfiles"]>[number]>(
+    `SELECT c.id,c.name,a.name agency,coalesce(c.segment,'Non classé') segment,
+            coalesce(c.credit_limit,0) creditLimitTnd,
+            coalesce(c.payment_terms_days,0) paymentTermsDays,
+            c.representative_id representativeId
+       FROM customers c JOIN agencies a ON a.id=c.agency_id
+      ORDER BY c.id`,
+  )
   const data: Dataset = {
     sales,
     receivables,
     inventory,
     collections,
     supplierDocuments,
+    stockMovements,
+    procurementLines,
+    customerProfiles,
     metadata: { ...datasetMetadata, source: "Bac à sable ERP synthétique (SQLite) — données fictives", asOf: db.asOf(), lastUpdated: new Date().toISOString() },
   }
   cached = { db, version: db.version, data }
