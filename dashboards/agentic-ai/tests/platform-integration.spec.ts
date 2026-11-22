@@ -28,7 +28,11 @@ function overviewFixture(params: URLSearchParams,revision=1) {
     snapshotId: "snap-" + agency.replace(/\s/g, "-") + "-" + from + (revision>1?"-rev-"+revision:""),
     generatedAt: "2026-11-21T12:00:00.000Z",
     scope: filters.agencies,
-    snapshot: { asOf: "2026-10-31", source: "Synthetic QA", sourceKind: "sandbox", isSynthetic: true, storage:"postgres",revision },
+    snapshot: { asOf: "2026-10-31", source: "Synthetic QA", sourceKind: "sandbox", isSynthetic: true, storage:"postgres",revision,
+      ...(revision>1?{demo:{mode:"synthetic_live_demo",
+        lastEvent:{id:"SIM-0000010",kind:"sale",agency:"Sfax",date:"2026-10-31",
+        reference:"SIM-0000010",amountTnd:150,units:1,
+        description:"Vente fictive synchronisée",erpWrites:0}}}:{})},
     bi: {
       status: "available",
       data: {
@@ -267,6 +271,8 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(agentic.locator('[data-shared-kpi="revenue"]')).toHaveText("2200.000")
   await expect(bi.locator('[data-shared-kpi="revenue"]')).toHaveText("2200.000")
   await expect(page.locator('[data-analytics-change="snap-Sfax-2026-07-01-rev-2"]')).toBeVisible()
+  await expect(page.locator('[data-demo-live="true"]')).toContainText("Nouvelle vente")
+  await expect(page.locator('[data-demo-live="true"]')).toContainText("révision 2")
   await page.getByRole("button", { name: "Créer nouveau dossier AI Director" }).click()
   await expect.poll(()=>createdMissions).toBe(1)
   await expect.poll(()=>executedMissions).toBe(1)
