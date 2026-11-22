@@ -604,3 +604,22 @@ td b { font-weight: 690; color: #173050; }
 @media(max-width:1100px){.scenario-inputs{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:650px){.scenario-lab{padding:14px}.scenario-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}.scenario-results{grid-template-columns:1fr}}
 @media(max-width:420px){.scenario-inputs{grid-template-columns:1fr}}
+
+
+/* Decision dossiers: shared ERP hierarchy, no synthetic action claims. */
+.specialist-evidence{border:1px solid #dce7f2;border-radius:13px;background:#fff;padding:17px;display:grid;gap:12px}
+.specialist-evidence-head{display:flex;align-items:start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.specialist-evidence-head h3{margin:0 0 6px;color:#17365f;font-size:15px}
+.specialist-evidence-head p{font-size:11px;color:#6a7f97;margin:0;line-height:1.5}
+.specialist-evidence-head>div:last-child{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.specialist-evidence-head span{background:#edf4fc;color:#2c587f;padding:6px 9px;border-radius:20px;font-size:10px;font-weight:750}
+.specialist-evidence-head button{border:1px solid #c7d9ee;background:#f4f9ff;color:#1858a0;border-radius:8px;padding:9px 11px;cursor:pointer;font-size:11px;font-weight:750}
+.specialist-evidence-item{padding:12px 13px;background:#f9fbfd;border:1px solid #e4ebf5;border-radius:10px;display:grid;gap:7px}
+.specialist-evidence-item>div{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.specialist-evidence-item strong{font-size:13px;color:#1c3a61}
+.specialist-evidence-item p{margin:0;font-size:12px;color:#526781}
+.specialist-evidence-item>b{color:#1e4b83;font-size:14px;font-variant-numeric:tabular-nums}
+.specialist-evidence-item small{font-size:11px;color:#72849b;overflow-wrap:anywhere}
+.specialist-caveat{font-size:11px;color:#82652c;line-height:1.5;margin:0}
+.specialist-evidence-head button:focus-visible{outline:3px solid #9ec8f6;outline-offset:2px}
+@media(max-width:650px){.specialist-evidence{padding:13px}}
