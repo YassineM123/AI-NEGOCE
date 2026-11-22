@@ -7,6 +7,7 @@ import {filteredSales} from "./services.js"
 import {buildAnalyticsInsights} from "./analytics-insights.js"
 import {evaluateAgenticForecast} from "./agents/predictive.js"
 import {forecastSkuDemand} from "./sku-demand-model.js"
+import {analyzeLinkedBusinessEvidence} from "./linked-business-evidence.js"
 import {backtestCustomerInactivity,backtestCollections,backtestSupplierDocuments} from "./data-science-advanced.js"
 const m=(n:number)=>Math.round(n*1000)
 const money=(n:number)=>Math.round(n)/1000
