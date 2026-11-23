@@ -193,7 +193,9 @@ export type CopilotStreamCallbacks = {
   onError?: (err: Error) => void
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:3001/api/v1"
+// Prefer the same-origin reverse proxy. This avoids hostname-dependent CORS
+// failures and keeps production deployments free to bake in an API origin.
+const API_URL = (import.meta.env.VITE_API_URL || "/api/v1").replace(/\/$/, "")
 const post = <T>(path: string, body: unknown) =>
   request<T>(path, {
     method: "POST",

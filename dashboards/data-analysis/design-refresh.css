@@ -54,3 +54,23 @@ body{background:var(--bg);font-size:13px}.sidebar{background:var(--nav);box-shad
 #exportEvidenceBtn:hover{background:#dcecff}
 #exportEvidenceBtn[hidden]{display:none!important}
 @media(max-width:720px){.unified-header-actions{width:100%;justify-content:flex-start}.unified-header-actions button{min-height:36px}}
+/* Shared snapshot context strip: one compact line, shown above governed pages only. */
+.shared-snapshot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-bottom:14px;padding:8px 10px;border:1px solid var(--line,#d7e0e8);border-radius:10px;background:#fff;font-size:12px;color:#647184}
+.snap-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#25354a;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.snap-chip b{font-weight:600;color:#647184;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.snap-note{margin-left:auto;font-size:11px;color:#8a96a8}
+/* Top 5 clients ranking */
+.rank-list{list-style:none;margin:0;padding:4px 0;display:grid;gap:12px;counter-reset:rank}
+.rank-list li{display:grid;grid-template-columns:minmax(140px,1.6fr) minmax(60px,1fr) auto auto;align-items:center;gap:10px;font-size:13px;counter-increment:rank}
+.rank-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#25354a}
+.rank-name:before{content:counter(rank) ". ";color:#8a96a8}
+.rank-bar{height:8px;border-radius:999px;background:#eef2f7;overflow:hidden}
+.rank-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2368b5,#72c7f0)}
+.rank-list b{font-variant-numeric:tabular-nums;color:#25354a;white-space:nowrap}
+.rank-list small{color:#8a96a8;min-width:52px;text-align:right}
+/* Points d'attention */
+.insight-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.insight-list li{display:flex;flex-wrap:wrap;gap:4px 12px;padding:9px 12px;border-left:3px solid #e3a008;border-radius:6px;background:#fffbeb;font-size:13px;color:#25354a}
+.insight-list b{min-width:170px}
+@media (max-width:640px){.snap-note{margin-left:0}.rank-list li{grid-template-columns:1fr auto}.rank-bar{grid-column:1/-1;order:3}}
+th.num{text-align:right}

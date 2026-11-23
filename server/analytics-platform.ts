@@ -115,6 +115,9 @@ export function buildAnalyticsOverview(input: {
         ? ["revenue_growth", "financial_strategy", "supply_chain_intelligence", "business_strategy"] : [],
     },
     warnings: [
+      ...(input.organization.isSynthetic ? [
+        "DEMONSTRATION : donnees entierement fictives. Aucune connexion, lecture ou ecriture ERP.",
+      ] : []),
       "Analyses Data Science sur dataset commun; modèle CA expérimental et non certifié.",
       ...(pseudonymizedExtract ? [
         "DEMONSTRATION : extraits IAINEG pseudonymises, non rapproches avec les editions officielles.",

@@ -22,7 +22,9 @@ extensions:{path:'Cahier des charges > Lots L0 a L5',file:'Catalogue fonctionnel
 coverage:{path:'Catalogue BI audite',file:'MANIFESTE_RAPPORTS_BI.csv',scope:'Installation auditee et extension demo',status:'Couverture en cours',proof:'RAPPORT_AUDIT_BI_NEGOCE.md'}};
 const state={page:location.hash.slice(1)||'overview',data:{},filter:{},platform:{status:'disconnected',context:null,overview:null}};const $=s=>document.querySelector(s);const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const num=v=>Number(String(v??0).replace(/\s/g,'').replace(',','.'))||0;const fmt=(v,d=3)=>num(v).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});const money=v=>fmt(v)+' TND';const sum=(r,k)=>r.reduce((a,x)=>a+num(x[k]),0);
 function parseCSV(t){const l=t.replace(/^\uFEFF/,'').trim().split(/\r?\n/),split=s=>{let a=[],c='',q=false;for(let i=0;i<s.length;i++){let x=s[i];if(x==='"'){if(q&&s[i+1]==='"'){c+='"';i++;}else q=!q;}else if(x===';'&&!q){a.push(c);c='';}else c+=x;}a.push(c);return a;},h=split(l.shift());return l.map(x=>Object.fromEntries(split(x).map((v,i)=>[h[i],v])))}
-async function load(k,f){if(!state.data[k]){const r=await fetch(ROOT+f);if(!r.ok)throw Error(f);state.data[k]=parseCSV(await r.text())}return state.data[k]}
+// On the governed portal only the fictional scenario folder is published, under /platform/bi-demo/.
+const dataUrl=f=>governedPortal&&f.startsWith('demonstration/')?'/platform/bi-demo/'+f.slice(14):ROOT+f;
+async function load(k,f){if(!state.data[k]){const r=await fetch(dataUrl(f));if(!r.ok)throw Error(f);state.data[k]=parseCSV(await r.text())}return state.data[k]}
 // Source of truth for the shared demonstration revenue: the DOCUMENT-grain
 // journal has currency; daily and customer extracts do not. Never total EUR,
 // USD and TND into a single "TND" amount.
@@ -30,7 +32,7 @@ async function tndJournal(){return (await load('journal_all','ventes/journal_ven
 const mm=v=>Math.round(num(v)*1000);
 async function tndDaily(){let m=new Map();for(const r of await tndJournal()){let x=m.get(r.date_facture)||{date_facture:r.date_facture,documents:0,ht_m:0,ttc_m:0,timbre_m:0};x.documents++;x.ht_m+=mm(r.montant_ht);x.ttc_m+=mm(r.montant_ttc);x.timbre_m+=mm(r.timbre);m.set(r.date_facture,x)}return [...m.values()].sort((a,b)=>a.date_facture.localeCompare(b.date_facture)).map(x=>({date_facture:x.date_facture,documents:x.documents,montant_ht:x.ht_m/1000,montant_ttc:x.ttc_m/1000,timbre:x.timbre_m/1000}))}
 async function tndCustomers(){let m=new Map();for(const r of await tndJournal()){let x=m.get(r.client_id)||{client_id:r.client_id,documents:0,ht_m:0,ttc_m:0};x.documents++;x.ht_m+=mm(r.montant_ht);x.ttc_m+=mm(r.montant_ttc);m.set(r.client_id,x)}return [...m.values()].map(x=>({client_id:x.client_id,documents:x.documents,montant_ht:x.ht_m/1000,montant_ttc:x.ttc_m/1000}))}
-function badge(t){let n=t.toLowerCase(),c=n.includes('simulation')||n.includes('prototype')?'demo':n.includes('extension')?'option':n.includes('rapprocher')||n.includes('confirmer')||n.includes('requise')?'warn':'ok';return `<span class="badge ${c}">${t}</span>`}function kpi(l,v,n='Source CSV'){return `<article class="kpi"><small>${l}</small><strong>${v}</strong><em>${n}</em></article>`}function panel(t,b,s='',v=''){return `<article class="panel"><div class="panel-head"><div><h3>${t}</h3><p>${s}</p></div>${v?badge(v):''}</div>${b}</article>`}function table(r,c,m=100){return r.length?`<div class="table-wrap"><table><thead><tr>${c.map(x=>`<th>${x[1]}</th>`).join('')}</tr></thead><tbody>${r.slice(0,m).map(y=>`<tr>${c.map(x=>`<td class="${x[2]||''}">${x[3]?x[3](y[x[0]]):y[x[0]]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Aucune donnee</div>'}
+function badge(t){let n=t.toLowerCase(),c=n.includes('simulation')||n.includes('prototype')?'demo':n.includes('extension')?'option':n.includes('rapprocher')||n.includes('confirmer')||n.includes('requise')?'warn':'ok';return `<span class="badge ${c}">${t}</span>`}function kpi(l,v,n='Source CSV'){return `<article class="kpi"><small>${l}</small><strong>${v}</strong><em>${n}</em></article>`}function panel(t,b,s='',v=''){return `<article class="panel"><div class="panel-head"><div><h3>${t}</h3><p>${s}</p></div>${v?badge(v):''}</div>${b}</article>`}function table(r,c,m=100){return r.length?`<div class="table-wrap"><table><thead><tr>${c.map(x=>`<th class="${x[2]||''}">${x[1]}</th>`).join('')}</tr></thead><tbody>${r.slice(0,m).map(y=>`<tr>${c.map(x=>`<td class="${x[2]||''}">${x[3]?x[3](y[x[0]]):y[x[0]]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Aucune donnee</div>'}
 function agentCard(icon,name,role,status,detail){return `<article class="agent-card"><div class="agent-icon">${icon}</div><div class="agent-copy"><div class="agent-title"><h3>${name}</h3>${badge(status)}</div><p>${role}</p><small>${detail}</small></div></article>`}
 function offerCard(name,status,value,needs,tag){return `<article class="offer-card"><div class="offer-top"><span class="offer-tag">${tag}</span>${badge(status)}</div><h3>${name}</h3><p>${value}</p><div class="offer-needs"><strong>Pre-requis</strong><span>${needs}</span></div><button class="offer-action" data-offer="${name}">Voir le perimetre</button></article>`}
 function bars(r,l,v){const w=720,h=250,p=40,M=Math.max(...r.map(x=>num(x[v])),1),st=(w-p*2)/Math.max(r.length,1),bw=st*.65;return `<div class="chart"><svg viewBox="0 0 ${w} ${h}"><line class="axis" x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}"/>${r.map((x,i)=>{let z=num(x[v]),hh=(h-p*2)*z/M,xx=p+i*st+st*.16,y=h-p-hh;return `<g class="bar-group" data-key="${x[l]}"><rect class="bar" x="${xx}" y="${y}" width="${bw}" height="${hh}" rx="3"><title>${x[l]} - ${fmt(z)}</title></rect><text class="tick" x="${xx+bw/2}" y="${h-12}" text-anchor="middle">${String(x[l]).slice(0,11)}</text></g>`}).join('')}</svg></div>`}
@@ -70,7 +72,9 @@ function directionFinal(){let html=directionV2();filters([]);return `<section cl
 async function stockFinal(){let html=await stock();return html.replace('valeur PMP non affichee car absente du fichier source','valeur PMP presente dans le schema, non renseignee et non certifiee')}
 async function marginFinal(){let r=await load('margin',sources.margin.file),ca=sum(r,'ca_net'),m=sum(r,'marge_brute'),monthly=Object.values(r.reduce((a,x)=>{a[x.mois]??={x:x.mois,v:0};a[x.mois].v+=num(x.marge_brute);return a},{}));filters([]);return cards([kpi('CA net',money(ca)),kpi('Cout net',money(sum(r,'cout_net'))),kpi('Marge brute',money(m)),kpi('Taux marge',fmt(ca?m/ca*100:0,2)+' %')])+panel('Marge mensuelle',line(monthly,'x','v'),'Agregee sur les depots - cout a certifier',sources.margin.status)+panel('Detail par depot',table(r,[['mois','Mois'],['depot_id','Depot'],['ca_net','CA net','num',money],['cout_net','Cout','num',money],['marge_brute','Marge','num',money]]))}
 async function qualityReal(){filters([]);let defs=[['Ventes quotidiennes sans devise','daily','ventes/ventes_quotidiennes_2026.csv','Journal des ventes','Ne pas consolider les devises'],['Journal ventes multidevises','journal_all',sources.sales.file,'Journal des ventes','Filtrage TND pour le dashboard'],['CA clients brut sans devise','clients_source','ventes/ca_clients_2026.csv',"Chiffre d'affaire client",'Ne pas consolider les devises'],['Ventes articles','articles',sources.articles.file,'Factures detaillees par article','Rapprochement ERP en attente'],['Stock disponible','stock',sources.stock.file,'Articles a commander','Formule disponible a confirmer'],['Creances agees','debts',sources.debts.file,'Soldes ages','Regles de vieillissement a confirmer'],['Marges mensuelles','margin',sources.margin.file,'Etat des marges','Cout historique a certifier'],['Encaissements','cash',sources.cash.file,'Ventes et encaissements','Rapprochement ERP en attente']],rows=[];for(let d of defs){let data=await load(d[1],d[2]);rows.push({source:d[0],lignes:data.length,ecran:d[3],extraction:'Disponible',validation:d[4]})}return cards([kpi('Sources utilisees',fmt(rows.length,0),'Extraits actifs'),kpi('Sources rapprochees','0','Validation LAI requise'),kpi('Ecritures ERP','0','Lecture seule')])+panel('Registre des sources',table(rows,[['source','Source'],['lignes','Lignes','num',v=>fmt(v,0)],['ecran','Ecran NEGOCE'],['extraction','Extraction'],['validation','Validation']]),'Etat factuel des donnees utilisees')}
-function apiOverviewCards(){const x=state.platform.overview;if(!x)return '';const d=x.bi.data;return `<section class="shared-snapshot" data-platform-snapshot="${safe(x.snapshotId)}" data-platform-app="bi"><strong>Snapshot partagé · ${safe(x.snapshotId)}</strong><span data-shared-kpi="revenue">${Number(d.revenue).toFixed(3)}</span><span data-shared-kpi="receivables">${Number(d.receivables).toFixed(3)}</span><span>Filtres : ${safe(x.scope==='*'?'Toutes agences':x.scope.join(', '))} · ${safe(d.filters.from||'—')} — ${safe(d.filters.to||'—')}</span></section><section class="data-status"><strong>API analytics gouvernée · ${safe(x.snapshot.source)}</strong><span>Arrêté ${safe(x.snapshot.asOf)} · ${x.snapshot.source.includes('IAINEG')?'Extrait pseudonymisé TND, non rapproché':(x.snapshot.isSynthetic?'données synthétiques':'source ERP')}</span><span>Contrat ${safe(x.contractVersion)}</span></section>${cards([kpi('CA API',money(d.revenue),'Snapshot '+safe(x.snapshotId)),kpi('Marge brute API',d.marginCoverage==='none'?'N/D':money(d.grossMargin),safe(d.marginCoverage)),kpi('Créances API',x.insights?.coverage.receivablesAvailable===false?'N/D':money(d.receivables),'Source API'),kpi('En retard API',x.insights?.coverage.receivablesAvailable===false?'N/D':money(d.overdue),'Source API'),kpi('Enregistrements API',fmt(d.recordCount,0),'Source API')])}`}
+// Compact, always-visible context strip: which snapshot/agency/period every number on the page belongs to.
+// Hidden data-shared-kpi values are machine-readable reconciliation anchors used by the cross-dashboard tests.
+function apiOverviewCards(){const x=state.platform.overview;if(!x)return '';const d=x.bi.data,f=d.filters||{},scope=x.scope==='*'?'Toutes agences':x.scope.join(', '),period=f.from||f.to?(f.from||'…')+' → '+(f.to||'…'):'Toutes périodes',origin=x.snapshot.source.includes('IAINEG')?'Extrait pseudonymisé TND, non rapproché':(x.snapshot.isSynthetic?'Données synthétiques':'Source ERP'),id=String(x.snapshotId),shortId=id.length>14?id.slice(0,12)+'…':id;const chip=(k,v,t='')=>`<span class="snap-chip"${t?` title="${safe(t)}"`:''}><b>${k}</b>${safe(v)}</span>`;return `<section class="shared-snapshot" data-platform-snapshot="${safe(id)}" data-insights-snapshot="${safe(id)}" data-platform-app="bi" aria-label="Contexte des données">${chip('Agence',scope)}${chip('Période',period)}${chip('Arrêté',x.snapshot.asOf)}${chip('Source',origin,x.snapshot.source)}${chip('Snapshot',shortId,id+' · contrat '+x.contractVersion)}<span class="snap-note">Lecture seule · TND · non certifié ERP</span><span hidden data-shared-kpi="revenue">${Number(d.revenue).toFixed(3)}</span><span hidden data-shared-kpi="receivables">${Number(d.receivables).toFixed(3)}</span></section>`}
 
 /** Connected mode never silently merges the legacy CSV dashboard with scoped API data. */
 const simulatedPages = new Set(['orders','promos','scoring','packages','suppliersDemo','treasuryDemo','decisions','extensions']);
@@ -79,23 +83,71 @@ function connectedBiContent(page){
   const x=state.platform.overview, i=x?.insights;
   if(!i)return '<section class="data-status"><strong>Détails API indisponibles</strong><span>Le snapshot partagé est actif, mais le serveur ne fournit pas le contrat descriptif.</span><span>Aucun chiffre CSV local substitué à ce périmètre.</span></section>';
   const d=x.bi.data, cv=i.coverage, summary=i.summary, monthly=i.months;
-  const apiNote='<section class="data-status" data-insights-snapshot="'+safe(x.snapshotId)+'"><strong>Analyse gouvernée · même source BI / Data Science / Agentic</strong><span>'+safe(x.snapshot.source)+' · arrêté '+safe(x.snapshot.asOf)+'</span><span>Agence / période héritées du Command Center · lecture seule · TND uniquement · non certifié ERP</span></section>';
-  const costs=cv.costMissingRows===0&&summary.salesRows>0, collections=summary.documentCount;
-  const headline=cards([
-    kpi('CA HT net · TND',money(summary.revenue),'Document posté, avoirs inclus'),
-    kpi('Documents',fmt(collections,0),'Sans double-compte de lignes'),
-    kpi('Clients distincts',fmt(summary.customerCount,0),'IDs stables de la source'),
-    kpi('Top 5 clients',summary.topFiveSharePercent==null?'N/D':fmt(summary.topFiveSharePercent,2)+' %','Part du CA HT net'),
-    kpi('Marge brute',costs?money(d.grossMargin):'N/D',costs?'Coûts présents':'Coûts historiques manquants')
-  ]);
+  // Every figure below comes from the same governed snapshot; ratios are derived, never invented.
+  const costs=cv.costMissingRows===0&&summary.salesRows>0, docs=summary.documentCount;
+  const recv=cv.receivablesAvailable!==false, revenue=num(summary.revenue);
+  const pct=(a,b)=>num(b)>0?fmt(num(a)/num(b)*100,1)+' %':'N/D';
+  const change=summary.monthlyChangePercent;
+  const changeTxt=change==null?'N/D':(change>0?'+':'')+fmt(change,1)+' %';
+  const basket=docs>0?money(revenue/docs):'N/D';
+  const marginTxt=costs?money(d.grossMargin):'N/D', marginRate=costs?pct(d.grossMargin,revenue):'N/D';
   const trend=monthly.length?line(monthly.map(r=>({x:r.month,v:r.revenue})),'x','v'):'<div class="empty">Aucune vente sur cette période.</div>';
-  const trendsPanel=panel('Évolution mensuelle du CA HT',trend,'Mois observés ; mois partiels non clôturés');
-  const customers=table(i.topCustomers,[['name','Client',null,safe],['documents','Documents','num',v=>fmt(v,0)],['revenue','CA HT','num',money],['lastPurchase','Dernier achat',null,safe],['daysSinceLastPurchase','Jours sans achat','num',v=>fmt(v,0)]],10);
-  const clientsPanel=panel('Principaux clients du périmètre',customers,'Tri déterministe par CA HT · identifiants pseudonymisés si extrait');
+  const monthBars=monthly.length?bars(monthly.slice(-12).map(r=>({x:r.month,v:r.revenue})),'x','v'):'<div class="empty">Aucune vente sur cette période.</div>';
+  const monthTable=table([...monthly].reverse(),[['month','Mois'],['revenue','CA HT','num',money],['documents','Documents','num',v=>fmt(v,0)],['customers','Clients','num',v=>fmt(v,0)],['closed','Clôturé',null,v=>v?'Oui':'Non']],36);
+  const top=i.topCustomers;
+  const customers=table(top,[['name','Client',null,safe],['revenue','CA HT','num',money],['sharePercent','Part du CA','num',v=>v==null?'N/D':fmt(v,2)+' %'],['documents','Documents','num',v=>fmt(v,0)],['lastPurchase','Dernier achat',null,safe],['daysSinceLastPurchase','Jours sans achat','num',v=>fmt(v,0)]],10);
+  const topMax=Math.max(...top.slice(0,5).map(c=>num(c.revenue)),1);
+  const topBars=top.length?'<ol class="rank-list">'+top.slice(0,5).map(c=>'<li><span class="rank-name" title="'+safe(c.name)+'">'+safe(c.name)+'</span><span class="rank-bar"><i style="width:'+Math.max(2,num(c.revenue)/topMax*100).toFixed(1)+'%"></i></span><b>'+money(c.revenue)+'</b><small>'+(c.sharePercent==null?'N/D':fmt(c.sharePercent,2)+' %')+'</small></li>').join('')+'</ol>':'<div class="empty">Aucun client sur ce périmètre.</div>';
   const warnings='<section class="data-status"><strong>Limites des sources</strong><span>'+safe(i.warnings.join(' · '))+'</span></section>';
-  if(['overview','direction','sales'].includes(page))
-    return apiNote+headline+'<div class="grid panels-2">'+trendsPanel+clientsPanel+'</div>'+panel('Périodes de vente',table(monthly,[['month','Mois'],['revenue','CA HT','num',money],['documents','Documents','num',v=>fmt(v,0)],['customers','Clients','num',v=>fmt(v,0)],['closed','Clôturé',null,v=>v?'Oui':'Non']],36),'Détail agrégé selon les filtres')+warnings;
-  if(page==='clients')return apiNote+headline+clientsPanel+warnings;
+
+  // Synthèse = « où en est-on ? » : 5 indicateurs clés, tendance, top 5 et points d'attention.
+  if(page==='overview'){
+    const alerts=[];
+    if(recv&&num(d.receivables)>0)alerts.push(['Créances en retard',pct(d.overdue,d.receivables)+' des créances ('+money(d.overdue)+')']);
+    if(summary.topFiveSharePercent!=null)alerts.push(['Concentration clients','Top 5 = '+fmt(summary.topFiveSharePercent,2)+' % du CA HT']);
+    if(!costs)alerts.push(['Marge',fmt(cv.costMissingRows,0)+' lignes sans coût historique : marge non calculable']);
+    if(change!=null)alerts.push(['Dernier mois clôturé',changeTxt+' vs mois précédent']);
+    const alertList=alerts.length?'<ul class="insight-list">'+alerts.map(a=>'<li><b>'+safe(a[0])+'</b><span>'+safe(a[1])+'</span></li>').join('')+'</ul>':'<div class="empty">Aucun point d’attention calculable.</div>';
+    return cards([
+      kpi('CA HT net',money(revenue),'Factures postées, avoirs inclus'),
+      kpi('Marge brute',marginTxt,costs?'Taux '+marginRate:'Coûts historiques manquants'),
+      kpi('Créances',recv?money(d.receivables):'N/D',recv?'Dont en retard '+pct(d.overdue,d.receivables):'Non fournies par la source'),
+      kpi('Clients actifs',fmt(summary.customerCount,0),fmt(docs,0)+' documents'),
+      kpi('Variation mensuelle',changeTxt,'Dernier mois clôturé vs précédent')
+    ])+'<div class="grid panels-2">'+panel('Évolution mensuelle du CA HT',trend,'Mois partiels non clôturés')+panel('Top 5 clients',topBars,'Par CA HT net sur le périmètre')+'</div>'+panel('Points d’attention',alertList,'Calculés à partir du snapshot affiché');
+  }
+  // Vue consolidée = « le détail chiffré pour la direction » : position financière et table mensuelle complète.
+  if(page==='direction'){
+    const position=[
+      {k:'Chiffre d’affaires HT net',v:money(revenue),n:'Base de tous les ratios'},
+      {k:'Marge brute',v:marginTxt,n:costs?'Coûts présents sur toutes les lignes':'Coûts manquants'},
+      {k:'Taux de marge brute',v:marginRate,n:'Marge / CA HT'},
+      {k:'Créances clients',v:recv?money(d.receivables):'N/D',n:recv?'Solde à date d’arrêté':'Non fournies'},
+      {k:'dont en retard',v:recv?money(d.overdue):'N/D',n:recv?pct(d.overdue,d.receivables)+' des créances':'—'},
+      {k:'Créances / CA',v:recv?pct(d.receivables,revenue):'N/D',n:'Poids du crédit client'},
+      {k:'Panier moyen',v:basket,n:'CA HT / document'},
+      {k:'CA moyen par client',v:summary.customerCount>0?money(revenue/summary.customerCount):'N/D',n:fmt(summary.customerCount,0)+' clients'},
+    ];
+    return cards([
+      kpi('Documents',fmt(docs,0),'Sans double-compte de lignes'),
+      kpi('Lignes de vente',fmt(summary.salesRows,0),'Enregistrements sources'),
+      kpi('Panier moyen',basket,'CA HT / document'),
+      kpi('Taux de marge',marginRate,costs?'Marge / CA HT':'Coûts manquants')
+    ])+'<div class="grid panels-2">'+panel('Position consolidée',table(position,[['k','Indicateur'],['v','Valeur','num'],['n','Lecture']]),'Ratios dérivés du même snapshot')+panel('CA HT des 12 derniers mois',monthBars,'Mois partiels non clôturés')+'</div>'+panel('Détail par période',monthTable,'Du plus récent au plus ancien · 36 mois max')+warnings;
+  }
+  if(page==='sales')
+    return cards([
+      kpi('CA HT net',money(revenue),'Factures postées, avoirs inclus'),
+      kpi('Documents',fmt(docs,0),'Sans double-compte de lignes'),
+      kpi('Panier moyen',basket,'CA HT / document'),
+      kpi('Variation mensuelle',changeTxt,'Dernier mois clôturé')
+    ])+panel('Évolution mensuelle du CA HT',trend,'Mois partiels non clôturés')+panel('Périodes de vente',monthTable,'Détail agrégé selon les filtres');
+  if(page==='clients')
+    return cards([
+      kpi('Clients actifs',fmt(summary.customerCount,0),'IDs stables de la source'),
+      kpi('Top 5 clients',summary.topFiveSharePercent==null?'N/D':fmt(summary.topFiveSharePercent,2)+' %','Part du CA HT net'),
+      kpi('CA moyen par client',summary.customerCount>0?money(revenue/summary.customerCount):'N/D','CA HT / client')
+    ])+'<div class="grid panels-2">'+panel('Top 5 clients',topBars,'Par CA HT net')+panel('Principaux clients',customers,'Tri déterministe par CA HT · identifiants pseudonymisés si extrait')+'</div>';
   if(page==='quality'||page==='coverage'){
     const audit=[
       {metric:'Lignes de vente',value:fmt(summary.salesRows,0)},
@@ -107,7 +159,33 @@ function connectedBiContent(page){
       {metric:'Jointures factures / articles',value:cv.invoiceItemLinksAvailable?'À valider':'Non disponibles'},
       {metric:'Model serving Data Science',value:'Non vérifié'},
     ];
-    return apiNote+panel('Couverture vérifiable des données',table(audit,[['metric','Contrôle'],['value','Résultat']]),'Aucune valeur manquante remplacée par zéro')+warnings;
+    return panel('Couverture vérifiable des données',table(audit,[['metric','Contrôle'],['value','Résultat']]),'Aucune valeur manquante remplacée par zéro')+warnings;
+  }
+  // Detailed modules served by the API (same snapshot / agency / period). An unavailable module shows its reason.
+  const moduleKey={articles:'articles',stock:'stock',debts:'receivables',margin:'margin',cash:'cash'}[page];
+  const mod=moduleKey&&i.modules?.[moduleKey];
+  if(mod&&mod.status==='not_available')
+    return '<section class="data-status"><strong>Donnée non disponible pour ce filtre</strong><span>'+safe(mod.reason)+'</span><span>Aucun chiffre CSV local substitué.</span></section>';
+  if(mod){
+    const rank=(rows,label,value,fmtV,note)=>{const mx=Math.max(...rows.map(r=>Math.abs(num(r[value]))),1);return rows.length?'<ol class="rank-list">'+rows.map(r=>'<li><span class="rank-name" title="'+safe(r[label])+'">'+safe(r[label])+'</span><span class="rank-bar"><i style="width:'+Math.max(2,Math.abs(num(r[value]))/mx*100).toFixed(1)+'%"></i></span><b>'+fmtV(r[value])+'</b><small>'+(note?note(r):'')+'</small></li>').join('')+'</ol>':'<div class="empty">Aucune donnée.</div>'};
+    const pctV=v=>v==null?'N/D':fmt(v,1)+' %';
+    if(page==='articles'){const t=mod.topProducts;
+      return cards([kpi('Articles vendus',fmt(mod.productCount,0),'Références distinctes'),kpi('Top 15 articles',pctV(t.reduce((n,r)=>n+num(r.sharePercent),0)),'Part du CA HT net'),kpi('Article n°1',safe(t[0]?.label||'—'),t[0]?money(t[0].revenue):'')])
+        +panel('Top 10 articles par CA',rank(t.slice(0,10),'label','revenue',money,r=>pctV(r.sharePercent)),'Part du CA HT net à droite')+panel('Détail des 15 premiers articles',table(t,[['label','Article',null,safe],['family','Famille',null,safe],['revenue','CA HT','num',money],['quantity','Quantité','num',v=>v==null?'N/D':fmt(v,0)],['marginPercent','Marge','num',pctV],['documents','Factures','num',v=>fmt(v,0)]],15),'Quantité / marge N/D si une ligne est incomplète')+warnings}
+    if(page==='margin'){const fam=mod.byFamily,last=mod.months.at(-1);
+      return cards([kpi('Marge brute',money(d.grossMargin),'Lignes avec coût connu'),kpi('Taux de marge',marginRate,'Marge / CA HT'),kpi('Familles',fmt(fam.length,0),'Avec ventes sur la période'),kpi('Lignes sans coût',fmt(mod.missingCostRows,0),'Exclues de la marge, jamais lues comme 0')])
+        +'<div class="grid panels-2">'+panel('Taux de marge par mois',mod.months.length?line(mod.months.map(r=>({x:r.month,v:r.marginPercent??0})),'x','v'):'<div class="empty">Aucune donnée.</div>','En % · dernier mois '+(last?pctV(last.marginPercent):'N/D'))+panel('Marge brute par famille',rank(fam,'family','margin',money,r=>pctV(r.marginPercent)),'Taux de marge à droite')+'</div>'
+        +panel('Détail par famille',table(fam,[['family','Famille',null,safe],['revenue','CA HT','num',money],['margin','Marge brute','num',money],['marginPercent','Taux','num',pctV],['missingCostRows','Lignes sans coût','num',v=>fmt(v,0)]]),'Tri par CA HT');}
+    if(page==='stock')
+      return cards([kpi('Valeur du stock',money(mod.totalValue),'Quantité × coût unitaire'),kpi('Positions',fmt(mod.positions,0),'Article × agence'),kpi('Sous le seuil',fmt(mod.belowReorder,0),pctV(mod.positions?mod.belowReorder/mod.positions*100:null)+' des positions'),kpi('Photo du stock',safe(mod.asOf),'Pas d’historique sur la période')])
+        +'<div class="grid panels-2">'+panel('À réapprovisionner en priorité',table(mod.toReorder,[['reference','Réf.',null,safe],['product','Article',null,safe],['agency','Agence',null,safe],['quantity','Stock','num',v=>fmt(v,0)],['reorderPoint','Seuil','num',v=>fmt(v,0)]],15),'Plus grand écart sous le seuil de réapprovisionnement','À rapprocher')+panel('Plus grosses valeurs en stock',rank(mod.topByValue.slice(0,10),'product','value',money,r=>safe(r.agency)),'Agence à droite')+'</div>';
+    if(page==='debts'){
+      return cards([kpi('Créances ouvertes',money(mod.outstanding),fmt(mod.documents,0)+' factures'),kpi('En retard',money(mod.overdue),pct(mod.overdue,mod.outstanding)+' des créances'),kpi('Plus de 90 jours',money(mod.buckets[4].amount),pct(mod.buckets[4].amount,mod.outstanding)+' des créances'),kpi('Arrêté au',safe(mod.asOf),'Âge = jours après échéance')])
+        +panel('Balance âgée',rank(mod.buckets,'label','amount',money,r=>fmt(r.documents,0)+' fact.'),'Montant par tranche de retard')+panel('Clients les plus exposés',table(mod.topDebtors,[['name','Client',null,safe],['outstanding','Encours','num',money],['overdue','En retard','num',money],['daysOverdue','Retard max (j)','num',v=>fmt(v,0)],['documents','Factures','num',v=>fmt(v,0)]],15),'Tri par encours');}
+    if(page==='cash'){const ms=mod.months,best=[...ms].sort((a,b)=>b.amount-a.amount)[0];
+      return cards([kpi('Encaissements',money(mod.total),'Paiements clients enregistrés'),kpi('Opérations',fmt(mod.count,0),'Paiements'),kpi('Moyenne mensuelle',ms.length?money(mod.total/ms.length):'N/D',fmt(ms.length,0)+' mois'),kpi('Meilleur mois',best?safe(best.month):'N/D',best?money(best.amount):'')])
+        +panel('Encaissements par mois',ms.length?bars(ms.slice(-18).map(r=>({x:r.month,v:r.amount})),'x','v'):'<div class="empty">Aucune donnée.</div>','Paiements clients enregistrés, pas un relevé bancaire')
+        +panel('Détail mensuel',table([...ms].reverse(),[['month','Mois'],['amount','Montant','num',money],['count','Paiements','num',v=>fmt(v,0)]],36),'Du plus récent au plus ancien');}
   }
   const reasons={
     articles:'Lignes articles reliées aux factures non présentes dans la source commune.',
@@ -116,7 +194,7 @@ function connectedBiContent(page){
     margin:'Coût historique par vente et marge document non disponibles.',
     cash:'Encaissements et décaissements rapprochés non exposés dans le dataset commun.',
   };
-  return apiNote+'<section class="data-status"><strong>Module non calculable dans ce périmètre</strong><span>'+safe(reasons[page]||'Données officielles complémentaires requises.')+'</span><span>Ne pas substituer les statistiques CSV locales aux filtres agence/période de l’API.</span></section>'+warnings;
+  return '<section class="data-status"><strong>Module non calculable dans ce périmètre</strong><span>'+safe(reasons[page]||'Données officielles complémentaires requises.')+'</span><span>Ne pas substituer les statistiques CSV locales aux filtres agence/période de l’API.</span></section>'+warnings;
 }
 
 // Scenario files are isolated, 100%-fictional examples: never join them to IAINEG
@@ -151,7 +229,11 @@ async function treasuryDemo(){
       'Solde fin = solde début + encaissements - décaissements ; validation automatique');
 }
 
-const renderers={overview:overviewReal,direction:directionReal,decisions,sales,clients,articles,stock:stockFinal,debts,margin:marginFinal,cash,orders,promos,scoring,packages,suppliersDemo,treasuryDemo,quality:qualityReal,extensions,coverage};async function render(){if(!renderers[state.page])state.page='overview';let s=sources[state.page];$('#title').textContent=pages.find(x=>x[0]===state.page)[1];$('#subtitle').textContent=state.platform.status==='connected'?'Source API commune · agence et période synchronisées':s.scope+' - '+s.status;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));$('#content').innerHTML='<div class="empty">Chargement...</div>';try{let html=state.platform.status==='connected'&&!simulatedPages.has(state.page)?connectedBiContent(state.page):await renderers[state.page]();$('#content').innerHTML=apiOverviewCards()+html;bind()}catch(e){$('#content').innerHTML=`<div class="empty">Erreur de chargement: ${e.message}</div>`}}
+const unifiedPortal=window.parent!==window;
+// `/platform/bi/` is an API-governed route even when opened in a top-level tab.
+// Legacy CSV routes stay blocked; the user explicitly connects the local demo API.
+const governedPortal=unifiedPortal||location.pathname.startsWith('/platform/bi/');
+const renderers={overview:overviewReal,direction:directionReal,decisions,sales,clients,articles,stock:stockFinal,debts,margin:marginFinal,cash,orders,promos,scoring,packages,suppliersDemo,treasuryDemo,quality:qualityReal,extensions,coverage};async function render(){if(!renderers[state.page])state.page='overview';let s=sources[state.page];$('#title').textContent=pages.find(x=>x[0]===state.page)[1];$('#subtitle').textContent=state.platform.status==='connected'?'Démo synthétique partagée · agence et période synchronisées':governedPortal?'Session démo commune requise':s.scope+' - '+s.status;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));$('#content').innerHTML='<div class="empty">Chargement...</div>';try{let html;if(state.platform.status==='connected'){html=simulatedPages.has(state.page)?await renderers[state.page]():connectedBiContent(state.page)}else{html=governedPortal?state.platform.status==='loading'?'<div class="empty">Connexion à la session démo…</div>':'<section class="data-status"><strong>Connectez la session démo pour charger le dashboard</strong><span>Les trois dashboards utiliseront ensuite le même jeu synthétique, la même agence et la même période.</span><span>Aucune connexion ERP ni donnée d’entreprise n’est utilisée.</span></section>':await renderers[state.page]()}$('#content').innerHTML=(simulatedPages.has(state.page)?'':apiOverviewCards())+html;bind()}catch(e){$('#content').innerHTML=`<div class="empty">Erreur de chargement: ${e.message}</div>`}}
 function downloadEvidenceFile(filename,content,mime){
   const url=URL.createObjectURL(new Blob([content],{type:mime}));
   const a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();
@@ -186,9 +268,14 @@ $('.menu-toggle').onclick=()=>document.body.classList.toggle('nav-open');
 addEventListener('hashchange',()=>document.body.classList.remove('nav-open'));
 const platformButton=$('#platformConnect'),platformStatus=$('#platformStatus');
 function platformPermission(c,key){return Array.isArray(c?.permissions)&&c.permissions.includes(key)}
-function platformLabel(){const c=state.platform.context;if(!c)return 'CSV anonymisés · hors API';const bi=c.platforms.bi;if(!platformPermission(c,'analytics.bi.read'))return 'Accès BI non autorisé';return bi.status==='available'?'API BI · source gouvernée':`API connectée · BI ${bi.status}`}
-function paintPlatform(){const connected=state.platform.status==='connected';const exportButton=$('#exportEvidenceBtn');if(exportButton)exportButton.hidden=!(connected&&state.platform.overview);platformButton.textContent=connected?'Déconnecter API':'Connecter API partagée';platformButton.disabled=state.platform.status==='loading';platformStatus.textContent=platformLabel();platformStatus.classList.toggle('api-connected',connected);platformStatus.classList.toggle('api-forbidden',connected&&!platformPermission(state.platform.context,'analytics.bi.read'))}
-platformButton.onclick=async()=>{if(state.platform.status==='connected'){window.AINegocePlatform.disconnect();state.platform={status:'disconnected',context:null,overview:null};paintPlatform();render();return}state.platform.status='loading';paintPlatform();try{state.platform.context=await window.AINegocePlatform.connectLocalDemo();if(platformPermission(state.platform.context,'analytics.bi.read'))state.platform.overview=await window.AINegocePlatform.getAnalyticsOverview();state.platform.status='connected';render()}catch(e){state.platform={status:'error',context:null,overview:null};platformStatus.textContent=e instanceof Error?e.message:'Connexion API impossible'}paintPlatform()};paintPlatform();
+function platformLabel(){const c=state.platform.context;if(!c)return governedPortal?'Session démo déconnectée':'Démo locale · données synthétiques';const bi=c.platforms.bi;if(!platformPermission(c,'analytics.bi.read'))return 'Accès BI non autorisé';return bi.status==='available'?'Démo synthétique · source partagée':`Session démo · BI ${bi.status}`}
+function paintPlatform(){const connected=state.platform.status==='connected';const exportButton=$('#exportEvidenceBtn');if(exportButton)exportButton.hidden=!(connected&&state.platform.overview);platformButton.textContent=connected?(unifiedPortal?'Session démo connectée':'Déconnecter la démo'):'Connecter la démo';platformButton.disabled=(connected&&unifiedPortal)||state.platform.status==='loading';platformStatus.textContent=platformLabel();platformStatus.classList.toggle('api-connected',connected);platformStatus.classList.toggle('api-forbidden',connected&&!platformPermission(state.platform.context,'analytics.bi.read'))}
+async function connectDemo(){state.platform.status='loading';paintPlatform();if(governedPortal)render();try{state.platform.context=await window.AINegocePlatform.connectLocalDemo();if(platformPermission(state.platform.context,'analytics.bi.read'))state.platform.overview=await window.AINegocePlatform.getAnalyticsOverview();state.platform.status='connected';render()}catch(e){state.platform={status:'error',context:null,overview:null};platformStatus.textContent=e instanceof Error?e.message:'Connexion API impossible';render()}paintPlatform()}
+platformButton.onclick=()=>{if(state.platform.status==='connected'){window.AINegocePlatform.disconnect();state.platform={status:'disconnected',context:null,overview:null};paintPlatform();render();return}connectDemo()};paintPlatform();
+// Standalone /platform/bi/ opens ready to use: the local-dev demo session is requested once at startup.
+// Inside the Command Center iframe the parent owns the session, so nothing is auto-connected there.
+// If the server is not in local-dev mode the request fails and the manual button stays available.
+if(governedPortal&&!unifiedPortal)connectDemo();
 
 let bridgeSyncRevision=0;
 window.AINegocePlatform.subscribe(async (stateFromPortal) => {

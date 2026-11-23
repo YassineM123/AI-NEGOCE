@@ -7,7 +7,13 @@ Trois applications indépendantes dans la même branche :
 - **Data Science** : dashboards/data-science/ (HTML/JS ; calculs serveur gouvernés en mode connecté, prévision pilote backtestée, simulations locales isolées en mode non connecté).
 - **Agentic AI** : dashboards/agentic-ai/ (React + Vite, 4 agents déterministes et AI Director dans server/agents/).
 
-**Point d'entrée unique** : http://127.0.0.1:8444. Le Command Center sert les deux autres interfaces sur /platform/bi/ et /platform/ds/, les extractions anonymisées sur /data/extractions/ et utilise le proxy /api vers le backend Express localhost:3001. Le build dist-agentic conserve les ressources nécessaires.
+**Point d'entrée unique** : http://127.0.0.1:8444. Le Command Center sert les deux autres interfaces sur /platform/bi/ et /platform/ds/ et utilise le proxy /api vers le backend Express localhost:3001. Le portail unifié ne publie plus les extractions CSV : BI et Data Science affichent uniquement le snapshot API PostgreSQL autorisé, ou N/D lorsqu'un domaine n'est pas disponible.
+
+Pour lancer le backend et les trois dashboards avec une seule commande :
+
+    npm run dev:all
+
+Le portail démarre sur `http://127.0.0.1:8444`, lance automatiquement l'API locale sur le port `3001`, et expose Data Analyse et Data Science sous `/platform/bi/` et `/platform/ds/`.
 
 ## Session commune
 
@@ -37,11 +43,7 @@ Depuis la racine du dépôt :
 
     npm ci
     # Configurer le sandbox local avec AUTH_MODE=local-dev et HOST=127.0.0.1
-    npm run dev:api
-
-Dans un second terminal :
-
-    npm run agentic:dev
+    npm run dev:all
 
 Ouvrir http://127.0.0.1:8444, choisir « Plateformes BI / DS » puis « Connecter la session sandbox ».
 

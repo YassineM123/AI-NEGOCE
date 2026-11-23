@@ -4,6 +4,7 @@
  * No ML predictions, automatic actions or inferred ERP joins.
  */
 import { filteredSales, type Dataset, type Filters } from "./services.js"
+import { buildBiModules } from "./analytics-bi-modules.js"
 
 const toMillimes = (value: number) => Math.round(value * 1000)
 const decimal = (millimes: number) => millimes / 1000
@@ -101,6 +102,7 @@ export function buildAnalyticsInsights(dataset: Dataset, filters: Filters = {}) 
       invoiceItemLinksAvailable: !isPseudonymizedExtract,
       modelServingVerified: false as const,
     },
+    modules: buildBiModules(dataset, filters),
     warnings: [
       "Analyse descriptive déterministe, pas de modèle ML ni de prédiction validée.",
       ...(isPseudonymizedExtract ? [

@@ -56,17 +56,23 @@ test("Agentic: every command-center page renders without uncaught errors",async(
 test("BI: all nineteen pages display their actual titles and render content",async({page})=>{
  test.setTimeout(240_000)
  const errors=capturePageErrors(page)
- await page.goto("/platform/bi/")
- await expect(page.locator("#nav")).toBeVisible()
+ await page.goto("/")
+ await page.getByRole("navigation",{name:"Navigation principale"})
+  .getByRole("button",{name:"Plateformes BI / DS",exact:true}).click()
+ const bi=page.frameLocator('iframe[title="Data Analyse"]')
+ await expect(bi.locator("#nav")).toBeVisible()
  for(const [index,[id,title]] of biPages.entries()){
   await test.step(`BI ${index+1}/${biPages.length}: ${title}`,async()=>{
-   const button=page.locator(`#nav button[data-page="${id}"]`)
+   const button=bi.locator(`#nav button[data-page="${id}"]`)
    await expect(button).toBeVisible()
-   await button.click()
+   // The BI iframe sits below the command-center cards. Dispatch inside the
+   // frame so a sticky inner sidebar is not rejected as outside the parent
+   // viewport by Playwright's pointer actionability check.
+   await button.evaluate((element:HTMLElement)=>element.click())
    await expect(button).toHaveClass(/active/)
-   await expect(page.locator("#title")).toHaveText(title)
-   await expect(page.locator("#content")).not.toContainText("Erreur de chargement:")
-   await expect(page.locator("#content")).not.toContainText("Chargement...")
+   await expect(bi.locator("#title")).toHaveText(title)
+   await expect(bi.locator("#content")).not.toContainText("Erreur de chargement:")
+   await expect(bi.locator("#content")).not.toContainText("Chargement...")
    await snapshot(page,"bi",String(index+1).padStart(2,"0"))
   })
  }
@@ -76,15 +82,19 @@ test("BI: all nineteen pages display their actual titles and render content",asy
 test("Data Science: all sixteen navigable pages have meaningful visible output",async({page})=>{
  test.setTimeout(240_000)
  const errors=capturePageErrors(page)
- await page.goto("/platform/ds/")
- await expect(page.locator("#app")).toBeVisible()
+ await page.goto("/")
+ await page.getByRole("navigation",{name:"Navigation principale"})
+  .getByRole("button",{name:"Plateformes BI / DS",exact:true}).click()
+ await page.getByRole("tab",{name:/Data Science/}).click()
+ const ds=page.frameLocator('iframe[title="Data Science"]')
+ await expect(ds.locator("#app")).toBeVisible()
  for(const [index,id] of dsPages.entries()){
   await test.step(`Data Science ${index+1}/${dsPages.length}: ${id}`,async()=>{
-   const button=page.locator(`.nav-scroll button[data-nav="${id}"]`)
+   const button=ds.locator(`.nav-scroll button[data-nav="${id}"]`)
    await expect(button).toBeAttached()
    await button.click()
-   await expect(page.locator(`#content.module-${id}`)).toBeVisible()
-   await expect(page.locator(`#content.module-${id}`)).not.toBeEmpty()
+   await expect(ds.locator(`#content.module-${id}`)).toBeVisible()
+   await expect(ds.locator(`#content.module-${id}`)).not.toBeEmpty()
    await snapshot(page,"ds",String(index+1).padStart(2,"0"))
   })
  }

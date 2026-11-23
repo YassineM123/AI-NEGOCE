@@ -67,6 +67,10 @@ const biOverviewSchema = z.object({
 })
 
 
+const biModuleSchema = z.union([
+  z.object({ status: z.literal("not_available"), reason: z.string() }),
+  z.object({ status: z.enum(["observed", "observed_current_snapshot"]) }).passthrough(),
+])
 export const analyticsInsightsSchema = z.object({
   currency: z.literal("TND"),
   basis: z.literal("posted_sales_net_ht"),
@@ -94,6 +98,11 @@ export const analyticsInsightsSchema = z.object({
     agencyAttributionAvailable: z.boolean(), invoiceItemLinksAvailable: z.boolean(),
     modelServingVerified: z.literal(false),
   }),
+  /** Detailed BI modules; each is either observed data or an explicit not_available reason. */
+  modules: z.object({
+    articles: biModuleSchema, margin: biModuleSchema, stock: biModuleSchema,
+    receivables: biModuleSchema, cash: biModuleSchema,
+  }).optional(),
   warnings: z.array(z.string()),
 })
 export type AnalyticsInsights = z.infer<typeof analyticsInsightsSchema>

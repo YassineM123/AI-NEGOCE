@@ -52,6 +52,13 @@ describe("analytics platform API", () => {
     expect(first.headers["cache-control"]).toBe("no-store")
     expect(analyticsOverviewSchema.safeParse(first.body).success).toBe(true)
     expect(first.body.scope).toEqual(["Sfax"])
+    expect(first.body.snapshot).toMatchObject({
+      sourceKind: "sandbox",
+      isSynthetic: true,
+    })
+    expect(first.body.warnings).toContain(
+      "DEMONSTRATION : donnees entierement fictives. Aucune connexion, lecture ou ecriture ERP.",
+    )
     expect(first.body.snapshotId).toBe(second.body.snapshotId)
     expect(first.body.insights.summary.revenue).toBe(first.body.bi.data.revenue)
     expect(first.body.insights.summary.documentCount).toBe(first.body.bi.data.recordCount)
@@ -65,6 +72,37 @@ describe("analytics platform API", () => {
     expect(first.body.dataScience.analysis.portfolio.customers).toBe(first.body.insights.summary.customerCount)
     expect(first.body.dataScience.analysis.forecast.verifiedProduction).toBe(false)
     expect(store.audits.some((event) => event.action === "analytics.overview.viewed")).toBe(true)
+  })
+
+  it("serves detailed BI modules that reconcile with the scoped KPI snapshot", async () => {
+    const { app } = makeApp()
+    const res = await request(app).get("/api/v1/analytics/overview?agency=Sfax").set(bearer("dev-manager-sfax"))
+    expect(res.status).toBe(200)
+    expect(analyticsOverviewSchema.safeParse(res.body).success).toBe(true)
+    const bi = res.body.bi.data, modules = res.body.insights.modules
+    const millimes = (n: number) => Math.round(n * 1000)
+    for (const key of ["articles", "margin", "stock", "receivables", "cash"])
+      expect(["observed", "observed_current_snapshot", "not_available"]).toContain(modules[key].status)
+    if (modules.receivables.status === "observed") {
+      expect(modules.receivables.outstanding).toBe(bi.receivables)
+      expect(modules.receivables.overdue).toBe(bi.overdue)
+    }
+    if (modules.margin.status === "observed")
+      expect(modules.margin.byFamily.reduce((n: number, f: { margin: number }) => n + millimes(f.margin), 0))
+        .toBe(millimes(bi.grossMargin))
+    if (modules.stock.status === "observed_current_snapshot") {
+      expect(modules.stock.totalValue).toBe(bi.inventoryValue)
+      expect(modules.stock.topByValue.every((r: { agency: string }) => r.agency === "Sfax")).toBe(true)
+    }
+    if (modules.articles.status === "observed")
+      expect(modules.articles.topProducts.length).toBeGreaterThan(0)
+  })
+
+  it("never presents a past-period stock as observed", async () => {
+    const { app } = makeApp()
+    const res = await request(app).get("/api/v1/analytics/overview?from=2020-01-01&to=2020-01-31").set(bearer("dev-admin"))
+    expect(res.status).toBe(200)
+    expect(res.body.insights.modules.stock.status).toBe("not_available")
   })
 
   it("fails closed for another agency and another tenant", async () => {

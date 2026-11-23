@@ -2,10 +2,16 @@ import { defineConfig, type HtmlTagDescriptor, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import path from "node:path"
+import fs from "node:fs"
 import net from "node:net"
 import { spawn, type ChildProcess } from "node:child_process"
 
 import siteConfiguration from "./.figma/make/site.json"
+
+// Vite exposes .env to import.meta.env, but config-time process.env consumers
+// (the API proxy and child process) need it before the config is evaluated.
+const localEnvFile = path.resolve(__dirname, ".env")
+if (fs.existsSync(localEnvFile)) process.loadEnvFile(localEnvFile)
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -41,6 +47,7 @@ export default defineConfig(({ mode }) => {
       watch: {
         ignored: ["**/.figma/**"],
       },
+      proxy: { "/api": `http://127.0.0.1:${process.env.API_PORT || "3001"}` },
     },
     preview: {
       host: process.env.FIGMA_DEV_SERVER_HOST || "0.0.0.0",
@@ -488,7 +495,9 @@ function autoStartApi(): Plugin {
         {
           cwd: __dirname,
           stdio: "inherit",
-          env: process.env,
+          // This bootstrap is development-only and the API stays on loopback.
+          // Direct API starts still require an explicit AUTH_MODE.
+          env: { ...process.env, AUTH_MODE: process.env.AUTH_MODE || "local-dev" },
         },
       )
       child.on("exit", (code) => {

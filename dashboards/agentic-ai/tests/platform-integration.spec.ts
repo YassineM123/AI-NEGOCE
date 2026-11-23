@@ -285,21 +285,42 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
   await expect(bi.locator('[data-platform-app="bi"]')).toHaveCount(0)
 })
 
-test("the BI iframe can reach the exact Database extract paths and isolated synthetic scenarios", async ({ request }) => {
-  // The legacy BI frame resolves ../../Database/extractions from /platform/bi/.
-  // Both static aliases must exist so the client never sees empty BI cards.
-  const checks = [
-    { url: "/Database/extractions/ventes/journal_ventes_2026_demo.csv", header: "date_facture", rows: 3158 },
-    { url: "/data/extractions/ventes/journal_ventes_2026_demo.csv", header: "date_facture", rows: 3158 },
-    { url: "/Database/extractions/demonstration/fournisseurs_livraisons_demo_synthetique.csv", header: "commande_id", rows: 8 },
-    { url: "/Database/extractions/demonstration/plan_tresorerie_demo_synthetique.csv", header: "mois", rows: 6 },
-  ]
-  for (const file of checks) {
-    const response = await request.get(file.url)
-    expect(response.status(), file.url).toBe(200)
-    expect(response.headers()["content-type"], file.url).toContain("text/csv")
-    const lines = (await response.text()).trim().split(/\r?\n/)
-    expect(lines[0], file.url).toContain(file.header)
-    expect(lines.length - 1, file.url).toBe(file.rows)
+test("direct BI route stays governed and never falls back to legacy CSV", async ({ page }) => {
+  const legacyRequests: string[] = []
+  page.on("request", (request) => {
+    if (request.url().includes("/Database/extractions/") || request.url().includes("/data/extractions/"))
+      legacyRequests.push(request.url())
+  })
+
+  await page.goto("/platform/bi/")
+
+  // The standalone route opens the local demo session by itself.
+  await expect(page.locator("#platformStatus")).toContainText("source partagée", { timeout: 30000 })
+  await expect(page.locator("#content")).not.toContainText("Erreur de chargement:")
+  expect(legacyRequests).toEqual([])
+
+  // Synthèse and Vue consolidée answer different questions.
+  await expect(page.getByRole("heading", { name: "Points d’attention" })).toBeVisible()
+  await page.locator('.nav-btn[data-page="direction"]').click()
+  await expect(page.getByRole("heading", { name: "Position consolidée" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Points d’attention" })).toHaveCount(0)
+
+  // Manual disconnect is respected and the button reconnects.
+  await page.getByRole("button", { name: "Déconnecter la démo" }).click()
+  await expect(page.locator("#content")).toContainText("Connectez la session démo")
+  await page.getByRole("button", { name: "Connecter la démo" }).click()
+  await expect(page.locator("#platformStatus")).toContainText("source partagée")
+  await expect(page.locator("#content")).not.toContainText("Erreur de chargement:")
+  expect(legacyRequests).toEqual([])
+})
+
+test("the unified portal does not publish legacy CSV data routes", async ({ request }) => {
+  for (const url of [
+    "/Database/extractions/ventes/journal_ventes_2026_demo.csv",
+    "/data/extractions/ventes/journal_ventes_2026_demo.csv",
+  ]) {
+    const response = await request.get(url)
+    expect(response.headers()["content-type"] ?? "", url).not.toContain("text/csv")
+    expect(await response.text(), url).not.toContain("date_facture")
   }
 })

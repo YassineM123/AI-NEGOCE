@@ -3,6 +3,8 @@
 ## Architecture de démonstration
 BI / Data Analyse, Data Science et Agentic (4 spécialistes + AI Director) utilisent un même snapshot versionné dans PostgreSQL. Les missions, validations et chats sont persistés dans la même base, dans une table différente. Aucune connexion ERP LAI.
 
+Dans le portail unifié, les iframes BI et Data Science sont API-only : aucune route CSV n'est publiée, aucune simulation locale n'est utilisée avant connexion et les modules non couverts restent explicitement N/D. Les modes HTML autonomes historiques restent des prototypes séparés et ne constituent pas la plateforme connectée.
+
 Portail : http://127.0.0.1:8444 → backend : http://127.0.0.1:3001 → PostgreSQL local. Les applications embarquées BI/DS passent par le broker de session ; les agents lisent le même dataset au niveau de chaque requête.
 
 ## Démarrage Windows / PowerShell

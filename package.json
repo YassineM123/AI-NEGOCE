@@ -34,6 +34,7 @@
     "qa:oracle": "python tools/qa/bi_oracle.py datasets/synthetic/v1 reports/evidence/bi_expected.json",
     "qa:perf": "tsx tools/qa/perf.ts reports/evidence/performance.json",
     "agentic:dev": "vite --config dashboards/agentic-ai/vite.config.ts",
+    "dev:all": "npm run agentic:dev",
     "agentic:typecheck": "tsc --project dashboards/agentic-ai/tsconfig.json --noEmit",
     "agentic:build": "vite build --config dashboards/agentic-ai/vite.config.ts",
     "agentic:worker": "tsx --env-file-if-exists=.env server/agents/workspace-worker.ts",
