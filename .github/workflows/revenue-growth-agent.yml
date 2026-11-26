@@ -1,6 +1,9 @@
 name: revenue-growth-agent
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   revenue-agent:
     runs-on: ubuntu-latest

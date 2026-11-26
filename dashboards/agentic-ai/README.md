@@ -33,13 +33,13 @@ The app has an optional `VITE_AGENTIC_API_BASE` for a separately hosted authoriz
 ## Screens
 
 - Vue d'ensemble — command-center executive layout
-- Centre de missions — interactive Kanban and drill-down
-- Mes agents — four specialist profiles and proactive notification **UI preview**
+- Centre de missions — server-backed missions when authenticated; fixture Kanban only while disconnected
+- Mes agents — four specialist profiles, governed reports, and authenticated in-app signals
 - Agent detail — conversation panel, follow-up, source-backed read-only Revenue Growth, Financial, Supply Chain, and Business Strategy findings
 - AI Director — bounded read-only multi-specialist investigation and evidence assembly
-- Décisions & approbations — local-only approval simulation and evidence
+- Décisions & approbations — server-backed maker/checker review in the authenticated workspace; local simulation while disconnected
 - Connexions BI / Data Science — real connection status when available, no fabricated health data
-- Historique & audit — clearly labelled local UI trace; server audit is separate
+- Historique & audit — clearly labelled local UI trace; authenticated workspace mutations are also audited by the server
 - Paramètres — safe local preferences
 
 ## Run validation
@@ -50,11 +50,18 @@ npm run agentic:build
 npx playwright test --config dashboards/agentic-ai/playwright.config.ts
 ```
 
-## Safety and production gap
+## Connected workspace and demonstration views
 
-**All example missions, alerts and decisions are fixtures.** Operations on them are ephemeral interface state, not persistent CRM/ERP actions. The Revenue Growth engine is a deterministic read-only MVP (no calibrated ML probabilities). Autonomous LLM conversations, durable orchestration, Data Science model-serving integration, real LAI ERP API integration, server-persisted case management, approvals, email/push dispatch, production SSO, background workers and observability are not implemented here.
+The UI has two deliberately different modes:
 
-Never claim that clicking Approve, Start or Mark as Read writes to an ERP. Real actions require authenticated server endpoints, isolation, human authorization, signed evidence and idempotency.
+- **Authenticated workspace:** `AdvancedWorkspace.tsx` uses the guarded `/api/v1/agentic/workspace/*` API for persisted missions, deterministic read-only investigations, maker/checker approvals, in-app notifications, bounded action-package exports, and agent chat. PostgreSQL persistence requires `DATABASE_URL`; without it, the server reports its temporary in-memory mode. The due-reminder worker is started separately with `npm run agentic:worker`.
+- **Disconnected demonstration:** legacy mission, alert, decision, and audit screens use labelled fixtures and ephemeral browser state. They are previews only and do not prove persistence or external delivery.
+
+The Revenue Growth and specialist engines remain deterministic and read-only. Agent chat requires an explicitly configured real LLM provider; the built-in mock is rejected by the advanced chat API. Predictions are experimental and are not certified production models.
+
+Approving, starting, or marking an item never writes to the ERP. The authenticated workflow persists and audits a reviewed dossier only. Real LAI ERP integration, idempotent write-back, production SSO, supervised/HA workers, external email/push/WhatsApp delivery, load validation, and production observability are still required.
+
+See [Advanced Agentic workflows](../../docs/agentic/ADVANCED_WORKFLOWS.md) for endpoint contracts, persistence modes, worker behavior, and current limitations.
 
 ## Les deux autres dashboards (conservés)
 

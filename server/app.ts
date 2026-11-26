@@ -174,7 +174,8 @@ export function createApp(deps = defaultDependencies()) {
   )
   const app = express()
   app.disable("x-powered-by")
-  app.use(helmet({ contentSecurityPolicy: false }))
+  if (config.TRUST_PROXY_HOPS > 0) app.set("trust proxy", config.TRUST_PROXY_HOPS)
+  app.use(helmet())
   app.use(
     cors({
       origin: config.FRONTEND_ORIGIN,
@@ -203,6 +204,13 @@ export function createApp(deps = defaultDependencies()) {
       limit: config.RATE_LIMIT_PER_MINUTE,
       standardHeaders: true,
       legacyHeaders: false,
+      // Express intentionally ignores Forwarded. When no trusted proxy is
+      // configured it also ignores X-Forwarded-For, so suppress only those
+      // inapplicable validators instead of emitting noisy runtime errors.
+      validate: {
+        forwardedHeader: false,
+        xForwardedForHeader: config.TRUST_PROXY_HOPS > 0,
+      },
     }),
   )
   app.get("/api/v1/livez", (_req, res) => res.json({ status: "ok" }))

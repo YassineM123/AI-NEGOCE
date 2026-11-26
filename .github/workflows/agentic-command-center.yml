@@ -1,6 +1,9 @@
 name: agentic-command-center
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   react-ui:
     runs-on: ubuntu-24.04

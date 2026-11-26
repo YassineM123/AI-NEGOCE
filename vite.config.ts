@@ -1,56 +1,84 @@
 import { defineConfig, type HtmlTagDescriptor, type Plugin } from "vite"
+
 import react from "@vitejs/plugin-react"
+
 import tailwindcss from "@tailwindcss/vite"
+
 import path from "node:path"
+
 import fs from "node:fs"
+
 import net from "node:net"
+
 import { spawn, type ChildProcess } from "node:child_process"
 
-import siteConfiguration from "./.figma/make/site.json"
+import siteConfiguration from "./.figma/make/site.json" with { type: "json" }
 
 // Vite exposes .env to import.meta.env, but config-time process.env consumers
+
 // (the API proxy and child process) need it before the config is evaluated.
-const localEnvFile = path.resolve(__dirname, ".env")
+
+const localEnvFile = path.resolve(import.meta.dirname, ".env")
+
 if (fs.existsSync(localEnvFile)) process.loadEnvFile(localEnvFile)
 
 // Vite config — https://vitejs.dev/config/
+
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
+
   const emitSourcemaps = mode === "development"
 
   return {
     base: process.env.FIGMA_PUBLIC_URL
       ? `${process.env.FIGMA_PUBLIC_URL}/`
       : "/",
+
     build: {
       sourcemap: emitSourcemaps ? "inline" : false,
+
       minify: !emitSourcemaps,
     },
+
     plugins: [
       react(),
+
       tailwindcss(),
+
       figmaSiteConfiguration(siteConfiguration),
+
       figmaErrorOverlayReplay(),
+
       figmaReactRefreshBoundaryFallback(),
+
       figmaMakeKitPlugin({ storiesGlob: "/src/**/*.stories.{ts,tsx,js,jsx}" }),
+
       autoStartApi(),
     ],
+
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
+        "@": path.resolve(import.meta.dirname, "./src"),
       },
     },
+
     server: {
       host: process.env.FIGMA_DEV_SERVER_HOST || "0.0.0.0",
+
       port: parseInt(process.env.PORT || "8443"),
+
       strictPort: true,
+
       watch: {
         ignored: ["**/.figma/**"],
       },
+
       proxy: { "/api": `http://127.0.0.1:${process.env.API_PORT || "3001"}` },
     },
+
     preview: {
       host: process.env.FIGMA_DEV_SERVER_HOST || "0.0.0.0",
+
       port: parseInt(process.env.PORT || "8443"),
     },
   }
@@ -58,152 +86,221 @@ export default defineConfig(({ mode }) => {
 
 type FigmaSiteConfiguration = {
   title?: string
+
   description?: string
+
   language?: string
+
   robots?: {
     index?: boolean
   }
+
   icons?: {
     icon?: string
   }
+
   openGraph?: {
     image?: string
   }
+
   analytics?: {
     googleAnalyticsId?: string
   }
+
   customScripts?: {
     headStart?: string
+
     headEnd?: string
+
     bodyStart?: string
+
     bodyEnd?: string
   }
+
   accessibility?: {
     addBypassLinks?: boolean
   }
 }
 
 /** Applies /.figma/make/site.json to the generated document shell. */
+
 function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   function sanitizeHtmlValue(value: string | undefined): string {
     return value?.replace(/[^a-zA-Z0-9_-]/g, "") || ""
   }
+
   function escapeHtmlText(value: string): string {
     return value
+
       .replace(/&/g, "&amp;")
+
       .replace(/</g, "&lt;")
+
       .replace(/>/g, "&gt;")
   }
+
   function replaceHtmlCommentSlot(
     html: string,
+
     slotName: string,
+
     content: string,
   ): string {
     return html.replace(`<!-- ${slotName} -->`, content)
   }
 
   const title = config.title ?? "Nexora"
+
   const description = config.description ?? ""
+
   // Imported HTML keeps its own favicon; new Makes default to the Make product icon.
+
   const favicon = config.icons?.icon ?? "/favicon.svg"
+
   const socialImage = config.openGraph?.image ?? ""
+
   const language = sanitizeHtmlValue(config.language) || "en"
+
   const googleAnalyticsId = sanitizeHtmlValue(
     config.analytics?.googleAnalyticsId,
   )
+
   const headStart = config.customScripts?.headStart ?? ""
+
   const headEnd = config.customScripts?.headEnd ?? ""
+
   const bodyStart = config.customScripts?.bodyStart ?? ""
+
   const bodyEnd = config.customScripts?.bodyEnd ?? ""
+
   const robotsTxt =
     config.robots?.index === false ? "User-agent: *\nDisallow: /\n" : ""
 
   return {
     name: "figma-site-configuration",
+
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (!robotsTxt || req.url?.split("?")[0] !== "/robots.txt")
           return next()
 
         res.setHeader("Content-Type", "text/plain; charset=utf-8")
+
         res.end(robotsTxt)
       })
     },
+
     generateBundle() {
       if (!robotsTxt) return
 
       this.emitFile({
         type: "asset",
+
         fileName: "robots.txt",
+
         source: robotsTxt,
       })
     },
+
     transformIndexHtml: {
       order: "pre",
+
       handler(html) {
         let result = html
+
         result = replaceHtmlCommentSlot(result, "figma:lang", language)
+
         result = replaceHtmlCommentSlot(
           result,
+
           "figma:title",
+
           escapeHtmlText(title),
         )
+
         result = replaceHtmlCommentSlot(result, "figma:head-start", headStart)
+
         result = replaceHtmlCommentSlot(result, "figma:head-end", headEnd)
+
         result = replaceHtmlCommentSlot(result, "figma:body-start", bodyStart)
+
         result = replaceHtmlCommentSlot(result, "figma:body-end", bodyEnd)
 
         const tags: HtmlTagDescriptor[] = []
+
         if (description) {
           tags.push({
             tag: "meta",
+
             attrs: { name: "description", content: description },
+
             injectTo: "head",
           })
         }
+
         if (config.robots?.index === false) {
           tags.push({
             tag: "meta",
+
             attrs: { name: "robots", content: "noindex, nofollow" },
+
             injectTo: "head",
           })
         }
+
         if (favicon) {
           tags.push({
             tag: "link",
+
             attrs: { rel: "icon", href: favicon },
+
             injectTo: "head",
           })
         }
+
         if (title) {
           tags.push({
             tag: "meta",
+
             attrs: { property: "og:title", content: title },
+
             injectTo: "head",
           })
         }
+
         if (description) {
           tags.push({
             tag: "meta",
+
             attrs: { property: "og:description", content: description },
+
             injectTo: "head",
           })
         }
+
         if (socialImage) {
           tags.push(
             {
               tag: "meta",
+
               attrs: { property: "og:image", content: socialImage },
+
               injectTo: "head",
             },
+
             {
               tag: "meta",
+
               attrs: { name: "twitter:card", content: "summary_large_image" },
+
               injectTo: "head",
             },
+
             {
               tag: "meta",
+
               attrs: { name: "twitter:image", content: socialImage },
+
               injectTo: "head",
             },
           )
@@ -213,20 +310,26 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
           tags.push(
             {
               tag: "script",
+
               attrs: {
                 async: true,
+
                 src: `https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`,
               },
+
               injectTo: "head",
             },
+
             {
               tag: "script",
+
               children: `
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', ${JSON.stringify(googleAnalyticsId)});
 `,
+
               injectTo: "head",
             },
           )
@@ -236,6 +339,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
           tags.push(
             {
               tag: "style",
+
               children: `
   .figma-bypass-link {
     position: fixed;
@@ -254,12 +358,17 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
     transform: translateY(0);
   }
 `,
+
               injectTo: "head",
             },
+
             {
               tag: "a",
+
               attrs: { class: "figma-bypass-link", href: "#root" },
+
               children: "Skip to content",
+
               injectTo: "body-prepend",
             },
           )
@@ -267,6 +376,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
 
         return {
           html: result,
+
           tags,
         }
       },
@@ -287,26 +397,33 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
  * `update` or `full-reload` so a stale overlay can't survive a
  * fixed build.
  */
+
 function figmaErrorOverlayReplay(): Plugin {
   return {
     name: "figma-error-overlay-replay",
+
     apply: "serve",
+
     configureServer(server) {
       let lastError: object | null = null
 
       const origSend = server.ws.send.bind(server.ws) as (
         ...args: any[]
       ) => void
+
       server.ws.send = (((...args: any[]) => {
         const payload = args[0]
+
         if (payload && typeof payload === "object" && !Array.isArray(payload)) {
           const type = (payload as { type?: string }).type
+
           if (type === "error") {
             lastError = (payload as object)
           } else if (type === "update" || type === "full-reload") {
             lastError = null
           }
         }
+
         return origSend(...args)
       }) as typeof server.ws.send)
 
@@ -331,59 +448,84 @@ function figmaErrorOverlayReplay(): Plugin {
  * mounted component family. React reports a successful refresh while leaving
  * the old tree mounted until the page is reloaded.
  */
+
 function figmaReactRefreshBoundaryFallback(): Plugin {
   type ModuleNode = import("vite").ModuleNode
+
   const hadRefreshBoundary = new Map<string, boolean>()
+
   const lostRefreshBoundaries = new Set<string>()
+
   let sendFullReload: (() => void) | null = null
 
   return {
     name: "figma-react-refresh-boundary-fallback",
+
     apply: "serve",
+
     enforce: "post",
+
     configureServer(server) {
       sendFullReload = () => server.ws.send({ type: "full-reload", path: "*" })
     },
+
     handleHotUpdate({ modules, server, timestamp }) {
       if (lostRefreshBoundaries.size === 0) return
 
       const visited = new Set<ModuleNode>()
+
       const pending = [...modules]
+
       while (pending.length > 0) {
         const current = pending.pop()
+
         if (!current || visited.has(current)) continue
+
         visited.add(current)
 
         const moduleId = current.id?.split("?")[0]
+
         if (moduleId && lostRefreshBoundaries.has(moduleId)) {
           const invalidated = new Set<ModuleNode>()
+
           for (const updatedModule of modules) {
             server.moduleGraph.invalidateModule(
               updatedModule,
+
               invalidated,
+
               timestamp,
+
               true,
             )
           }
+
           sendFullReload?.()
+
           return []
         }
 
         pending.push(...current.importers)
       }
     },
+
     transform(code, id) {
       if (!/\.[jt]sx?(?:\?|$)/.test(id) || id.includes("/node_modules/"))
         return null
 
       const moduleId = id.split("?")[0] ?? id
+
       const hasRefreshBoundary = code.includes("registerExportsForReactRefresh")
+
       const previousHadRefreshBoundary = hadRefreshBoundary.get(moduleId)
+
       hadRefreshBoundary.set(moduleId, hasRefreshBoundary)
 
       if (hasRefreshBoundary) lostRefreshBoundaries.delete(moduleId)
+
       if (previousHadRefreshBoundary && !hasRefreshBoundary) {
         lostRefreshBoundaries.add(moduleId)
+
         queueMicrotask(() => sendFullReload?.())
       }
 
@@ -403,16 +545,22 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
  * builds (`vite build`) skip it entirely so the route doesn't leak
  * into shipped bundles.
  */
+
 function figmaMakeKitPlugin(options: {
   storiesGlob: string | string[]
 }): Plugin {
   const storiesGlob = Array.isArray(options.storiesGlob)
     ? options.storiesGlob
     : [options.storiesGlob]
+
   const ROUTE = "/.figma/make/kit.html"
+
   const VIRTUAL_ID = "virtual:figma-stories"
+
   const RESOLVED_ID = "\0" + VIRTUAL_ID
+
   const STORIES_MODULE = `export const stories = import.meta.glob(${JSON.stringify(storiesGlob)})`
+
   const HTML_BOOTSTRAP = `<!doctype html>
 <html lang="en">
 <head>
@@ -431,22 +579,30 @@ function figmaMakeKitPlugin(options: {
 
   return {
     name: "figma-make-kit",
+
     apply: "serve",
+
     resolveId(id) {
       if (id === VIRTUAL_ID) return RESOLVED_ID
+
       return null
     },
+
     load(id) {
       if (id !== RESOLVED_ID) return null
+
       return STORIES_MODULE
     },
+
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || ""
+
         if (url.split("?")[0] !== ROUTE) return next()
 
         try {
           res.setHeader("Content-Type", "text/html")
+
           res.end(await server.transformIndexHtml(url, HTML_BOOTSTRAP))
         } catch (err) {
           next(err as Error)
@@ -463,50 +619,80 @@ function figmaMakeKitPlugin(options: {
  * AUTO_START_API=false. Like `npm run dev:api`, it reads the local `.env`
  * (DATABASE_URL for the dev PostgreSQL); variables already set in the shell win.
  */
+
 function autoStartApi(): Plugin {
   let child: ChildProcess | null = null
+
   const port = parseInt(process.env.API_PORT || "3001")
 
   const portInUse = () =>
     new Promise<boolean>((resolve) => {
       const socket = net.connect({ port, host: "127.0.0.1" })
+
       socket.once("connect", () => (socket.destroy(), resolve(true)))
+
       socket.once("error", () => resolve(false))
     })
 
   const stop = () => {
     if (child && !child.killed) child.kill()
+
     child = null
   }
 
   return {
     name: "auto-start-api",
+
     apply: "serve",
+
     async configureServer(server) {
       if (process.env.AUTO_START_API === "false") return
+
       if (await portInUse()) {
         server.config.logger.info(`[api] already running on port ${port}`)
+
         return
       }
-      const cli = path.resolve(__dirname, "node_modules/tsx/dist/cli.mjs")
+
+      const cli = path.resolve(
+        import.meta.dirname,
+
+        "node_modules/tsx/dist/cli.mjs",
+      )
+
       child = spawn(
         process.execPath,
+
         [cli, "watch", "--env-file-if-exists=.env", "server/index.ts"],
+
         {
-          cwd: __dirname,
+          cwd: import.meta.dirname,
+
           stdio: "inherit",
+
           // This bootstrap is development-only and the API stays on loopback.
+
           // Direct API starts still require an explicit AUTH_MODE.
-          env: { ...process.env, AUTH_MODE: process.env.AUTH_MODE || "local-dev" },
+
+          env: {
+            ...process.env,
+            AUTH_MODE: process.env.AUTH_MODE || "local-dev",
+          },
         },
       )
+
       child.on("exit", (code) => {
         if (code) server.config.logger.error(`[api] exited with code ${code}`)
+
         child = null
       })
+
       server.httpServer?.once("close", stop)
+
       process.once("exit", stop)
+
       process.once("SIGINT", () => (stop(), process.exit(0)))
+
       process.once("SIGTERM", () => (stop(), process.exit(0)))
     },
   }

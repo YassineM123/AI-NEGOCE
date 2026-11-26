@@ -19,15 +19,33 @@ try {
   } else if (command === "create") {
     if (!id || !ID.test(id)) throw new Error("Invalid id: lowercase letters, digits and dashes (2-63 chars)")
     if (!name) throw new Error("Name required")
-    await pool.query("INSERT INTO organizations(id, name, status, is_synthetic) VALUES ($1, $2, 'active', $3)", [id, name, process.argv.includes("--synthetic")])
-    console.log(`Organization ${id} created`)
+    const ifNotExists = process.argv.includes("--if-not-exists")
+    const result = await pool.query(
+      `INSERT INTO organizations(id, name, status, is_synthetic)
+       VALUES ($1, $2, 'active', $3)
+       ${ifNotExists ? "ON CONFLICT (id) DO NOTHING" : ""}
+       RETURNING id`,
+      [id, name, process.argv.includes("--synthetic")],
+    )
+    if (!result.rowCount && ifNotExists) {
+      const existing = await pool.query<{ name: string; status: string }>(
+        "SELECT name, status FROM organizations WHERE id = $1",
+        [id],
+      )
+      if (!existing.rowCount) throw new Error(`Organization ${id} could not be created`)
+      if (existing.rows[0].name !== name)
+        throw new Error(`Organization ${id} already exists with a different name`)
+      if (existing.rows[0].status !== "active")
+        throw new Error(`Organization ${id} exists but is ${existing.rows[0].status}`)
+      console.log(`Organization ${id} already initialized`)
+    } else console.log(`Organization ${id} created`)
   } else if (command === "suspend" || command === "activate") {
     if (id === "legacy-unassigned") throw new Error("legacy-unassigned stays in quarantine")
     const r = await pool.query("UPDATE organizations SET status = $2 WHERE id = $1", [id, command === "suspend" ? "suspended" : "active"])
     if (!r.rowCount) throw new Error(`Unknown organization ${id}`)
     console.log(`Organization ${id} ${command === "suspend" ? "suspended" : "activated"} (effective within 30 s)`)
   } else {
-    throw new Error("Usage: npm run org -- list | create <id> \"<name>\" [--synthetic] | suspend <id> | activate <id>")
+    throw new Error("Usage: npm run org -- list | create <id> \"<name>\" [--synthetic] [--if-not-exists] | suspend <id> | activate <id>")
   }
 } finally {
   await pool.end()

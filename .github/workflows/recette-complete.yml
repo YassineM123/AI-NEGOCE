@@ -2,7 +2,9 @@ name: recette-ui-et-cinq-scenarios-postgresql
 
 on:
   push:
-    branches: [feature/ai-negoce-complete-demo]
+    branches: [feature/unified-ai-analytics-platform]
+  pull_request:
+    branches: [feature/unified-ai-analytics-platform]
   workflow_dispatch:
 
 permissions:

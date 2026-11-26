@@ -18,6 +18,9 @@ const schema = z.object({
   FRONTEND_ORIGIN: z.string().url().default("http://localhost:8443"),
   UPLOAD_DIR: z.string().default("var/uploads"),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
+  // Number of reverse-proxy hops that are controlled by the deployment. Zero
+  // keeps Express on the direct socket address and ignores spoofable headers.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
   DATABASE_URL: z.string().min(1).optional(),
   OIDC_ISSUER: z.string().url().optional(),
   OIDC_AUDIENCE: z.string().min(1).optional(),

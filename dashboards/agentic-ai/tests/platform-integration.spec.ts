@@ -287,6 +287,29 @@ test("three apps reuse one session and reconcile exact agency/period KPI snapsho
 
 test("direct BI route stays governed and never falls back to legacy CSV", async ({ page }) => {
   const legacyRequests: string[] = []
+  await page.route("**/api/v1/auth/dev-session", async (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ token: "qa-standalone-bi-token" }),
+    }))
+  await page.route("**/api/v1/platform/context", async (route) => {
+    expect(route.request().headers().authorization).toBe("Bearer qa-standalone-bi-token")
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(contextFixture()),
+    })
+  })
+  await page.route("**/api/v1/analytics/overview*", async (route) => {
+    expect(route.request().headers().authorization).toBe("Bearer qa-standalone-bi-token")
+    const params = new URL(route.request().url()).searchParams
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(overviewFixture(params)),
+    })
+  })
   page.on("request", (request) => {
     if (request.url().includes("/Database/extractions/") || request.url().includes("/data/extractions/"))
       legacyRequests.push(request.url())

@@ -1,6 +1,9 @@
 name: agentic-specialists-and-director
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   agentic-api:
     runs-on: ubuntu-24.04

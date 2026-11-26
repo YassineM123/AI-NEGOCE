@@ -13,12 +13,14 @@ services:
       timeout: 3s
       retries: 10
   api:
+    image: ai-negoce-api:local
     build: .
     environment:
       NODE_ENV: production
       AUTH_MODE: oidc
       HOST: 0.0.0.0
       API_PORT: 3001
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?set FRONTEND_ORIGIN}
       DATABASE_URL: postgresql://ai_negoce:${POSTGRES_PASSWORD}@postgres:5432/ai_negoce
       OIDC_ISSUER: ${OIDC_ISSUER:?set OIDC_ISSUER}
@@ -27,12 +29,33 @@ services:
       ERP_BASE_URL: ${ERP_BASE_URL:?set ERP_BASE_URL}
       ERP_API_TOKEN: ${ERP_API_TOKEN:?set ERP_API_TOKEN}
     depends_on:
-      postgres:
-        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     ports: ["3001:3001"]
     read_only: true
     tmpfs: ["/tmp"]
     volumes: ["uploads:/app/var/uploads"]
+  migrate:
+    image: ai-negoce-api:local
+    build: .
+    command: ["npm", "run", "migrate"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://ai_negoce:${POSTGRES_PASSWORD}@postgres:5432/ai_negoce
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+  bootstrap:
+    image: ai-negoce-api:local
+    command: ["npm", "run", "org", "--", "create", "${BOOTSTRAP_ORGANIZATION_ID:?set BOOTSTRAP_ORGANIZATION_ID}", "${BOOTSTRAP_ORGANIZATION_NAME:?set BOOTSTRAP_ORGANIZATION_NAME}", "--if-not-exists"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://ai_negoce:${POSTGRES_PASSWORD}@postgres:5432/ai_negoce
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
 volumes:
   postgres_data:
   uploads:
