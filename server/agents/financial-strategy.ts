@@ -3,7 +3,7 @@ import { analyzeReceivablesAging } from "./decision-support.js"
 import {collectionReviewQueue} from "./specialist-action-plans.js"
 import type { Dataset } from "../services.js"
 import {
-  amount, daysBetween, ensureLimit, finding, percent, receivablesInScope,
+  amount, buildDeepAnalysis, daysBetween, ensureLimit, finding, percent, receivablesInScope,
   snapshot, sumMoney, type AgentReport, type Evidence, type ReportPeriod,
 } from "./common.js"
 
@@ -54,22 +54,23 @@ export function analyzeFinancialStrategy(input: {
     assumption: "Hypothèse de sensibilité uniquement ; ni prévision, ni garantie d'encaissement.",
     valueTnd: rows.length ? amount(overdueTnd * rate / 100) : null,
   }))
+  const metrics = {
+    outstandingTnd:rows.length ? totalOutstandingTnd : null, overdueTnd:rows.length ? overdueTnd : null,
+    overdue90Tnd:rows.length ? overdue90Tnd : null, overdueSharePercent:rows.length ? percent(overdueTnd,totalOutstandingTnd) : null,
+    openInvoiceCount:rows.length, overdueInvoiceCount:overdue.length, exposedCustomers:ranked.length,
+  }
   return {
     agent:"financial_strategy",
     status: rows.length ? "ok" : "no_data",
     executionMode:"read_only",
     snapshot:snap,
-    metrics:{
-      outstandingTnd:rows.length ? totalOutstandingTnd : null,
-      overdueTnd:rows.length ? overdueTnd : null,
-      overdue90Tnd:rows.length ? overdue90Tnd : null,
-      overdueSharePercent:rows.length ? percent(overdueTnd,totalOutstandingTnd) : null,
-      openInvoiceCount:rows.length,
-      overdueInvoiceCount:overdue.length,
-      exposedCustomers:ranked.length,
-    },
+    metrics,
     findings,
     scenarios,
+    deepAnalysis:buildDeepAnalysis({headline:rows.length?`${overdueTnd.toFixed(3)} TND échus sur ${totalOutstandingTnd.toFixed(3)} TND d'encours`:"Encours non analysable",
+      explanation:"Mesure de l'exposition, de son ancienneté et de sa concentration afin de prioriser les revues sans assimiler les créances à de la trésorerie.",metrics,
+      metricDefinitions:{outstandingTnd:{label:"Encours total",unit:"TND",interpretation:"Montant documenté restant à recevoir."},overdueTnd:{label:"Encours échu",unit:"TND",interpretation:"Montant au-delà de sa date d'échéance."},overdueSharePercent:{label:"Part échue",unit:"percent",interpretation:"Poids des échéances dans l'encours."},exposedCustomers:{label:"Clients exposés",unit:"count",interpretation:"Clients avec au moins une créance échue."}},findings,scenarios,
+      scenarioTradeoffs:["Accélération potentielle des encaissements","Impact possible sur la relation client","Dépend des litiges et règlements non rapprochés"]}),
     decisionSupport:{aging:analyzeReceivablesAging(input.dataset,input.scope,input.period),
       collectionQueue:collectionReviewQueue(input.dataset,input.scope,input.period,limit)},
     warnings:[

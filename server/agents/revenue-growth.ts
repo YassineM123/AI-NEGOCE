@@ -164,6 +164,9 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
     b.priorityScore - a.priorityScore ||
     b.metrics.currentRevenueTnd - a.metrics.currentRevenueTnd ||
     a.customerId.localeCompare(b.customerId))
+  const returned=ordered.slice(0,limit)
+  const currentRevenueTnd=tnd([...customers.values()].reduce((sum,c)=>sum+total(c.current,"revenue"),0))
+  const previousRevenueTnd=tnd([...customers.values()].reduce((sum,c)=>sum+total(c.previous,"revenue"),0))
   return {
     agent: "revenue_growth",
     status: scopedPostedLines ? "ok" : "no_data",
@@ -185,7 +188,23 @@ export function analyzeRevenueGrowth(input: RevenueAgentInput) {
       opportunitiesFound: ordered.length,
       returned: Math.min(ordered.length, limit),
     },
-    opportunities: ordered.slice(0, limit),
+    opportunities: returned,
+    deepAnalysis:{
+      headline:scopedPostedLines?`${ordered.length} opportunité(s) sur ${customers.size} client(s) analysé(s)`:"Croissance non analysable",
+      explanation:"Comparaison déterministe de deux fenêtres de vente, avec segmentation de dynamique et score de priorité heuristique non probabiliste.",
+      quantifiedInsights:[
+        {id:"currentRevenueTnd",label:"CA fenêtre courante",value:currentRevenueTnd,unit:"TND" as const,interpretation:"CA signé observé sur la fenêtre courante."},
+        {id:"previousRevenueTnd",label:"CA fenêtre précédente",value:comparable?previousRevenueTnd:null,unit:"TND" as const,interpretation:"Base comparable précédente, si entièrement observable."},
+        {id:"customersAnalyzed",label:"Clients analysés",value:customers.size,unit:"count" as const,interpretation:"Portefeuilles clients distincts dans le périmètre."},
+        {id:"opportunitiesFound",label:"Opportunités détectées",value:ordered.length,unit:"count" as const,interpretation:"Clients répondant aux règles explicites de dynamique."},
+      ],
+      alternatives:[
+        {id:"TARGET_PRIORITY",label:"Cibler les priorités",assumption:"Traiter d'abord les scores les plus élevés après contrôle stock, encours et litiges.",estimatedValueTnd:null,tradeoffs:["Effort commercial concentré","Score heuristique, pas une probabilité"]},
+        {id:"PILOT_AND_MEASURE",label:"Pilote contrôlé",assumption:"Tester un petit groupe et mesurer la réponse avant extension.",estimatedValueTnd:null,tradeoffs:["Risque limité","Résultat plus lent"]},
+        {id:"MONITOR",label:"Surveiller sans solliciter",assumption:"Conserver les clients faibles en observation jusqu'à nouvelles données.",estimatedValueTnd:null,tradeoffs:["Préserve la relation","Opportunités possibles différées"]},
+      ],
+      proposedActions:returned.map((item,index)=>({id:"ACTION-REV-"+(index+1),label:item.proposedAction.type,rationale:item.reason+" ; score "+item.priorityScore+"/100",priority:item.priorityScore>=70?"high" as const:item.priorityScore>=45?"medium" as const:"low" as const,status:"draft_only" as const,requiresHumanApproval:true as const,sourceFindingIds:[item.customerId]})),
+    },
     decisionSupport:{portfolio:analyzeCustomerConcentration(input.dataset,input.scope,input.period),
       accountPlans:commercialAccountPlans(input.dataset,input.scope,input.period,limit)},
     warnings: [

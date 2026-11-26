@@ -4,7 +4,7 @@ import { analyzeRevenueGrowth } from "./revenue-growth.js"
 import { analyzeFinancialStrategy } from "./financial-strategy.js"
 import { analyzeSupplyChain } from "./supply-chain.js"
 import { analyzeBusinessStrategy } from "./business-strategy.js"
-import { ensureLimit, snapshot, type AgentDomain, type AgentFinding, type AgentReport, type ReportPeriod } from "./common.js"
+import { ensureLimit, snapshot, type AgentDomain, type AgentFinding, type AgentReport, type DeepAnalysis, type ReportPeriod } from "./common.js"
 import {assessDecisionReadiness} from "./decision-gates.js"
 
 export type DirectorAgent = "revenue_growth" | AgentDomain
@@ -16,6 +16,8 @@ type DirectorSection = {
   status:"ok"|"no_data"
   metrics:Record<string,number|null>
   findings:AgentFinding[]
+  scenarios:AgentReport["scenarios"]
+  deepAnalysis:DeepAnalysis
   warnings:string[]
 }
 export function chooseAgents(objective: string): DirectorAgent[] {
@@ -50,6 +52,8 @@ function revenueSection(data: Dataset, scope: AgencyScope, limit: number,period:
       evidence:op.evidence.invoiceIds.map((id)=>({type:"invoice" as const,id,agency:op.agency})),
       action:{ ...op.proposedAction, requiresHumanApproval:true as const },
     })),
+    scenarios:result.deepAnalysis.alternatives.map(x=>({id:x.id,label:x.label,assumption:x.assumption,valueTnd:x.estimatedValueTnd})),
+    deepAnalysis:result.deepAnalysis,
     warnings:result.warnings,
   }
 }
@@ -59,6 +63,8 @@ function reportSection(result:AgentReport):DirectorSection {
     status:result.status,
     metrics:result.metrics,
     findings:result.findings,
+    scenarios:result.scenarios,
+    deepAnalysis:result.deepAnalysis,
     warnings:result.warnings,
   }
 }
@@ -96,6 +102,20 @@ export function investigateWithDirector(input: {
       const priority={high:3,medium:2,low:1}
       return priority[b.priority]-priority[a.priority]||a.id.localeCompare(b.id)
     }).slice(0,limit)
+  const scorecard=sections.map((section)=>({agent:section.agent,status:section.status,
+    quantifiedInsights:section.deepAnalysis.quantifiedInsights,findings:section.findings.length,
+    highPriorityFindings:section.findings.filter(x=>x.priority==="high").length,
+    alternatives:section.deepAnalysis.alternatives.length,proposedActions:section.deepAnalysis.proposedActions.length}))
+  const active=new Set(sections.filter(x=>x.status==="ok").map(x=>x.agent))
+  const synergies:Array<{agents:DirectorAgent[];title:string;explanation:string}>=[]
+  if(active.has("revenue_growth")&&active.has("supply_chain_intelligence")) synergies.push({agents:["revenue_growth","supply_chain_intelligence"],title:"Valider la disponibilité avant activation commerciale",explanation:"Rapprocher les opportunités de vente des tensions de stock avant toute sollicitation."})
+  if(active.has("financial_strategy")&&active.has("business_strategy")) synergies.push({agents:["financial_strategy","business_strategy"],title:"Financer la stratégie par des hypothèses vérifiables",explanation:"Confronter les scénarios de croissance aux créances et hypothèses de recouvrement."})
+  const conflicts:Array<{agents:DirectorAgent[];title:string;explanation:string}>=[]
+  if(active.has("revenue_growth")&&active.has("financial_strategy")&&sections.find(x=>x.agent==="financial_strategy")?.findings.length) conflicts.push({agents:["revenue_growth","financial_strategy"],title:"Croissance commerciale versus exposition client",explanation:"Une relance peut accroître l'exposition d'un client en retard ; contrôle crédit requis."})
+  const weight={high:3,medium:2,low:1}
+  const prioritizedActions=sections.flatMap(section=>section.deepAnalysis.proposedActions.map(action=>({agent:section.agent,...action})))
+    .sort((a,b)=>weight[b.priority]-weight[a.priority]||a.id.localeCompare(b.id)).slice(0,limit)
+    .map((action,index)=>({rank:index+1,...action}))
   return {
     director:"ai_director" as const,
     orchestrationMode:"deterministic_read_only" as const,
@@ -134,6 +154,8 @@ export function investigateWithDirector(input: {
       ],
       nextStep:"human_review_and_revalidate_snapshot" as const,
     },
+    comparison:{scorecard,synergies,conflicts,prioritizedActions,
+      explanation:"Comparaison par couverture, volume de constats et priorité. Aucun total ne mélange TND, pourcentages et volumes."},
     summary:{
       agentsInvoked:sections.length,
       totalFindings:sections.reduce((sum,s)=>sum+s.findings.length,0),
